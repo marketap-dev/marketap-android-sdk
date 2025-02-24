@@ -5,7 +5,7 @@ import android.view.WindowManager
 import android.widget.FrameLayout
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
-import com.marketap.sdk.service.MarketapSDK.Companion.marketapCore
+import com.marketap.sdk.Marketap.marketapCore
 
 
 class InAppMessageActivity : AppCompatActivity() {

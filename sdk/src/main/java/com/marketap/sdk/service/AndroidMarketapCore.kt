@@ -7,6 +7,7 @@ import com.marketap.sdk.model.internal.api.IngestEventRequest
 import com.marketap.sdk.model.internal.api.UpdateProfileRequest
 import com.marketap.sdk.model.internal.inapp.HideType
 import com.marketap.sdk.service.inapp.CampaignComponentHandler
+import com.marketap.sdk.service.inapp.comparison.types.util.getNow
 import com.marketap.sdk.service.ingestion.EventService
 import com.marketap.sdk.service.state.StateManager
 import java.time.Instant
@@ -31,7 +32,7 @@ internal class AndroidMarketapCore(
                 id = id,
                 name = name,
                 properties = properties,
-                timestamp = timestamp?.toString(),
+                timestamp = timestamp?.toString() ?: getNow(),
                 device = state.device.toReq(),
                 userId = state.userId
             )
@@ -46,7 +47,7 @@ internal class AndroidMarketapCore(
             state.projectId,
             UpdateProfileRequest(
                 userId = userId,
-                properties = properties ?: emptyMap(),
+                properties = properties?.toMap() ?: emptyMap(),
                 device = state.device.toReq()
             )
         )

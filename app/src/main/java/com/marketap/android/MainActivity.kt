@@ -19,7 +19,8 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.google.firebase.messaging.FirebaseMessaging
-import com.marketap.sdk.Marketap.marketap
+import com.marketap.sdk.Marketap
+import com.marketap.sdk.model.external.EventProperty
 
 class MainActivity : AppCompatActivity() {
 
@@ -29,14 +30,18 @@ class MainActivity : AppCompatActivity() {
         createNotificationChannel()
         enableEdgeToEdge()
         setContentView(R.layout.activity_main)
-        marketap.trackPageView(
-            mapOf("mkt_page_title" to "홈", "mkt_page_name" to "상세화면")
+        Marketap.trackPageView(
+            EventProperty.Builder()
+                .setAll(mapOf("mkt_page_title" to "홈", "mkt_page_name" to "상세화면"))
+                .build()
         )
 
         val button = findViewById<Button>(R.id.button)
         button.setOnClickListener {
-            marketap.trackPageView(
-                mapOf("mkt_page_title" to "홈", "mkt_page_name" to "상세화면")
+            Marketap.trackPageView(
+                EventProperty.Builder()
+                    .setAll(mapOf("mkt_page_title" to "홈", "mkt_page_name" to "상세화면"))
+                    .build()
             )
         }
 

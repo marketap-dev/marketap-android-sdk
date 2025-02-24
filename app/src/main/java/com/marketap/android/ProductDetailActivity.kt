@@ -6,7 +6,9 @@ import android.util.Log
 import android.widget.Button
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
-import com.marketap.sdk.Marketap.marketap
+import com.marketap.sdk.Marketap
+import com.marketap.sdk.model.external.EventProperty
+import com.marketap.sdk.model.external.Item
 
 class ProductDetailActivity : AppCompatActivity() {
 
@@ -26,18 +28,17 @@ class ProductDetailActivity : AppCompatActivity() {
 
         findViewById<Button>(R.id.buttonBuy).setOnClickListener {
             Log.d("ProductDetail", "${product.name} 구매 버튼 클릭됨")
-            marketap.trackPurchase(
-                product.price, mapOf(
-                    "mkt_items" to listOf(
-                        mapOf(
-                            "mkt_product_id" to product.id,
-                            "mkt_product_name" to product.name,
-                            "mkt_category1" to product.category,
-                            "mkt_product_price" to product.price,
-                            "mkt_quantity" to 1
-                        )
-                    )
-                )
+            Marketap.trackPurchase(
+                product.price,
+                EventProperty.Builder()
+                    .setItem(
+                        Item.Builder()
+                            .setProductId(product.id)
+                            .setProductName(product.name)
+                            .setCategory1(product.category)
+                            .setProductPrice(product.price)
+                            .build()
+                    ).build()
             )
         }
 

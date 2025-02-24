@@ -7,7 +7,7 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import com.marketap.sdk.Marketap.marketap
+import com.marketap.sdk.Marketap
 import java.util.UUID
 
 class LoginActivity : AppCompatActivity() {
@@ -38,7 +38,7 @@ class LoginActivity : AppCompatActivity() {
             val intent = Intent(this, WelcomeActivity::class.java).apply {
                 putExtra("USER_ID", finalUserId)
             }
-            marketap.login(finalUserId)
+            Marketap.login(finalUserId)
             startActivity(intent)
             finish()
         }

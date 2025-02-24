@@ -1,11 +1,11 @@
 package com.marketap.android
 
 import android.app.Application
-import com.marketap.sdk.Marketap.marketap
+import com.marketap.sdk.Marketap
 
 class MyApplication : Application() {
     override fun onCreate() {
         super.onCreate()
-        marketap.initialize(this, "kx43pz7")
+        Marketap.initialize(this, "kx43pz7")
     }
 }
