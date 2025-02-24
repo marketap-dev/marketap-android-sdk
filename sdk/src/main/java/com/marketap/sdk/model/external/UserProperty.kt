@@ -69,12 +69,14 @@ class UserProperty private constructor(
             return this
         }
 
-        fun setCart(cart: List<Item>) {
+        fun setCart(cart: List<Item>): Builder {
             properties["mkt_cart"] = cart.map { it.toMap() }
+            return this
         }
 
-        fun setWishList(wishList: List<Item>) {
+        fun setWishList(wishList: List<Item>): Builder {
             properties["mkt_wish_list"] = wishList.map { it.toMap() }
+            return this
         }
 
         fun setCoupons(coupons: List<Coupon>): Builder {

@@ -20,8 +20,8 @@ class EventProperty private constructor(
             return this
         }
 
-        fun setItem(item: Item): Builder {
-            items.add(item)
+        fun setItems(items: List<Item>): Builder {
+            this.items.addAll(items)
             return this
         }
 
