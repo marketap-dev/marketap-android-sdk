@@ -37,15 +37,12 @@ dependencies {
     implementation(libs.ktor.client.core)
     implementation(libs.ktor.client.android)
     implementation(libs.play.services.ads.identifier)
-    implementation(libs.play.services.appset) // 최신 버전 확인 필요
+    implementation(libs.play.services.appset)
 
     implementation(libs.play.services.appsearch)
     implementation(libs.firebase.messaging)
     implementation(platform(libs.firebase.bom))
 
-    implementation(libs.kotlin.bom)
-    implementation(libs.kotlin.stdlib)
-    
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)

@@ -5,7 +5,6 @@ import io.ktor.client.HttpClient
 import io.ktor.client.HttpClientConfig
 import io.ktor.client.engine.HttpClientEngineConfig
 import io.ktor.client.engine.android.Android
-import io.ktor.client.plugins.timeout
 import io.ktor.client.request.HttpRequestBuilder
 import io.ktor.client.request.header
 import io.ktor.client.request.post
@@ -29,12 +28,6 @@ internal class CustomClient(
             builder()
             header("Content-Type", "application/json")
             setBody(body)
-
-            this.timeout {
-                requestTimeoutMillis = timeout
-                connectTimeoutMillis = timeout
-                socketTimeoutMillis = timeout
-            }
         }
         val res = getResponse.bodyAsText()
 

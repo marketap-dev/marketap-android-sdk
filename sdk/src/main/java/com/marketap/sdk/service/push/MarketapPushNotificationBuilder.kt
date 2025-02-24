@@ -11,7 +11,7 @@ import android.net.Uri
 import androidx.core.app.NotificationCompat
 import com.marketap.sdk.model.internal.push.AndroidPushButton
 import com.marketap.sdk.model.internal.push.PushData
-import kotlinx.io.IOException
+import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
 
