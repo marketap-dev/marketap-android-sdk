@@ -24,9 +24,13 @@ object Marketap {
     fun initialize(application: Application, projectId: String, debug: Boolean? = null) {
         val config = MarketapConfig(projectId, debug == true)
         if (marketapCore == null || this.config?.projectId != config.projectId || application !== this.application) {
-            marketapCore = initializeCore(config, application)
-            this.config = config
-            this.application = application
+            marketapCore = try {
+                this.config = config
+                this.application = application
+                initializeCore(config, application)
+            } catch (e: Exception) {
+                null
+            }
         }
     }
 

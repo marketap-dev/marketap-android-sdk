@@ -25,44 +25,64 @@ internal class AndroidMarketapCore(
         timestamp: Instant?,
         then: (() -> Unit)?
     ) {
-        val state = stateManager.getState()
-        eventService.ingestEvent(
-            state.projectId,
-            IngestEventRequest(
-                id = id,
-                name = name,
-                properties = properties,
-                timestamp = timestamp?.toString() ?: getNow(),
-                device = state.device.toReq(),
-                userId = state.userId
+        try {
+            val state = stateManager.getState()
+            eventService.ingestEvent(
+                state.projectId,
+                IngestEventRequest(
+                    id = id,
+                    name = name,
+                    properties = properties,
+                    timestamp = timestamp?.toString() ?: getNow(),
+                    device = state.device.toReq(),
+                    userId = state.userId
+                )
             )
-        )
-        then?.invoke()
+            then?.invoke()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     override fun identify(userId: String, properties: Map<String, Any>?, then: (() -> Unit)?) {
-        stateManager.setUserId(userId)
-        val state = stateManager.getState()
-        marketapBackend.updateProfile(
-            state.projectId,
-            UpdateProfileRequest(
-                userId = userId,
-                properties = properties?.toMap() ?: emptyMap(),
-                device = state.device.toReq()
+        try {
+            stateManager.setUserId(userId)
+            val state = stateManager.getState()
+            marketapBackend.updateProfile(
+                state.projectId,
+                UpdateProfileRequest(
+                    userId = userId,
+                    properties = properties?.toMap() ?: emptyMap(),
+                    device = state.device.toReq()
+                )
             )
-        )
-        then?.invoke()
+            then?.invoke()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     override fun resetIdentity() {
-        stateManager.setUserId(null)
+        try {
+            stateManager.setUserId(null)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     override fun hideCampaign(campaignId: String, hideType: HideType) {
-        campaignComponentHandler.hideCampaign(campaignId, hideType)
+        try {
+            campaignComponentHandler.hideCampaign(campaignId, hideType)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     override fun click(campaignId: String, locationId: String, uri: Uri) {
-        campaignComponentHandler.click(campaignId, locationId, uri)
+        try {
+            campaignComponentHandler.click(campaignId, locationId, uri)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 }

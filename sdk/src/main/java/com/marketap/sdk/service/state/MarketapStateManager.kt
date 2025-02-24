@@ -6,6 +6,7 @@ import android.util.Log
 import com.google.android.gms.ads.identifier.AdvertisingIdClient
 import com.google.android.gms.appset.AppSet
 import com.google.android.gms.appset.AppSetIdClient
+import com.google.firebase.FirebaseApp
 import com.google.firebase.messaging.FirebaseMessaging
 import com.marketap.sdk.model.MarketapConfig
 import com.marketap.sdk.model.internal.MarketapState
@@ -31,6 +32,11 @@ internal class MarketapStateManager(
         storage.setItem("debug", config.debug)
         deviceManager.updateDevice(projectId)
         fetchInApp(userId)
+        // Firebase 초기화 (명시적 호출)
+        if (FirebaseApp.getApps(application).isEmpty()) {
+            FirebaseApp.initializeApp(application)
+        }
+        
         FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
             if (task.isSuccessful) {
                 Log.d("MarketapSDK", "FCM token: ${task.result}")
