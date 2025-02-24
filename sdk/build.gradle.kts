@@ -43,6 +43,9 @@ dependencies {
     implementation(libs.firebase.messaging)
     implementation(platform(libs.firebase.bom))
 
+    implementation(libs.kotlin.bom)
+    implementation(libs.kotlin.stdlib)
+    
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
