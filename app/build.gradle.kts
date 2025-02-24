@@ -10,7 +10,7 @@ android {
 
     defaultConfig {
         applicationId = "com.marketap.android"
-        minSdk = 24
+        minSdk = 26
         targetSdk = 35
         versionCode = 1
         versionName = "1.0"
@@ -39,7 +39,7 @@ android {
 dependencies {
     implementation(libs.firebase.messaging)
     implementation(platform(libs.firebase.bom))
-    implementation(project(":sdk")) // ✅ SDK 모듈 추가
+    implementation(project(":sdk"))
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)

@@ -1,9 +1,6 @@
-package com.marketap.sdk
-
-import android.app.Activity
+package com.marketap.sdk.model
 
 data class MarketapConfig(
     val projectId: String,
-    val activity: Activity,
     val debug: Boolean = false
 )

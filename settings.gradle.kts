@@ -12,10 +12,11 @@ pluginManagement {
     }
 }
 dependencyResolutionManagement {
-    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS) // FAIL_ON_PROJECT_REPOS 대신 사용
     repositories {
         google()
         mavenCentral()
+        maven("https://jitpack.io") // JitPack에서 가져올 수 있도록 추가
     }
 }
 

@@ -1,10 +1,11 @@
 package com.marketap.android
 
 import android.Manifest
-import android.annotation.SuppressLint
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
@@ -18,33 +19,46 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.google.firebase.messaging.FirebaseMessaging
-import com.marketap.sdk.Marketap
-import com.marketap.sdk.MarketapConfig
-import com.marketap.sdk.MarketapSDK
+import com.marketap.sdk.Marketap.marketap
 
 class MainActivity : AppCompatActivity() {
 
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
-    @SuppressLint("MissingInflatedId")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         createNotificationChannel()
         enableEdgeToEdge()
         setContentView(R.layout.activity_main)
-
-
-        // SDK 초기화
-        Marketap.initialize(MarketapConfig("xziewjm", this))
-
+        marketap.trackPageView(
+            mapOf("mkt_page_title" to "홈", "mkt_page_name" to "상세화면")
+        )
 
         val button = findViewById<Button>(R.id.button)
         button.setOnClickListener {
-            Marketap.trackPageView()
+            marketap.trackPageView(
+                mapOf("mkt_page_title" to "홈", "mkt_page_name" to "상세화면")
+            )
         }
 
         val button2 = findViewById<Button>(R.id.button2)
         button2.setOnClickListener {
-            Marketap.setDeviceId(appSetId = "test_app_set_id_1234")
+        }
+
+        // 버튼 찾기
+        val button4 = findViewById<Button>(R.id.button4)
+
+        val button5 = findViewById<Button>(R.id.button5)
+        button5.setOnClickListener {
+            val intent = Intent(this, LoginActivity::class.java)
+            startActivity(intent)
+        }
+
+        // 버튼 클릭 이벤트 설정
+        button4.setOnClickListener {
+            val intent = Intent(this, DetailActivity::class.java)
+            intent.putExtra("extra_data", "테스트 데이터") // DetailActivity로 데이터 전달
+            intent.setData(Uri.parse("myapp://notification/detail?push_id=1234")) // 딥링크 URI 설정
+            startActivity(intent)
         }
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
@@ -92,20 +106,18 @@ class MainActivity : AppCompatActivity() {
 
     private fun createNotificationChannel() {
         // API 레벨 26 이상에서만 필요
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            Log.d("FCM Token", "WOW!!")
-            val channelId = "default_channel_id"
-            val channelName = "Default Channel"
-            val descriptionText = "This is the default notification channel"
-            val importance = NotificationManager.IMPORTANCE_DEFAULT
-            val channel = NotificationChannel(channelId, channelName, importance).apply {
-                description = descriptionText
-                lightColor = android.graphics.Color.RED // LED 색상 설정
-            }
-            // NotificationManager를 통해 채널을 시스템에 등록
-            val notificationManager: NotificationManager =
-                getSystemService(NotificationManager::class.java)
-            notificationManager.createNotificationChannel(channel)
+        Log.d("FCM Token", "WOW!!")
+        val channelId = "default_channel_id"
+        val channelName = "Default Channel"
+        val descriptionText = "This is the default notification channel"
+        val importance = NotificationManager.IMPORTANCE_DEFAULT
+        val channel = NotificationChannel(channelId, channelName, importance).apply {
+            description = descriptionText
+            lightColor = android.graphics.Color.RED // LED 색상 설정
         }
+        // NotificationManager를 통해 채널을 시스템에 등록
+        val notificationManager: NotificationManager =
+            getSystemService(NotificationManager::class.java)
+        notificationManager.createNotificationChannel(channel)
     }
 }
