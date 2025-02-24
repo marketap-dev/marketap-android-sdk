@@ -1,10 +1,2 @@
 jdk:
   - openjdk17
-before_install:
-  - chmod +x gradlew
-install:
-  - ./gradlew clean assembleRelease
-
-artifacts:
-  - path: sdk/build/outputs/aar/sdk-release.aar
-    name: sdk-release.aar
