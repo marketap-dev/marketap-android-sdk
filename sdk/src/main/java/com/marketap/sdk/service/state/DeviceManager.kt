@@ -21,9 +21,7 @@ internal class DeviceManager(
     init {
         setMaxTouchPoints(context)
     }
-
-
-    private val sessionId: String = UUID.randomUUID().toString()
+    
     private var token: String? = null
     fun setToken(token: String) {
         this.token = token
@@ -77,7 +75,6 @@ internal class DeviceManager(
         )
 
         return Device(
-            sessionId = sessionId,
             gaid = storage.getItem("gaid", getTypeToken<String>()),
             appSetId = storage.getItem("app_set_id", getTypeToken<String>()),
             appLocalId = getOrCreateLocalId(),

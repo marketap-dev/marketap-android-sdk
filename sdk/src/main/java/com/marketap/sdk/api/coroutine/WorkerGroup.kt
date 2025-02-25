@@ -28,7 +28,6 @@ class WorkerGroup(
                 try {
                     work()
                 } catch (e: Exception) {
-                    // Log error
                     Log.e("WorkerGroup", "Error in worker", e)
                 }
             }

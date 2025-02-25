@@ -10,15 +10,13 @@ import com.marketap.sdk.service.inapp.InAppCallBack
 
 internal class WebAppInterface(
     private val callBack: InAppCallBack?,
-    private val inAppMessageActivity: InAppMessageActivity // ✅ Activity 참조 추가
+    private val inAppMessageActivity: InAppMessageActivity
 ) {
 
     @JavascriptInterface
     fun hideCampaign(campaignId: String, hideType: String) {
         val hideTypeEnum = HideType.valueOf(hideType.uppercase())
         callBack?.hideCampaign(campaignId, hideTypeEnum)
-
-        // ✅ 콜백이 끝난 후 조용히 Activity 종료
         inAppMessageActivity.hideQuietly()
 
     }
@@ -50,7 +48,6 @@ internal class WebAppInterface(
             }
         }
 
-        // ✅ 콜백이 끝난 후 조용히 Activity 종료
         inAppMessageActivity.hideQuietly()
     }
 }

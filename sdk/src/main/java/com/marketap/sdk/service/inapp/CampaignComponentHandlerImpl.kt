@@ -24,9 +24,9 @@ internal class CampaignComponentHandlerImpl(
         val intent = Intent(context, InAppMessageActivity::class.java).apply {
             putExtra("htmlData", campaign.html)
             putExtra("campaignId", campaign.id)
-            addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION) // ✅ 애니메이션 없이 실행
-            addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT) // ✅ 기존 Activity가 있으면 재사용
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) // ✅ ApplicationContext일 때만 필요
+            addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION)
+            addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
 
         context.startActivity(intent)

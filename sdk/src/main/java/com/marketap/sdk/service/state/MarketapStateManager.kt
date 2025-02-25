@@ -32,18 +32,23 @@ internal class MarketapStateManager(
         storage.setItem("debug", config.debug)
         deviceManager.updateDevice(projectId)
         fetchInApp(userId)
-        // Firebase 초기화 (명시적 호출)
-        if (FirebaseApp.getApps(application).isEmpty()) {
-            FirebaseApp.initializeApp(application)
+
+        try {
+            if (FirebaseApp.getApps(application).isEmpty()) {
+                FirebaseApp.initializeApp(application)
+            }
+
+            FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    Log.d("MarketapSDK", "FCM token: ${task.result}")
+                    deviceManager.setToken(task.result)
+                    deviceManager.updateDevice(projectId)
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("MarketapSDK", "Failed to fetch FCM token: ${e.message}")
         }
         
-        FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
-            if (task.isSuccessful) {
-                Log.d("MarketapSDK", "FCM token: ${task.result}")
-                deviceManager.setToken(task.result)
-                deviceManager.updateDevice(projectId)
-            }
-        }
         fetchAndStoreGAID(application, projectId)
         fetchAppSetId(application, projectId)
     }

@@ -112,4 +112,11 @@ internal class MarketapInAppView(
     fun closeView() {
         evaluateJavascript("window._marketap_native.hideWithAnimation('CLOSE');") {}
     }
+
+    fun removeView() {
+        postToMainThread {
+            visibility = GONE
+            loadDataWithBaseURL(null, "", "text/html", "UTF-8", null)
+        }
+    }
 }

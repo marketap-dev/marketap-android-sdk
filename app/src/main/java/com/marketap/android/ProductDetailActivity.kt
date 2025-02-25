@@ -31,13 +31,15 @@ class ProductDetailActivity : AppCompatActivity() {
             Marketap.trackPurchase(
                 product.price,
                 EventProperty.Builder()
-                    .setItem(
-                        Item.Builder()
-                            .setProductId(product.id)
-                            .setProductName(product.name)
-                            .setCategory1(product.category)
-                            .setProductPrice(product.price)
-                            .build()
+                    .setItems(
+                        listOf(
+                            Item.Builder()
+                                .setProductId(product.id)
+                                .setProductName(product.name)
+                                .setCategory1(product.category)
+                                .setProductPrice(product.price)
+                                .build()
+                        )
                     ).build()
             )
         }

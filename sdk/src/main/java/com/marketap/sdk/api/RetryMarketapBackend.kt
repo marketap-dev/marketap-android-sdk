@@ -1,5 +1,6 @@
 package com.marketap.sdk.api
 
+import android.util.Log
 import com.marketap.sdk.api.coroutine.WorkerGroup
 import com.marketap.sdk.model.internal.api.DeviceReq
 import com.marketap.sdk.model.internal.api.FetchCampaignReq
@@ -63,12 +64,11 @@ internal class RetryMarketapBackend(
         apiWorkGroup.dispatch {
             val deferredResponse = CompletableDeferred<InAppCampaignRes>()
 
-            // ✅ API 요청을 비동기적으로 실행 (한 번만 요청)
             apiWorkGroup.dispatch {
                 try {
                     val res = marketapApi.fetchCampaigns(request)
                     if (res.data != null) {
-                        deferredResponse.complete(res.data)  // ✅ 결과 저장
+                        deferredResponse.complete(res.data)
                     } else {
                         deferredResponse.cancel()
                     }
@@ -77,7 +77,6 @@ internal class RetryMarketapBackend(
                 }
             }
 
-            // ✅ 0.5초 안에 응답이 오면 onSuccess + beforeTimeout 실행
             val result = withTimeoutOrNull(500) {
                 deferredResponse.await()
             }
@@ -86,11 +85,10 @@ internal class RetryMarketapBackend(
                 onSuccess(result)
                 inTimeout?.invoke(result)
             } else {
-                // ✅ 0.5초 초과 시 → API 요청이 끝날 때까지 기다렸다가 beforeTimeout 실행
                 try {
                     onSuccess.invoke(deferredResponse.await())
                 } catch (e: Exception) {
-                    // 요청 실패 시 아무것도 안 함
+                    Log.e("MarketapBackend", "Failed to fetch campaigns", e)
                 }
             }
         }

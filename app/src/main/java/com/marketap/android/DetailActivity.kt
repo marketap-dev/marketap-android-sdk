@@ -1,35 +1,35 @@
 package com.marketap.android
 
+import android.annotation.SuppressLint
 import android.os.Bundle
-import android.util.Log
-import android.view.View
+import android.webkit.WebChromeClient
+import android.webkit.WebSettings
+import android.webkit.WebView
+import android.webkit.WebViewClient
 import androidx.appcompat.app.AppCompatActivity
-import com.marketap.sdk.Marketap
-import com.marketap.sdk.model.external.EventProperty
+import com.marketap.sdk.MarketapWebBridge
 
 class DetailActivity : AppCompatActivity() {
+
+    @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        // XML 레이아웃 설정 (예: activity_detail.xml)
         setContentView(R.layout.activity_detail)
 
-        // 딥링크 데이터 확인
-        intent?.data?.let { uri ->
-            val pushId = uri.getQueryParameter("push_id")
-            Log.d("DeepLink", "Push ID: $pushId")
+        val webView = findViewById<WebView>(R.id.webView)
+        webView.apply {
+            settings.javaScriptEnabled = true
+            settings.domStorageEnabled = true
+            settings.allowFileAccess = true
+            settings.allowContentAccess = true
+            settings.cacheMode = WebSettings.LOAD_NO_CACHE
+
+            webViewClient = WebViewClient()
+            webChromeClient = WebChromeClient()
+
+            this.addJavascriptInterface(MarketapWebBridge(), MarketapWebBridge.NAME)
         }
 
-        findViewById<View>(R.id.button3).setOnClickListener {
-            intent?.data?.let {
-                Marketap.trackPageView(
-                    EventProperty.Builder()
-                        .set("mkt_page_name", "상세화면")
-                        .set("mkt_page_uri", it.toString())
-                        .set("mkt_page_title", "홈")
-                        .build()
-                )
-            }
-        }
+        webView.loadUrl("https://marketap.cafe24.com/shop2")
     }
 }

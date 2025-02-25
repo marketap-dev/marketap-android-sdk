@@ -7,14 +7,12 @@ import android.view.WindowInsets
 
 object SafeAreaUtils {
 
-    // ✅ 상단 Status Bar 높이 구하기 (Android 11 이상 안전한 방식)
     @SuppressLint("DiscouragedApi", "InternalInsetResource")
     fun getStatusBarHeight(activity: Activity?): Int {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             val insets = activity?.window?.decorView?.rootWindowInsets
             insets?.getInsetsIgnoringVisibility(WindowInsets.Type.statusBars())?.top ?: return 0
         } else {
-            // API 30 미만에서는 기존 방식 사용
             val resourceId =
                 activity?.resources?.getIdentifier("status_bar_height", "dimen", "android")
                     ?: return 0
@@ -22,7 +20,6 @@ object SafeAreaUtils {
         }
     }
 
-    // ✅ 하단 Navigation Bar 높이 구하기 (Android 11 이상 안전한 방식)
     @SuppressLint("DiscouragedApi", "InternalInsetResource")
     fun getNavigationBarHeight(activity: Activity?): Int {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {

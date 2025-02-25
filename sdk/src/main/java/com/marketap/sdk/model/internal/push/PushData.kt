@@ -17,7 +17,7 @@ data class PushData(
             val body = data["message"] ?: return null
             val imageUrl = data["imageUrl"]
             val buttons =
-                data["buttons"]?.deserialize<List<AndroidPushButton>>()  // JSON 형태로 버튼 리스트 처리
+                data["buttons"]?.deserialize<List<AndroidPushButton>>()
             val campaignId = data["campaignId"]
             val notificationId = System.currentTimeMillis().toInt()
             val projectId = data["projectId"]

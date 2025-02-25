@@ -35,8 +35,6 @@ internal class InAppEventService(
                 )
             } ?: return@getInAppCampaigns
 
-//                Log.d("MarketapSDK", "Show campaign: ${targetCampaign}, event: ${eventRequest}")
-
             val onImpression = {
                 eventService.ingestEvent(
                     projectId, IngestEventRequest.delivery(

@@ -1,5 +1,6 @@
 package com.marketap.sdk.service.inapp.resource
 
+import android.content.Intent
 import android.os.Bundle
 import android.view.WindowManager
 import android.widget.FrameLayout
@@ -40,19 +41,14 @@ class InAppMessageActivity : AppCompatActivity() {
         })
     }
 
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+    }
+
     override fun onResume() {
         super.onResume()
         loadWebViewData()
-    }
-
-    override fun onStart() {
-        super.onStart()
-        messageView?.resumeTimers()
-    }
-
-    override fun onStop() {
-        super.onStop()
-        messageView?.pauseTimers()
     }
 
     override fun onDestroy() {
@@ -62,6 +58,7 @@ class InAppMessageActivity : AppCompatActivity() {
     }
 
     fun hideQuietly() {
+        messageView?.removeView()
         moveTaskToBack(true)
     }
 

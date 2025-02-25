@@ -23,7 +23,6 @@ import com.marketap.sdk.Marketap
 import com.marketap.sdk.model.external.EventProperty
 
 class MainActivity : AppCompatActivity() {
-
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

@@ -30,7 +30,6 @@ internal class MarketapActivityLifecycleCallbacks(
     }
 
     override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) {
-        // Do nothing
     }
 
     override fun onActivityDestroyed(activity: Activity) {
