@@ -24,7 +24,7 @@ internal class MarketapEventService(
             )
         }
 
-
+        lastEventTimestamp = System.currentTimeMillis()
         val request = if (eventRequest.timestamp == null) {
             eventRequest.copy(timestamp = getNow())
         } else {
