@@ -5,6 +5,7 @@ import android.util.Log
 import com.marketap.sdk.api.MarketapApiImpl
 import com.marketap.sdk.api.RetryMarketapBackend
 import com.marketap.sdk.model.MarketapConfig
+import com.marketap.sdk.service.activity.ActivityManager
 import com.marketap.sdk.service.activity.MarketapActivityLifecycleCallbacks
 import com.marketap.sdk.service.inapp.CampaignComponentHandlerImpl
 import com.marketap.sdk.service.inapp.ConditionCheckerImpl
@@ -23,11 +24,12 @@ internal fun initializeCore(config: MarketapConfig, application: Application): M
     val marketapBackend = RetryMarketapBackend(storage, marketapApi)
     val notificationOpenHandler = MarketapNotificationOpenHandler(marketapBackend, application)
 
-
+    val activityManager = ActivityManager()
     // Register activity lifecycle callbacks
     MarketapActivityLifecycleCallbacks(
         notificationOpenHandler = notificationOpenHandler,
-        application = application
+        application = application,
+        activityManager = activityManager
     )
 
     val deviceManager = DeviceManager(storage, marketapBackend, application)

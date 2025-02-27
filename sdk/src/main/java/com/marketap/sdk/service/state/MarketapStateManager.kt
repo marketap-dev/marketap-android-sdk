@@ -40,7 +40,6 @@ internal class MarketapStateManager(
 
             FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
                 if (task.isSuccessful) {
-                    Log.d("MarketapSDK", "FCM token: ${task.result}")
                     deviceManager.setToken(task.result)
                     deviceManager.updateDevice(projectId)
                 }
@@ -48,7 +47,7 @@ internal class MarketapStateManager(
         } catch (e: Exception) {
             Log.e("MarketapSDK", "Failed to fetch FCM token: ${e.message}")
         }
-        
+
         fetchAndStoreGAID(application, projectId)
         fetchAppSetId(application, projectId)
     }
@@ -71,9 +70,7 @@ internal class MarketapStateManager(
                 if (id != null && id != "00000000-0000-0000-0000-000000000000") {
                     deviceManager.setGoogleAdvertisingId(id, projectId)
                 }
-                Log.d("MarketapSDK", "GAID: $id")
             } catch (e: Exception) {
-                // GAID를 가져올 수 없거나 사용자가 옵트아웃한 경우
                 Log.e("MarketapSDK", "Failed to fetch GAID: ${e.message}")
             }
         }
@@ -83,7 +80,6 @@ internal class MarketapStateManager(
         val client: AppSetIdClient = AppSet.getClient(context)
         client.appSetIdInfo.addOnSuccessListener { appSetIdInfo ->
             val appSetId = appSetIdInfo.id
-            Log.d("MarketapSDK", "AppSet ID: $appSetId")
             deviceManager.setAppSetId(appSetId, projectId)
         }.addOnFailureListener {
             Log.e("MarketapSDK", "Failed to fetch AppSet ID: ${it.message}")

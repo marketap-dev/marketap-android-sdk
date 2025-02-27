@@ -3,10 +3,9 @@
 
     <application>
         <activity
-            android:name=".service.inapp.resource.InAppMessageActivity"
-            android:excludeFromRecents="true"
-            android:launchMode="singleTask"
-            android:taskAffinity=""
+            android:name="com.marketap.sdk.service.inapp.resource.InAppMessageActivity"
+            android:exported="false"
+            android:hardwareAccelerated="true"
             android:theme="@style/InAppMessageTheme" />
 
         <receiver

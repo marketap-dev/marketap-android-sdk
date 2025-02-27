@@ -14,7 +14,6 @@ class InAppMessageActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         window.setFlags(
             WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
             WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
@@ -31,8 +30,6 @@ class InAppMessageActivity : AppCompatActivity() {
 
         messageView = createWebView()
         rootView.addView(messageView)
-
-        loadWebViewData()
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
@@ -59,7 +56,7 @@ class InAppMessageActivity : AppCompatActivity() {
 
     fun hideQuietly() {
         messageView?.removeView()
-        moveTaskToBack(true)
+        finish()
     }
 
     private fun createWebView(): MarketapInAppView {

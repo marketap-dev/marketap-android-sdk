@@ -1,6 +1,5 @@
 package com.marketap.sdk.utils
 
-import android.util.Log
 import io.ktor.client.HttpClient
 import io.ktor.client.HttpClientConfig
 import io.ktor.client.engine.HttpClientEngineConfig
@@ -23,7 +22,7 @@ internal class CustomClient(
         builder: HttpRequestBuilder.() -> Unit = {}
     ): T {
         val body = request.serialize()
-        Log.d("CustomClient", "Request: $body, endpoint: $endpoint")
+//        Log.d("CustomClient", "Request: $body, endpoint: $endpoint")
         val getResponse = client.post(endpoint) {
             builder()
             header("Content-Type", "application/json")
@@ -31,8 +30,8 @@ internal class CustomClient(
         }
         val res = getResponse.bodyAsText()
 
-        Log.d("CustomClient", "Response: $getResponse")
-        Log.d("CustomClient", "Response body: $res")
+//        Log.d("CustomClient", "Response: $getResponse")
+//        Log.d("CustomClient", "Response body: $res")
         return res.deserialize()
     }
 }
