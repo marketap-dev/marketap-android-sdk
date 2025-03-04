@@ -20,7 +20,7 @@ internal class CampaignFetchService(
 
     private val CAMPAIGN_CACHE_KEY = "last_campaigns"
     private val CAMPAIGN_CACHED_AT = "campaign_cached_at"
-    private val expirationTime: Long = 30 * 60 * 1000 // 30분 (테스트 기준)
+    private val expirationTime: Long = 5 * 60 * 1000 // 5 minutes
 
     fun useCampaigns(block: (campaigns: List<InAppCampaign>) -> Unit) {
         fetchLocalCampaign()?.let { localCampaigns ->
@@ -31,8 +31,6 @@ internal class CampaignFetchService(
         val userId = clientStateManager.getUserId()
         val projectId = clientStateManager.getProjectId()
         val device = deviceManager.getDevice()
-
-        var isResolved = false
 
         inAppCampaignApi.fetchCampaigns(FetchCampaignReq(projectId, userId, device.toReq()), {
             block(it.campaigns)
@@ -54,7 +52,6 @@ internal class CampaignFetchService(
 
         val currentTime = System.currentTimeMillis()
 
-        // 캐시된 데이터가 expirationTime(30분) 이상 경과했으면 무효화
         return if (lastFetchedAt + expirationTime < currentTime) null else campaigns.campaigns
     }
 }

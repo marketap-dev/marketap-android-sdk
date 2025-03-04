@@ -1,6 +1,5 @@
 package com.marketap.sdk.client.api
 
-import android.util.Log
 import com.marketap.sdk.client.api.coroutine.WorkerGroup
 import com.marketap.sdk.domain.repository.InternalStorage
 import com.marketap.sdk.domain.repository.MarketapBackend
@@ -11,6 +10,7 @@ import com.marketap.sdk.model.internal.api.IngestEventRequest
 import com.marketap.sdk.model.internal.api.UpdateProfileRequest
 import com.marketap.sdk.utils.getTypeToken
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
 
 internal class RetryMarketapBackend(
@@ -59,16 +59,17 @@ internal class RetryMarketapBackend(
 
     override fun fetchCampaigns(
         request: FetchCampaignReq,
-        inTimeout: (suspend (InAppCampaignRes) -> Unit)?,
-        onSuccess: suspend (InAppCampaignRes) -> Unit
+        inTimeout: ((InAppCampaignRes) -> Unit)?,
+        onSuccess: (InAppCampaignRes) -> Unit
     ) {
-        apiWorkGroup.dispatch {
+        runBlocking {
             val deferredResponse = CompletableDeferred<InAppCampaignRes>()
 
             apiWorkGroup.dispatch {
                 try {
                     val res = marketapApi.fetchCampaigns(request)
                     if (res.data != null) {
+                        onSuccess(res.data)
                         deferredResponse.complete(res.data)
                     } else {
                         deferredResponse.cancel()
@@ -83,14 +84,7 @@ internal class RetryMarketapBackend(
             }
 
             if (result != null) {
-                onSuccess(result)
                 inTimeout?.invoke(result)
-            } else {
-                try {
-                    onSuccess.invoke(deferredResponse.await())
-                } catch (e: Exception) {
-                    Log.e("MarketapBackend", "Failed to fetch campaigns", e)
-                }
             }
         }
     }

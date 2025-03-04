@@ -18,9 +18,10 @@ internal class MarketapApiImpl(
     private val deviceEndpoint: String = DEVICE_ENDPOINT,
     private val ingestionEndpoint: String = INGESTION_ENDPOINT,
     private val inAppMessagingEndpoint: String = IN_APP_MESSAGING_ENDPOINT,
-    private val profileEndpoint: String = PROFILE_ENDPOINT
+    private val profileEndpoint: String = PROFILE_ENDPOINT,
+    debug: Boolean = false
 ) : MarketapApi {
-    private val client = CustomClient {
+    private val client = CustomClient(debug) {
         headers {
             append("Content-Type", "application/json")
         }

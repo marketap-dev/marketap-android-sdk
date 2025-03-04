@@ -14,8 +14,8 @@ internal interface MarketapBackend {
 
     fun fetchCampaigns(
         request: FetchCampaignReq,
-        inTimeout: (suspend (InAppCampaignRes) -> Unit)? = null,
-        onSuccess: suspend (InAppCampaignRes) -> Unit,
+        inTimeout: ((InAppCampaignRes) -> Unit)? = null,
+        onSuccess: (InAppCampaignRes) -> Unit,
     )
 
     fun track(
