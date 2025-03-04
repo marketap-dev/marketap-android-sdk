@@ -10,7 +10,8 @@ import com.marketap.sdk.model.internal.AppEventProperty
 import com.marketap.sdk.model.internal.api.DeviceReq
 import com.marketap.sdk.model.internal.api.IngestEventRequest
 import com.marketap.sdk.model.internal.push.PushData
-import com.marketap.sdk.domain.service.inapp.condition.comparison.types.util.getNow
+
+import com.marketap.sdk.utils.getNow
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch

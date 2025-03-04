@@ -1,12 +1,11 @@
 package com.marketap.sdk.domain.service.inapp.condition
 
 import com.google.gson.JsonElement
-import com.marketap.sdk.domain.service.inapp.condition.comparison.types.util.toDate
 import com.marketap.sdk.model.internal.inapp.DataType
 import com.marketap.sdk.model.internal.inapp.ExtractionStrategy
 import com.marketap.sdk.model.internal.inapp.Path
 import com.marketap.sdk.utils.serializeToJson
-
+import com.marketap.sdk.utils.toDate
 
 object EventExtractor {
     private fun JsonElement.asAny(dataType: DataType): Any? {

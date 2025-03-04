@@ -11,7 +11,8 @@ import com.marketap.sdk.model.internal.AppEventProperty
 import com.marketap.sdk.model.internal.api.DeviceReq
 import com.marketap.sdk.model.internal.api.IngestEventRequest
 import com.marketap.sdk.model.internal.push.DeliveryData
-import com.marketap.sdk.domain.service.inapp.condition.comparison.types.util.getNow
+
+import com.marketap.sdk.utils.getNow
 
 internal class MarketapNotificationOpenHandler(
     private val marketapBackend: MarketapBackend,

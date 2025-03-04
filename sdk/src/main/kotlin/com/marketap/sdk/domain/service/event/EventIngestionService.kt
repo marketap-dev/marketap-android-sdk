@@ -4,7 +4,8 @@ import com.marketap.sdk.domain.repository.DeviceManager
 import com.marketap.sdk.domain.repository.MarketapBackend
 import com.marketap.sdk.domain.repository.SessionManager
 import com.marketap.sdk.domain.service.inapp.InAppService
-import com.marketap.sdk.domain.service.inapp.condition.comparison.types.util.getNow
+
+import com.marketap.sdk.utils.getNow
 import com.marketap.sdk.domain.service.state.ClientStateManager
 import com.marketap.sdk.model.internal.api.DeviceReq.Companion.toReq
 import com.marketap.sdk.model.internal.api.IngestEventRequest

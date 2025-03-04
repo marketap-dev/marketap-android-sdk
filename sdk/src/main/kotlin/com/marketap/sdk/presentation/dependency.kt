@@ -15,6 +15,8 @@ import com.marketap.sdk.domain.service.inapp.CampaignExposureService
 import com.marketap.sdk.domain.service.inapp.CampaignFetchService
 import com.marketap.sdk.domain.service.inapp.InAppService
 import com.marketap.sdk.domain.service.inapp.condition.ConditionCheckerImpl
+import com.marketap.sdk.domain.service.inapp.condition.PropertyConditionCheckerImpl
+import com.marketap.sdk.domain.service.inapp.condition.comparator.ValueComparatorImpl
 import com.marketap.sdk.domain.service.state.ClientStateManager
 import com.marketap.sdk.model.MarketapConfig
 
@@ -41,7 +43,7 @@ internal fun initializeCore(
 
     val inAppService = InAppService(
         CampaignExposureService(storage),
-        ConditionCheckerImpl(),
+        ConditionCheckerImpl(PropertyConditionCheckerImpl(ValueComparatorImpl())),
         CampaignFetchService(storage, marketapBackend, clientStateManager, deviceManager),
         AndroidInAppView.getInstance().apply { init(application) }
     )
