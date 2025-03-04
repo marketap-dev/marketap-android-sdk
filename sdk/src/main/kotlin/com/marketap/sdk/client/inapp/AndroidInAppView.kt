@@ -37,6 +37,8 @@ class AndroidInAppView : InAppView, InAppCallback {
         }
         isShown = true
         onShow()
+        this.onClick = onClick
+        this.onHide = onHide
 
         val intent = Intent(app, InAppMessageActivity::class.java).apply {
             putExtra("htmlData", html)
