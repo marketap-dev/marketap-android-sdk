@@ -3,13 +3,13 @@
 
     <application>
         <activity
-            android:name="com.marketap.sdk.service.inapp.resource.InAppMessageActivity"
+            android:name="com.marketap.sdk.client.inapp.InAppMessageActivity"
             android:exported="false"
             android:hardwareAccelerated="true"
             android:theme="@style/InAppMessageTheme" />
 
         <receiver
-            android:name="com.marketap.sdk.service.push.MarketapBroadcastReceiver"
+            android:name="com.marketap.sdk.client.push.MarketapBroadcastReceiver"
             android:exported="true"
             android:permission="com.google.android.c2dm.permission.SEND">
             <intent-filter android:priority="999">
