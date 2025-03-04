@@ -56,6 +56,7 @@ class AndroidInAppView : InAppView, InAppCallback {
 
     override fun onClick(locationId: String) {
         onClick?.invoke(locationId)
+        isShown = false
         onClick = null
     }
 
