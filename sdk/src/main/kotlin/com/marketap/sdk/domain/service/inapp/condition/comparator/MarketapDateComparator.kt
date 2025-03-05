@@ -49,8 +49,11 @@ class MarketapDateComparator : TypeSafeComparator<MarketapDate> {
             TaxonomyOperator.MONTH_EQUAL -> targetValues.getSingleOrNull<Int>()
                 ?.let { value.month == it } ?: false
 
-            TaxonomyOperator.YEAR_MONTH_EQUAL -> targetValues.getPairOrNull<Int>()
-                ?.let { (year, month) -> value.year == year && value.month == month } ?: false
+            TaxonomyOperator.YEAR_MONTH_EQUAL -> {
+                val target = targetValues.getSingleOrNull<String>()
+                val (year, month) = target?.split("-")?.map { it.toInt() } ?: return false
+                value.year == year && value.month == month
+            }
 
             else -> throw IllegalArgumentException("Unsupported operator for MarketapDate: $operator")
         }

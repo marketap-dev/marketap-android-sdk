@@ -55,12 +55,13 @@ class DateComparator : TypeSafeComparator<Date> {
                 calendar.get(Calendar.MONTH) == month - 1
             } ?: false
 
-            TaxonomyOperator.YEAR_MONTH_EQUAL -> targetValues.getPairOrNull<Int>()
-                ?.let { (year, month) ->
-                    val calendar = Calendar.getInstance()
-                    calendar.time = value
-                    calendar.get(Calendar.YEAR) == year && calendar.get(Calendar.MONTH) == month - 1
-                } ?: false
+            TaxonomyOperator.YEAR_MONTH_EQUAL -> {
+                val target = targetValues.getSingleOrNull<String>()
+                val (year, month) = target?.split("-")?.map { it.toInt() } ?: return false
+                val calendar = Calendar.getInstance()
+                calendar.time = value
+                calendar.get(Calendar.YEAR) == year && calendar.get(Calendar.MONTH) == month - 1
+            }
 
             TaxonomyOperator.LIKE,
             TaxonomyOperator.NOT_LIKE,

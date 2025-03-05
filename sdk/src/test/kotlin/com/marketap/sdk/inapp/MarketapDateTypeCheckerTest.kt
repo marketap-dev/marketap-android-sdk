@@ -147,7 +147,7 @@ class MarketapDateTypeCheckerTest {
                 )
             ),
             operator = TaxonomyOperator.YEAR_MONTH_EQUAL,
-            targetValues = listOf(2024, 3)
+            targetValues = listOf("2024-03")
         )
 
         val result = propertyConditionChecker.check(condition, eventProperty)
