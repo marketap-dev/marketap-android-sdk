@@ -35,8 +35,8 @@ internal class CampaignFetchService(
             block(it.campaigns)
         })
         { campaigns ->
-            internalStorage.setItem(CAMPAIGN_CACHE_KEY, campaigns)
-            internalStorage.setItem(CAMPAIGN_CACHED_AT, System.currentTimeMillis())
+            internalStorage.setItem("$CAMPAIGN_CACHE_KEY:$userId", campaigns)
+            internalStorage.setItem("$CAMPAIGN_CACHED_AT:$userId", System.currentTimeMillis())
         }
     }
 

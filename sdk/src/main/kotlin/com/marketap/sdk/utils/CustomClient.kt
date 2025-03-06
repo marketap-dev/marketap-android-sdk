@@ -31,7 +31,7 @@ internal class CustomClient(
         }
         val res = getResponse.bodyAsText()
 
-        if (debug) Log.d("Marketap", "Response: $getResponse")
+        if (debug) Log.d("Marketap", "Response: $getResponse, body: $res")
         return res.deserialize()
     }
 }
