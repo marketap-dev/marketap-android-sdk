@@ -29,7 +29,7 @@ internal class CampaignExposureService(
         maxCount: Int
     ): Boolean {
         val impressions =
-            internalStorage.getItemList("impressions_${campaignId}", getTypeToken<Int>())
+            internalStorage.getItemList("impressions_${campaignId}", getTypeToken<Long>())
 
         val now = System.currentTimeMillis()
         val windowStart = now - windowMinutes * 60 * 1000

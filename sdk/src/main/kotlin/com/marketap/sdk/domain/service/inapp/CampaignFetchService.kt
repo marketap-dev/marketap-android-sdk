@@ -23,12 +23,11 @@ internal class CampaignFetchService(
     private val expirationTime: Long = 5 * 60 * 1000 // 5 minutes
 
     fun useCampaigns(block: (campaigns: List<InAppCampaign>) -> Unit) {
-        fetchLocalCampaign()?.let { localCampaigns ->
+        val userId = clientStateManager.getUserId()
+        fetchLocalCampaign(userId)?.let { localCampaigns ->
             block(localCampaigns)
             return
         }
-
-        val userId = clientStateManager.getUserId()
         val projectId = clientStateManager.getProjectId()
         val device = deviceManager.getDevice()
 
@@ -41,10 +40,11 @@ internal class CampaignFetchService(
         }
     }
 
-    private fun fetchLocalCampaign(): List<InAppCampaign>? {
+    private fun fetchLocalCampaign(userId: String?): List<InAppCampaign>? {
         val campaigns =
-            internalStorage.getItem<InAppCampaignRes>(CAMPAIGN_CACHE_KEY, getTypeToken())
-        val lastFetchedAt = internalStorage.getItem<Long>(CAMPAIGN_CACHED_AT, getTypeToken())
+            internalStorage.getItem<InAppCampaignRes>("$CAMPAIGN_CACHE_KEY:$userId", getTypeToken())
+        val lastFetchedAt =
+            internalStorage.getItem<Long>("$CAMPAIGN_CACHED_AT:$userId", getTypeToken())
 
         if (campaigns == null || lastFetchedAt == null) {
             return null
