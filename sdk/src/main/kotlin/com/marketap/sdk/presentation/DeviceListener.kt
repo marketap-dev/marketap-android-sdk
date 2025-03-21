@@ -19,7 +19,6 @@ internal class DeviceListener(
     private val application: Application,
 ) {
     fun init() {
-        userIngestionService.pushDevice()
         addTokenListener()
         addGAIDListener()
         addAppSetIdListener()
