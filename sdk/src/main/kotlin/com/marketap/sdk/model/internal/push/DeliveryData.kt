@@ -7,4 +7,5 @@ data class DeliveryData(
     val userId: String?,
     val deviceId: String,
     val campaignId: String,
+    val messageId: String,
 ) : Serializable

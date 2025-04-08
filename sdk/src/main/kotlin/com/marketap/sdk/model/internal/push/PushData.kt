@@ -24,11 +24,13 @@ data class PushData(
             val deviceId = data["deviceId"]
             val userId = data["userId"]
             val deepLink = data["deepLink"]
-            val deliveryData = if (projectId != null && deviceId != null && campaignId != null) {
-                DeliveryData(projectId, userId, deviceId, campaignId)
-            } else {
-                null
-            }
+            val messageId = data["messageId"]
+            val deliveryData =
+                if (projectId != null && deviceId != null && campaignId != null && messageId != null) {
+                    DeliveryData(projectId, userId, deviceId, campaignId, messageId)
+                } else {
+                    null
+                }
 
             return PushData(
                 title,

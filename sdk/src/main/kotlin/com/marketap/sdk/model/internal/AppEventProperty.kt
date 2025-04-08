@@ -7,10 +7,10 @@ internal data class AppEventProperty(
     val campaignCategory: String,
     val subChannelType: String,
     val channelType: String,
+    val messageId: String,
     val resultStatus: Int = 200,
     val resultMessage: String = "SUCCESS",
     val isSuccess: Boolean = true,
-    val messageId: String = UUID.randomUUID().toString(),
     val locationId: String? = null
 ) {
     fun addLocationId(locationId: String): AppEventProperty {
@@ -36,16 +36,18 @@ internal data class AppEventProperty(
                 campaignId = campaign.id,
                 campaignCategory = "ON_SITE",
                 subChannelType = campaign.layout.layoutSubType,
-                channelType = "IN_APP_MESSAGE"
+                channelType = "IN_APP_MESSAGE",
+                messageId = UUID.randomUUID().toString()
             )
         }
 
-        fun offSite(campaignId: String): AppEventProperty {
+        fun offSite(campaignId: String, messageId: String): AppEventProperty {
             return AppEventProperty(
                 campaignId = campaignId,
                 campaignCategory = "OFF_SITE",
                 subChannelType = "ANDROID",
-                channelType = "PUSH"
+                channelType = "PUSH",
+                messageId = messageId
             )
         }
     }

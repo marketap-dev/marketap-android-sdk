@@ -55,7 +55,7 @@ class MarketapBroadcastReceiver : BroadcastReceiver() {
                 IngestEventRequest.impression(
                     it.userId,
                     DeviceReq(it.deviceId),
-                    AppEventProperty.offSite(it.campaignId),
+                    AppEventProperty.offSite(it.campaignId, it.messageId),
                     getNow()
                 )
             )
