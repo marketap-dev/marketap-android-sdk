@@ -25,9 +25,18 @@ data class PushData(
             val userId = data["userId"]
             val deepLink = data["deepLink"]
             val messageId = data["messageId"]
+            val serverProperties = data["serverProperties"]
+
             val deliveryData =
                 if (projectId != null && deviceId != null && campaignId != null && messageId != null) {
-                    DeliveryData(projectId, userId, deviceId, campaignId, messageId)
+                    DeliveryData(
+                        projectId,
+                        userId,
+                        deviceId,
+                        campaignId,
+                        messageId,
+                        serverProperties
+                    )
                 } else {
                     null
                 }

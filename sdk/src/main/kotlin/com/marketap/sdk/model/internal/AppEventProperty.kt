@@ -1,5 +1,7 @@
 package com.marketap.sdk.model.internal
 
+import com.marketap.sdk.model.internal.push.DeliveryData
+import com.marketap.sdk.utils.deserialize
 import java.util.UUID
 
 internal data class AppEventProperty(
@@ -8,7 +10,8 @@ internal data class AppEventProperty(
     val subChannelType: String,
     val channelType: String,
     val messageId: String,
-    val resultStatus: Int = 200,
+    val serverProperties: Map<String, String> = emptyMap(),
+    val resultStatus: Int = 200000,
     val resultMessage: String = "SUCCESS",
     val isSuccess: Boolean = true,
     val locationId: String? = null
@@ -27,7 +30,7 @@ internal data class AppEventProperty(
             "mkt_result_message" to resultMessage,
             "mkt_is_success" to isSuccess,
             "mkt_message_id" to messageId
-        ) + (if (locationId != null) mapOf("mkt_location_id" to locationId) else emptyMap())
+        ) + (if (locationId != null) mapOf("mkt_location_id" to locationId) else emptyMap()) + serverProperties
     }
 
     companion object {
@@ -41,13 +44,23 @@ internal data class AppEventProperty(
             )
         }
 
-        fun offSite(campaignId: String, messageId: String): AppEventProperty {
+        fun offSite(deliveryData: DeliveryData): AppEventProperty {
+            val campaignId = deliveryData.campaignId
+            val messageId = deliveryData.messageId
+            val serverProperties = try {
+                deliveryData.serverProperties?.deserialize<Map<String, String>>()
+                    ?: emptyMap()
+            } catch (e: Exception) {
+                emptyMap()
+            }
+
             return AppEventProperty(
                 campaignId = campaignId,
                 campaignCategory = "OFF_SITE",
                 subChannelType = "ANDROID",
                 channelType = "PUSH",
-                messageId = messageId
+                messageId = messageId,
+                serverProperties = serverProperties
             )
         }
     }

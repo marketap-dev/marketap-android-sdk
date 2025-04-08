@@ -69,7 +69,7 @@ internal class MarketapNotificationOpenHandler(
                     IngestEventRequest.click(
                         data.userId,
                         DeviceReq(data.deviceId),
-                        AppEventProperty.offSite(data.campaignId, data.messageId)
+                        AppEventProperty.offSite(data)
                             .addLocationId("push"),
                         getNow()
                     )

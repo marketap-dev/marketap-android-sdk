@@ -8,4 +8,5 @@ data class DeliveryData(
     val deviceId: String,
     val campaignId: String,
     val messageId: String,
+    val serverProperties: String?,
 ) : Serializable

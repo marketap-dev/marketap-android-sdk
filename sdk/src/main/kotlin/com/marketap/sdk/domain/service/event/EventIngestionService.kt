@@ -4,11 +4,10 @@ import com.marketap.sdk.domain.repository.DeviceManager
 import com.marketap.sdk.domain.repository.MarketapBackend
 import com.marketap.sdk.domain.repository.SessionManager
 import com.marketap.sdk.domain.service.inapp.InAppService
-
-import com.marketap.sdk.utils.getNow
 import com.marketap.sdk.domain.service.state.ClientStateManager
 import com.marketap.sdk.model.internal.api.DeviceReq.Companion.toReq
 import com.marketap.sdk.model.internal.api.IngestEventRequest
+import com.marketap.sdk.utils.getNow
 import java.util.UUID
 
 internal class EventIngestionService(
@@ -62,7 +61,7 @@ internal class EventIngestionService(
                             "mkt_campaign_category" to "ON_SITE",
                             "mkt_channel_type" to "IN_APP_MESSAGE",
                             "mkt_sub_channel_type" to campaign.layout.layoutSubType,
-                            "mkt_result_status" to 200,
+                            "mkt_result_status" to 200000,
                             "mkt_result_message" to "SUCCESS",
                             "mkt_is_success" to true,
                             "mkt_message_id" to messageId,
@@ -84,7 +83,7 @@ internal class EventIngestionService(
                             "mkt_campaign_category" to "ON_SITE",
                             "mkt_channel_type" to "IN_APP_MESSAGE",
                             "mkt_sub_channel_type" to campaign.layout.layoutSubType,
-                            "mkt_result_status" to 200,
+                            "mkt_result_status" to 200000,
                             "mkt_result_message" to "SUCCESS",
                             "mkt_is_success" to true,
                             "mkt_message_id" to messageId,
