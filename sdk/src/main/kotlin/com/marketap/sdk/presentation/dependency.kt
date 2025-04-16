@@ -62,11 +62,12 @@ internal fun initializeCore(
         marketapBackend,
     )
 
-    val deviceListener = DeviceListener(deviceManager, userIngestionService, application)
-    deviceListener.init()
-
-    return MarketapCoreService(
+    val core = MarketapCoreService(
         eventIngestionService,
         userIngestionService,
     )
+
+    val deviceListener = DeviceListener(deviceManager, userIngestionService, application, core)
+    deviceListener.init()
+    return core
 }

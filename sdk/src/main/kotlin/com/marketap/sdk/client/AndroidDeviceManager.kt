@@ -23,6 +23,8 @@ internal class AndroidDeviceManager(
     }
 
     private var token: String? = null
+
+
     override fun setToken(token: String) {
         this.token = token
     }
@@ -45,6 +47,15 @@ internal class AndroidDeviceManager(
             storage.setItem("_marketap_local_id", newId)
             newId
         }
+    }
+
+    override fun setFirstOpen(): Boolean {
+        val isFirstOpen = storage.getItem("first_open", getTypeToken<Boolean>())
+        if (isFirstOpen == null) {
+            storage.setItem("first_open", true)
+            return true
+        }
+        return false
     }
 
 

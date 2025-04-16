@@ -8,6 +8,7 @@ import com.google.android.gms.appset.AppSetIdClient
 import com.google.firebase.FirebaseApp
 import com.google.firebase.messaging.FirebaseMessaging
 import com.marketap.sdk.domain.repository.DeviceManager
+import com.marketap.sdk.domain.service.MarketapCoreService
 import com.marketap.sdk.domain.service.event.UserIngestionService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -17,11 +18,11 @@ internal class DeviceListener(
     private val deviceManager: DeviceManager,
     private val userIngestionService: UserIngestionService,
     private val application: Application,
+    private val core: MarketapCoreService,
 ) {
     fun init() {
         addTokenListener()
         addGAIDListener()
-        addAppSetIdListener()
     }
 
     private fun addTokenListener() {
@@ -52,6 +53,8 @@ internal class DeviceListener(
                 }
             } catch (e: Exception) {
                 Log.e("MarketapSDK", "Failed to fetch GAID: ${e.message}")
+            } finally {
+                addAppSetIdListener()
             }
         }
     }
@@ -63,6 +66,11 @@ internal class DeviceListener(
             deviceManager.setAppSetId(appSetId)
         }.addOnFailureListener {
             Log.e("MarketapSDK", "Failed to fetch AppSet ID: ${it.message}")
+        }.addOnCompleteListener {
+            userIngestionService.pushDevice()
+            if (deviceManager.setFirstOpen()) {
+                core.track("mkt_first_visit", emptyMap())
+            }
         }
     }
 }

@@ -3,6 +3,7 @@ package com.marketap.sdk.domain.repository
 import com.marketap.sdk.model.internal.Device
 
 internal interface DeviceManager {
+    fun setFirstOpen(): Boolean
     fun getDevice(): Device
     fun setToken(token: String)
     fun setAppSetId(appSetId: String)
