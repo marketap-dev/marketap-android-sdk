@@ -26,9 +26,9 @@ internal fun initializeCore(
 ): MarketapCoreService {
     val storage = SharedPreferenceInternalStorage(application)
     val marketapApi = MarketapApiImpl(debug = config.debug)
-    val marketapBackend = RetryMarketapBackend(storage, marketapApi)
-    val clientStateManager = ClientStateManager(config, storage)
     val deviceManager = AndroidDeviceManager(storage, application)
+    val marketapBackend = RetryMarketapBackend(storage, marketapApi, deviceManager)
+    val clientStateManager = ClientStateManager(config, storage)
     val sessionManager = AndroidSessionManager(storage)
 
     val notificationOpenHandler = MarketapNotificationOpenHandler(marketapBackend, application)

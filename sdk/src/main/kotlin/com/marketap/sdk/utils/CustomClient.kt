@@ -23,7 +23,7 @@ internal class CustomClient(
         builder: HttpRequestBuilder.() -> Unit = {}
     ): T {
         val body = request.serialize()
-        if (debug) Log.d("Marketap", "Request: $body, endpoint: $endpoint")
+        if (debug) Log.d("Marketap", "endpoint: $endpoint, Request: $body")
         val getResponse = client.post(endpoint) {
             builder()
             header("Content-Type", "application/json")

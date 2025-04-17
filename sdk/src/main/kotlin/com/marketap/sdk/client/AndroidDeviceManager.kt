@@ -49,6 +49,11 @@ internal class AndroidDeviceManager(
         }
     }
 
+    override fun isDeviceReady(): Boolean {
+        val isFirstOpen = storage.getItem("first_open", getTypeToken<Boolean>())
+        return isFirstOpen == true
+    }
+
     override fun setFirstOpen(): Boolean {
         val isFirstOpen = storage.getItem("first_open", getTypeToken<Boolean>())
         if (isFirstOpen == null) {

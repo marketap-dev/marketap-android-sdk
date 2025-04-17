@@ -1,9 +1,11 @@
 package com.marketap.sdk.client.api
 
 import com.marketap.sdk.client.api.coroutine.WorkerGroup
+import com.marketap.sdk.domain.repository.DeviceManager
 import com.marketap.sdk.domain.repository.InternalStorage
 import com.marketap.sdk.domain.repository.MarketapBackend
 import com.marketap.sdk.model.internal.api.DeviceReq
+import com.marketap.sdk.model.internal.api.DeviceReq.Companion.toReq
 import com.marketap.sdk.model.internal.api.FetchCampaignReq
 import com.marketap.sdk.model.internal.api.InAppCampaignRes
 import com.marketap.sdk.model.internal.api.IngestEventRequest
@@ -15,9 +17,18 @@ import kotlinx.coroutines.withTimeoutOrNull
 
 internal class RetryMarketapBackend(
     private val storage: InternalStorage,
-    private val marketapApi: MarketapApi
+    private val marketapApi: MarketapApi,
+    private val deviceManager: DeviceManager,
 ) : MarketapBackend {
     private val apiWorkGroup = WorkerGroup().apply { start() }
+
+    private fun getSafeDevice(removeUserId: Boolean?): DeviceReq? {
+        return if (deviceManager.isDeviceReady()) {
+            deviceManager.getDevice().toReq(removeUserId)
+        } else {
+            null
+        }
+    }
 
     private suspend fun checkUserQueue() {
         val items =
@@ -29,7 +40,12 @@ internal class RetryMarketapBackend(
         items.forEach { (projectId, request) ->
             apiWorkGroup.dispatch {
                 try {
-                    marketapApi.updateProfile(projectId, request)
+                    val device = getSafeDevice(request.device.removeUserId)
+                    if (device != null) {
+                        marketapApi.updateProfile(projectId, request.copy(device = device))
+                    } else {
+                        throw IllegalStateException("Device is not ready")
+                    }
                 } catch (e: Exception) {
                     storage.queueItem("users", Pair(projectId, request))
                 }
@@ -43,7 +59,12 @@ internal class RetryMarketapBackend(
         items.forEach { (projectId, request) ->
             apiWorkGroup.dispatch {
                 try {
-                    marketapApi.track(projectId, request)
+                    val device = getSafeDevice(request.device.removeUserId)
+                    if (device != null) {
+                        marketapApi.track(projectId, request.copy(device = device))
+                    } else {
+                        throw IllegalStateException("Device is not ready")
+                    }
                 } catch (e: Exception) {
                     storage.queueItem("events", Pair(projectId, request))
                 }
@@ -51,10 +72,28 @@ internal class RetryMarketapBackend(
         }
     }
 
-    override fun updateDevice(projectId: String, request: DeviceReq) {
-        apiWorkGroup.dispatch {
-            marketapApi.updateDevice(projectId, request)
+    private suspend fun checkDeviceQueue() {
+        val items =
+            storage.popItems("devices", getTypeToken<Pair<String, DeviceReq>>(), 10)
+        items.forEach { (projectId, request) ->
+            apiWorkGroup.dispatch {
+                try {
+                    val device = getSafeDevice(request.removeUserId)
+                    if (device != null) {
+                        marketapApi.updateDevice(projectId, device)
+                    } else {
+                        throw IllegalStateException("Device is not ready")
+                    }
+                } catch (e: Exception) {
+                    storage.queueItem("devices", Pair(projectId, request))
+                }
+            }
         }
+    }
+
+    override fun updateDevice(projectId: String, request: DeviceReq) {
+        storage.queueItem("devices", Pair(projectId, request))
+        apiWorkGroup.dispatch(::checkDeviceQueue)
     }
 
     override fun fetchCampaigns(
@@ -93,11 +132,13 @@ internal class RetryMarketapBackend(
         storage.queueItem("events", Pair(projectId, request))
         apiWorkGroup.dispatch(::checkEventQueue)
         apiWorkGroup.dispatch(::checkUserQueue)
+        apiWorkGroup.dispatch(::checkDeviceQueue)
     }
 
     override fun updateProfile(projectId: String, request: UpdateProfileRequest) {
         storage.queueItem("users", Pair(projectId, request))
         apiWorkGroup.dispatch(::checkEventQueue)
         apiWorkGroup.dispatch(::checkUserQueue)
+        apiWorkGroup.dispatch(::checkDeviceQueue)
     }
 }
