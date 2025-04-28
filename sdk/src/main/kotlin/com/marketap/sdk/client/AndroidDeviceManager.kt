@@ -80,7 +80,7 @@ internal class AndroidDeviceManager(
             token = token,
             os = "Android ${Build.VERSION.RELEASE}",
             osVersion = "Android ${Build.VERSION.RELEASE} (SDK ${Build.VERSION.SDK_INT})",
-            libraryVersion = "1.0.0",
+            libraryVersion = "1.0.4",
             model = Build.MODEL,
             manufacturer = Build.MANUFACTURER,
             brand = Build.BRAND,
