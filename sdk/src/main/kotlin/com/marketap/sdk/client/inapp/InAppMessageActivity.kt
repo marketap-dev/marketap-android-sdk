@@ -54,8 +54,9 @@ class InAppMessageActivity : AppCompatActivity() {
     }
 
     fun hideQuietly() {
-        messageView?.removeView()
-        finish()
+        messageView?.removeView {
+            finish()
+        }
     }
 
     private fun createWebView(): MarketapInAppView {
