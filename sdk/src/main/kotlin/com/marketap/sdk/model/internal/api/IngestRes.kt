@@ -1,9 +1,10 @@
 package com.marketap.sdk.model.internal.api
 
-import com.google.gson.annotations.SerializedName
+import com.squareup.moshi.Json
+import com.squareup.moshi.JsonClass
 
-
+@JsonClass(generateAdapter = true)
 data class IngestRes(
-    @SerializedName("is_success")
+    @Json(name = "is_success")
     val isSuccess: Boolean
 )

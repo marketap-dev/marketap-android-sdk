@@ -1,23 +1,21 @@
 package com.marketap.sdk.domain.service.inapp.condition
 
-import com.google.gson.JsonElement
 import com.marketap.sdk.model.internal.inapp.DataType
 import com.marketap.sdk.model.internal.inapp.ExtractionStrategy
 import com.marketap.sdk.model.internal.inapp.Path
-import com.marketap.sdk.utils.serializeToJson
 import com.marketap.sdk.utils.toDate
 
 object EventExtractor {
-    private fun JsonElement.asAny(dataType: DataType): Any? {
+    private fun Any.asAny(dataType: DataType): Any? {
         return when (dataType) {
-            DataType.STRING -> asString
-            DataType.INT -> asInt
-            DataType.BIGINT -> asBigInteger
-            DataType.DOUBLE -> asDouble
-            DataType.BOOLEAN -> asBoolean
-            DataType.DATETIME -> asString.toDate()
-            DataType.DATE -> asString
-            DataType.STRING_ARRAY -> asJsonArray.map { it.asString }
+            DataType.STRING -> this as? String
+            DataType.INT -> (this as? Number)?.toInt()
+            DataType.BIGINT -> (this as? Number)?.toLong()
+            DataType.DOUBLE -> (this as? Number)?.toDouble()
+            DataType.BOOLEAN -> this as? Boolean
+            DataType.DATETIME -> (this as? String)?.toDate()
+            DataType.DATE -> (this as? String)
+            DataType.STRING_ARRAY -> (this as? List<*>)?.mapNotNull { it as? String }
             DataType.OBJECT -> TODO()
             DataType.OBJECT_ARRAY -> TODO()
         }
@@ -27,16 +25,16 @@ object EventExtractor {
         target: Map<String, Any>?,
         strategy: ExtractionStrategy
     ): List<Any?> {
-        val convertedTarget = target?.serializeToJson()
-
         return when (strategy.propertySchema.path) {
-            Path.ITEM -> convertedTarget?.get("mkt_items")?.asJsonArray?.map {
-                it.asJsonObject.get(strategy.propertySchema.name)
-                    ?.asAny(strategy.propertySchema.dataType)
-            } ?: emptyList()
+            Path.ITEM -> (
+                    target?.get("mkt_items") as? List<Map<String, Any>>?
+                    )?.map {
+                    it[strategy.propertySchema.name]
+                        ?.asAny(strategy.propertySchema.dataType)
+                } ?: emptyList()
 
             else -> listOf(
-                convertedTarget?.get(strategy.propertySchema.name)
+                target?.get(strategy.propertySchema.name)
                     ?.asAny(strategy.propertySchema.dataType)
             )
         }

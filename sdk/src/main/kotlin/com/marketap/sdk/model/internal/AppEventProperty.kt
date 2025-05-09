@@ -2,6 +2,7 @@ package com.marketap.sdk.model.internal
 
 import com.marketap.sdk.model.internal.push.DeliveryData
 import com.marketap.sdk.utils.deserialize
+import com.marketap.sdk.utils.mapAdapter
 import java.util.UUID
 
 internal data class AppEventProperty(
@@ -48,7 +49,7 @@ internal data class AppEventProperty(
             val campaignId = deliveryData.campaignId
             val messageId = deliveryData.messageId
             val serverProperties = try {
-                deliveryData.serverProperties?.deserialize<Map<String, String>>()
+                deliveryData.serverProperties?.deserialize(mapAdapter<String, String>())
                     ?: emptyMap()
             } catch (e: Exception) {
                 emptyMap()

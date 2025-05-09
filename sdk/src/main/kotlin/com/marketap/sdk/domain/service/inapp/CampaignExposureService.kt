@@ -1,25 +1,26 @@
 package com.marketap.sdk.domain.service.inapp
 
 import com.marketap.sdk.domain.repository.InternalStorage
-import com.marketap.sdk.utils.getTypeToken
+import com.marketap.sdk.utils.longAdapter
 
 internal class CampaignExposureService(
     private val internalStorage: InternalStorage,
 ) {
     fun hideCampaign(campaignId: String, until: Long) {
-        internalStorage.setItem("hide_campaign_${campaignId}", until)
+        internalStorage.setItem("hide_campaign_${campaignId}", until, longAdapter)
     }
 
     fun isCampaignHidden(campaignId: String): Boolean {
         val hiddenUntil =
-            internalStorage.getItem("hide_campaign_${campaignId}", getTypeToken<Long>())
+            internalStorage.getItem("hide_campaign_${campaignId}", longAdapter)
         return hiddenUntil != null && hiddenUntil > System.currentTimeMillis()
     }
 
     fun recordImpression(campaignId: String) {
         internalStorage.queueItem(
             "impressions_${campaignId}",
-            System.currentTimeMillis()
+            System.currentTimeMillis(),
+            longAdapter
         )
     }
 
@@ -29,7 +30,7 @@ internal class CampaignExposureService(
         maxCount: Int
     ): Boolean {
         val impressions =
-            internalStorage.getItemList("impressions_${campaignId}", getTypeToken<Long>())
+            internalStorage.getItemList("impressions_${campaignId}", longAdapter)
 
         val now = System.currentTimeMillis()
         val windowStart = now - windowMinutes * 60 * 1000

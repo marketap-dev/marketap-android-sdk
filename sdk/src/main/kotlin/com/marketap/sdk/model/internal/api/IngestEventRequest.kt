@@ -1,15 +1,18 @@
 package com.marketap.sdk.model.internal.api
 
-import com.google.gson.annotations.SerializedName
+
 import com.marketap.sdk.model.internal.AppEventProperty
+import com.squareup.moshi.Json
+import com.squareup.moshi.JsonClass
 
-
+@JsonClass(generateAdapter = true)
 internal data class IngestEventRequest(
     val id: String?,
     val name: String,
 
-    @SerializedName("user_id")
+    @Json(name = "user_id")
     val userId: String?,
+
     val device: DeviceReq,
     val properties: Map<String, Any>?,
     val timestamp: String?

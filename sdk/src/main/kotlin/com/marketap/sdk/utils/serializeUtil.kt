@@ -1,39 +1,61 @@
 package com.marketap.sdk.utils
 
-import com.google.gson.Gson
-import com.google.gson.GsonBuilder
-import com.google.gson.JsonObject
-import com.google.gson.ToNumberPolicy
-import com.google.gson.reflect.TypeToken
+import android.util.Log
+import com.squareup.moshi.JsonAdapter
+import com.squareup.moshi.JsonClass
+import com.squareup.moshi.Moshi
+import com.squareup.moshi.Types
+import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 
-private val gson: Gson = GsonBuilder()
-    .applyDefaultOptions()
-    .create()
+internal val moshi: Moshi = Moshi.Builder()
+    .add(KotlinJsonAdapterFactory())  // code-gen adapter 우선 적용
+    .build()
 
-private fun GsonBuilder.applyDefaultOptions(): GsonBuilder {
-    return this
-        .disableHtmlEscaping()
-        .setObjectToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE)
+/** 문자열(JSON)로 직렬화 */
+internal fun <T> T.serialize(adapter: JsonAdapter<T>): String {
+    return try {
+        adapter.toJson(this)
+    } catch (e: Exception) {
+        e.printStackTrace()
+        null
+    } ?: throw IllegalArgumentException("Failed to serialize object: $this")
 }
 
-internal fun <T> T.serialize(): String {
-    return gson.toJson(this)
+internal fun <T> String.deserialize(adapter: JsonAdapter<T>): T {
+    return try {
+        Log.d("Marketap", "deserialize: $this")
+        adapter.fromJson(this)
+    } catch (e: Exception) {
+        e.printStackTrace()
+        null
+    } ?: throw IllegalArgumentException("Failed to deserialize JSON: $this")
 }
 
-internal fun <T> T.serializeToJson(): JsonObject {
-    return gson.toJsonTree(this).asJsonObject
+internal inline fun <reified T> listAdapter(): JsonAdapter<List<T>> {
+    val type = Types.newParameterizedType(List::class.java, T::class.java)
+    return moshi.adapter(type)
 }
 
-
-internal inline fun <reified T> String.deserialize(): T {
-    val token = object : TypeToken<T>() {}.type
-    return gson.fromJson(this, token)
+internal inline fun <reified K, reified V> mapAdapter(): JsonAdapter<Map<K, V>> {
+    val type = Types.newParameterizedType(Map::class.java, K::class.java, V::class.java)
+    return moshi.adapter(type)
 }
 
-internal inline fun <reified T> getTypeToken(): TypeToken<T> {
-    return object : TypeToken<T>() {}
+@JsonClass(generateAdapter = true)
+data class PairEntry<K, V>(
+    val first: K,
+    val second: V
+)
+
+internal inline fun <reified K, reified V> pairAdapter(): JsonAdapter<PairEntry<K, V>> {
+    val type = Types.newParameterizedType(PairEntry::class.java, K::class.java, V::class.java)
+    return moshi.adapter(type)
 }
 
-internal fun <T> String.deserializeObject(type: TypeToken<T>): T {
-    return gson.fromJson(this, type)
+internal inline fun <reified T> adapter(): JsonAdapter<T> {
+    return moshi.adapter(T::class.java)
 }
+
+internal val stringAdapter: JsonAdapter<String> = moshi.adapter(String::class.java)
+internal val longAdapter: JsonAdapter<Long> = moshi.adapter(Long::class.java)
+internal val booleanAdapter: JsonAdapter<Boolean> = moshi.adapter(Boolean::class.java)

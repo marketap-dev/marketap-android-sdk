@@ -1,6 +1,7 @@
 package com.marketap.sdk.utils
 
 import android.util.Log
+import com.squareup.moshi.JsonAdapter
 import io.ktor.client.HttpClient
 import io.ktor.client.HttpClientConfig
 import io.ktor.client.engine.HttpClientEngineConfig
@@ -17,12 +18,14 @@ internal class CustomClient(
 ) {
     internal val client = HttpClient(Android, block)
 
-    suspend inline fun <S, reified T> post(
+    suspend inline fun <S, T> post(
         endpoint: String,
         request: S,
-        builder: HttpRequestBuilder.() -> Unit = {}
+        requestAdapter: JsonAdapter<S>,
+        responseAdapter: JsonAdapter<T>,
+        builder: HttpRequestBuilder.() -> Unit = {},
     ): T {
-        val body = request.serialize()
+        val body = request.serialize(requestAdapter)
         if (debug) Log.d("Marketap", "endpoint: $endpoint, Request: $body")
         val getResponse = client.post(endpoint) {
             builder()
@@ -32,6 +35,6 @@ internal class CustomClient(
         val res = getResponse.bodyAsText()
 
         if (debug) Log.d("Marketap", "Response: $getResponse, body: $res")
-        return res.deserialize()
+        return res.deserialize(responseAdapter)
     }
 }

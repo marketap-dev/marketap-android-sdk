@@ -3,7 +3,7 @@ activityKtx = "1.10.0"
 agp = "8.6.0"
 firebaseBom = "32.2.3"
 firebaseMessaging = "23.3.1"
-gson = "2.10.1"
+gson = "2.13.1"
 kotlin = "1.8.22"
 coreKtx = "1.12.0"
 junit = "4.13.2"
@@ -14,9 +14,11 @@ ktorClientAndroid = "2.3.0"
 ktorClientCore = "2.3.0"
 material = "1.9.0"
 mockk = "1.12.0"
+moshiKotlinCodegen = "1.15.0"
 playServicesAdsIdentifier = "17.0.0"
 playServicesAppsearch = "16.0.0"
 playServicesAppset = "16.0.0"
+slf4jAndroid = "1.7.36"
 [libraries]
 androidx-activity-ktx = { module = "androidx.activity:activity-ktx", version.ref = "activityKtx" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -31,9 +33,13 @@ ktor-client-android = { module = "io.ktor:ktor-client-android", version.ref = "k
 ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktorClientCore" }
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }
 mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
+moshi = { module = "com.squareup.moshi:moshi", version.ref = "moshiKotlinCodegen" }
+moshi-kotlin = { module = "com.squareup.moshi:moshi-kotlin", version.ref = "moshiKotlinCodegen" }
+moshi-kotlin-codegen = { module = "com.squareup.moshi:moshi-kotlin-codegen", version.ref = "moshiKotlinCodegen" }
 play-services-ads-identifier = { module = "com.google.android.gms:play-services-ads-identifier", version.ref = "playServicesAdsIdentifier" }
 play-services-appsearch = { group = "com.google.android.gms", name = "play-services-appsearch", version.ref = "playServicesAppsearch" }
 play-services-appset = { module = "com.google.android.gms:play-services-appset", version.ref = "playServicesAppset" }
+slf4j-android = { module = "org.slf4j:slf4j-android", version.ref = "slf4jAndroid" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

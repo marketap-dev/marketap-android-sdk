@@ -4,6 +4,7 @@ import android.util.Log
 import android.webkit.JavascriptInterface
 import com.marketap.sdk.model.internal.bridge.BridgeEventReq
 import com.marketap.sdk.model.internal.bridge.BridgeUserReq
+import com.marketap.sdk.utils.adapter
 import com.marketap.sdk.utils.deserialize
 
 class MarketapWebBridge {
@@ -15,12 +16,12 @@ class MarketapWebBridge {
     fun postMessage(type: String, params: String) {
         when (type) {
             "track" -> {
-                val data = params.deserialize<BridgeEventReq>()
+                val data = params.deserialize(adapter<BridgeEventReq>())
                 Marketap.track(data.eventName, data.eventProperties)
             }
 
             "identify" -> {
-                val data = params.deserialize<BridgeUserReq>()
+                val data = params.deserialize(adapter<BridgeUserReq>())
                 Marketap.identify(data.userId, data.userProperties)
             }
 

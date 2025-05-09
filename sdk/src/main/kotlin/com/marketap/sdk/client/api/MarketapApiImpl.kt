@@ -12,6 +12,10 @@ import com.marketap.sdk.model.internal.api.PROFILE_ENDPOINT
 import com.marketap.sdk.model.internal.api.ServerResponse
 import com.marketap.sdk.model.internal.api.UpdateProfileRequest
 import com.marketap.sdk.utils.CustomClient
+import com.marketap.sdk.utils.adapter
+import com.marketap.sdk.utils.moshi
+import com.squareup.moshi.JsonAdapter
+import com.squareup.moshi.Types
 import io.ktor.http.headers
 
 internal class MarketapApiImpl(
@@ -27,22 +31,31 @@ internal class MarketapApiImpl(
         }
     }
 
+    private inline fun <reified T> serverAdapter(): JsonAdapter<ServerResponse<T>> {
+        val type = Types.newParameterizedType(ServerResponse::class.java, T::class.java)
+        return moshi.adapter(type)
+    }
+
     override suspend fun updateDevice(
         projectId: String,
         request: DeviceReq
     ): ServerResponse<IngestRes> {
-        return client.post<DeviceReq, ServerResponse<IngestRes>>(
+        return client.post(
             "$deviceEndpoint?project_id=$projectId",
-            request
+            request,
+            adapter<DeviceReq>(),
+            serverAdapter<IngestRes>()
         )
     }
 
     override suspend fun fetchCampaigns(
         request: FetchCampaignReq,
     ): ServerResponse<InAppCampaignRes> {
-        val res = client.post<FetchCampaignReq, ServerResponse<InAppCampaignRes>>(
+        val res = client.post(
             inAppMessagingEndpoint,
-            request
+            request,
+            adapter<FetchCampaignReq>(),
+            serverAdapter<InAppCampaignRes>()
         )
         return res
     }
@@ -51,9 +64,11 @@ internal class MarketapApiImpl(
         projectId: String,
         request: IngestEventRequest,
     ): ServerResponse<IngestRes> {
-        return client.post<IngestEventRequest, ServerResponse<IngestRes>>(
+        return client.post(
             "$ingestionEndpoint?project_id=$projectId",
-            request
+            request,
+            adapter<IngestEventRequest>(),
+            serverAdapter<IngestRes>()
         )
     }
 
@@ -61,9 +76,11 @@ internal class MarketapApiImpl(
         projectId: String,
         request: UpdateProfileRequest,
     ): ServerResponse<IngestRes> {
-        return client.post<UpdateProfileRequest, ServerResponse<IngestRes>>(
+        return client.post(
             "$profileEndpoint?project_id=$projectId",
-            request
+            request,
+            adapter<UpdateProfileRequest>(),
+            serverAdapter<IngestRes>()
         )
     }
 }

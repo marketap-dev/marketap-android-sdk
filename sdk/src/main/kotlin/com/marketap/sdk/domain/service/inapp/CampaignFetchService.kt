@@ -8,7 +8,8 @@ import com.marketap.sdk.model.internal.InAppCampaign
 import com.marketap.sdk.model.internal.api.DeviceReq.Companion.toReq
 import com.marketap.sdk.model.internal.api.FetchCampaignReq
 import com.marketap.sdk.model.internal.api.InAppCampaignRes
-import com.marketap.sdk.utils.getTypeToken
+import com.marketap.sdk.utils.adapter
+import com.marketap.sdk.utils.longAdapter
 
 
 internal class CampaignFetchService(
@@ -35,16 +36,20 @@ internal class CampaignFetchService(
             block(it.campaigns)
         })
         { campaigns ->
-            internalStorage.setItem("$CAMPAIGN_CACHE_KEY:$userId", campaigns)
-            internalStorage.setItem("$CAMPAIGN_CACHED_AT:$userId", System.currentTimeMillis())
+            internalStorage.setItem("$CAMPAIGN_CACHE_KEY:$userId", campaigns, adapter())
+            internalStorage.setItem(
+                "$CAMPAIGN_CACHED_AT:$userId",
+                System.currentTimeMillis(),
+                longAdapter
+            )
         }
     }
 
     private fun fetchLocalCampaign(userId: String?): List<InAppCampaign>? {
         val campaigns =
-            internalStorage.getItem<InAppCampaignRes>("$CAMPAIGN_CACHE_KEY:$userId", getTypeToken())
+            internalStorage.getItem<InAppCampaignRes>("$CAMPAIGN_CACHE_KEY:$userId", adapter())
         val lastFetchedAt =
-            internalStorage.getItem<Long>("$CAMPAIGN_CACHED_AT:$userId", getTypeToken())
+            internalStorage.getItem<Long>("$CAMPAIGN_CACHED_AT:$userId", longAdapter)
 
         if (campaigns == null || lastFetchedAt == null) {
             return null

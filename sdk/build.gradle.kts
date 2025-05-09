@@ -1,15 +1,15 @@
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
+    id("com.google.devtools.ksp")
 }
 
 android {
     namespace = "com.marketap.sdk"
-    compileSdk = 35
+    compileSdk = 35               // 그대로 두세요
 
     defaultConfig {
         minSdk = 21
-
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles("consumer-rules.pro")
     }
@@ -24,16 +24,24 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions {
-        jvmTarget = "1.8"
+        jvmTarget = "17"
     }
 }
 
 dependencies {
-    implementation(libs.google.gson)
+    // Logger
+    implementation(libs.slf4j.android)
+
+    // Moshi core
+    implementation(libs.moshi)
+
+    // Kotlin support + reflection 제거용 code-gen
+    implementation(libs.moshi.kotlin)
+    ksp(libs.moshi.kotlin.codegen)
     implementation(libs.ktor.client.core)
     implementation(libs.ktor.client.android)
     implementation(libs.play.services.ads.identifier)

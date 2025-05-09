@@ -1,13 +1,16 @@
 package com.marketap.sdk.model.internal.api
 
-import com.google.gson.annotations.SerializedName
+import com.squareup.moshi.Json
+import com.squareup.moshi.JsonClass
 
 
+@JsonClass(generateAdapter = true)
 internal data class FetchCampaignReq(
-    @SerializedName("project_id")
+    @Json(name = "project_id")
     val projectId: String,
 
-    @SerializedName("user_id")
+    @Json(name = "user_id")
     val userId: String?,
+
     val device: DeviceReq
 )

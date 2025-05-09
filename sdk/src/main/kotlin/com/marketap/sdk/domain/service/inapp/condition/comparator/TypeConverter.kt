@@ -1,6 +1,5 @@
 package com.marketap.sdk.domain.service.inapp.condition.comparator
 
-import com.google.gson.JsonElement
 import com.marketap.sdk.utils.MarketapDate
 import com.marketap.sdk.utils.toDate
 import java.util.Date
@@ -30,7 +29,6 @@ object TypeConverter {
             String::class -> {
                 when (source) {
                     is String -> source as T
-                    is JsonElement -> if (source.isJsonPrimitive) source.asString as T else null
                     else -> null
                 }
             }
@@ -39,7 +37,6 @@ object TypeConverter {
                 when (source) {
                     is Int -> source as T
                     is Number -> source.toInt() as T
-                    is JsonElement -> if (source.isJsonPrimitive) source.asInt as T else null
                     else -> null
                 }
             }
@@ -48,7 +45,6 @@ object TypeConverter {
                 when (source) {
                     is Long -> source as T
                     is Number -> source.toLong() as T
-                    is JsonElement -> if (source.isJsonPrimitive) source.asLong as T else null
                     else -> null
                 }
             }
@@ -56,21 +52,6 @@ object TypeConverter {
             Boolean::class -> {
                 when (source) {
                     is Boolean -> source as T
-                    is JsonElement -> {
-                        if (source.isJsonPrimitive) {
-                            try {
-                                source.asBoolean as T
-                            } catch (e: Exception) {
-                                // 만약 boolean이 아닌 문자열로 저장된 경우
-                                val str = source.asString
-                                when (str.lowercase(Locale.getDefault())) {
-                                    "true" -> true as T
-                                    "false" -> false as T
-                                    else -> null
-                                }
-                            }
-                        } else null
-                    }
 
                     is String -> {
                         when (source.lowercase(Locale.getDefault())) {
@@ -88,7 +69,6 @@ object TypeConverter {
                 when (source) {
                     is Double -> source as T
                     is Number -> source.toDouble() as T
-                    is JsonElement -> if (source.isJsonPrimitive) source.asDouble as T else null
                     else -> null
                 }
             }
@@ -99,9 +79,6 @@ object TypeConverter {
                     is Date -> source as T
                     is Long -> Date(source) as T
                     is String -> source.toDate() as T
-                    is JsonElement -> {
-                        if (source.isJsonPrimitive) source.asString.toDate() as T else null
-                    }
 
                     else -> null
                 }
@@ -118,16 +95,6 @@ object TypeConverter {
                         }
                     }
 
-                    is JsonElement -> {
-                        if (source.isJsonPrimitive) {
-                            try {
-                                MarketapDate.fromString(source.asString) as T
-                            } catch (e: Exception) {
-                                null
-                            }
-                        } else null
-                    }
-
                     else -> null
                 }
             }
@@ -138,16 +105,6 @@ object TypeConverter {
                     if (source.all { it is String }) {
                         source as T
                     } else {
-                        null
-                    }
-                } else if (source is JsonElement && source.isJsonArray) {
-                    try {
-                        // JsonArray의 각 요소를 String으로 추출 (primitive일 경우)
-                        val list = source.asJsonArray.mapNotNull {
-                            if (it.isJsonPrimitive) it.asString else null
-                        }
-                        list as T
-                    } catch (e: Exception) {
                         null
                     }
                 } else {

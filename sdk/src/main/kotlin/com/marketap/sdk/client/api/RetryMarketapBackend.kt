@@ -10,7 +10,8 @@ import com.marketap.sdk.model.internal.api.FetchCampaignReq
 import com.marketap.sdk.model.internal.api.InAppCampaignRes
 import com.marketap.sdk.model.internal.api.IngestEventRequest
 import com.marketap.sdk.model.internal.api.UpdateProfileRequest
-import com.marketap.sdk.utils.getTypeToken
+import com.marketap.sdk.utils.PairEntry
+import com.marketap.sdk.utils.pairAdapter
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
@@ -34,7 +35,7 @@ internal class RetryMarketapBackend(
         val items =
             storage.popItems(
                 "users",
-                getTypeToken<Pair<String, UpdateProfileRequest>>(),
+                pairAdapter<String, UpdateProfileRequest>(),
                 10
             )
         items.forEach { (projectId, request) ->
@@ -47,7 +48,11 @@ internal class RetryMarketapBackend(
                         throw IllegalStateException("Device is not ready")
                     }
                 } catch (e: Exception) {
-                    storage.queueItem("users", Pair(projectId, request))
+                    storage.queueItem(
+                        "users",
+                        PairEntry(projectId, request),
+                        pairAdapter<String, UpdateProfileRequest>()
+                    )
                 }
             }
         }
@@ -55,7 +60,7 @@ internal class RetryMarketapBackend(
 
     private suspend fun checkEventQueue() {
         val items =
-            storage.popItems("events", getTypeToken<Pair<String, IngestEventRequest>>(), 10)
+            storage.popItems("events", pairAdapter<String, IngestEventRequest>(), 10)
         items.forEach { (projectId, request) ->
             apiWorkGroup.dispatch {
                 try {
@@ -66,7 +71,11 @@ internal class RetryMarketapBackend(
                         throw IllegalStateException("Device is not ready")
                     }
                 } catch (e: Exception) {
-                    storage.queueItem("events", Pair(projectId, request))
+                    storage.queueItem(
+                        "events",
+                        PairEntry(projectId, request),
+                        pairAdapter<String, IngestEventRequest>()
+                    )
                 }
             }
         }
@@ -74,7 +83,7 @@ internal class RetryMarketapBackend(
 
     private suspend fun checkDeviceQueue() {
         val items =
-            storage.popItems("devices", getTypeToken<Pair<String, DeviceReq>>(), 10)
+            storage.popItems("devices", pairAdapter<String, DeviceReq>(), 10)
         items.forEach { (projectId, request) ->
             apiWorkGroup.dispatch {
                 try {
@@ -85,14 +94,18 @@ internal class RetryMarketapBackend(
                         throw IllegalStateException("Device is not ready")
                     }
                 } catch (e: Exception) {
-                    storage.queueItem("devices", Pair(projectId, request))
+                    storage.queueItem(
+                        "devices",
+                        PairEntry(projectId, request),
+                        pairAdapter<String, DeviceReq>()
+                    )
                 }
             }
         }
     }
 
     override fun updateDevice(projectId: String, request: DeviceReq) {
-        storage.queueItem("devices", Pair(projectId, request))
+        storage.queueItem("devices", PairEntry(projectId, request), pairAdapter())
         apiWorkGroup.dispatch(::checkDeviceQueue)
     }
 
@@ -129,14 +142,14 @@ internal class RetryMarketapBackend(
     }
 
     override fun track(projectId: String, request: IngestEventRequest) {
-        storage.queueItem("events", Pair(projectId, request))
+        storage.queueItem("events", PairEntry(projectId, request), pairAdapter())
         apiWorkGroup.dispatch(::checkEventQueue)
         apiWorkGroup.dispatch(::checkUserQueue)
         apiWorkGroup.dispatch(::checkDeviceQueue)
     }
 
     override fun updateProfile(projectId: String, request: UpdateProfileRequest) {
-        storage.queueItem("users", Pair(projectId, request))
+        storage.queueItem("users", PairEntry(projectId, request), pairAdapter())
         apiWorkGroup.dispatch(::checkEventQueue)
         apiWorkGroup.dispatch(::checkUserQueue)
         apiWorkGroup.dispatch(::checkDeviceQueue)

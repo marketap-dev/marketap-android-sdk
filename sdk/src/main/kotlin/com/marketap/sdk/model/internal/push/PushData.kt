@@ -1,6 +1,7 @@
 package com.marketap.sdk.model.internal.push
 
 import com.marketap.sdk.utils.deserialize
+import com.marketap.sdk.utils.listAdapter
 import java.nio.charset.StandardCharsets
 
 
@@ -30,7 +31,8 @@ data class PushData(
             val body = data["message"] ?: return null
             val imageUrl = data["imageUrl"]
             val buttons =
-                data["buttons"]?.deserialize<List<AndroidPushButton>>()
+                data["buttons"]?.deserialize((listAdapter<AndroidPushButton>()))
+                    ?: emptyList()
             val campaignId = data["campaignId"]
             val messageId = data["messageId"]
             val notificationId = data["notificationId"]?.toIntOrNull()

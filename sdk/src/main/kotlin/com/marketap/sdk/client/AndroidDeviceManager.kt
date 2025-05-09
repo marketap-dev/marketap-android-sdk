@@ -9,7 +9,8 @@ import com.marketap.sdk.domain.repository.DeviceManager
 import com.marketap.sdk.domain.repository.InternalStorage
 import com.marketap.sdk.model.internal.Device
 import com.marketap.sdk.model.internal.Screen
-import com.marketap.sdk.utils.getTypeToken
+import com.marketap.sdk.utils.booleanAdapter
+import com.marketap.sdk.utils.stringAdapter
 import java.util.Locale
 import java.util.UUID
 
@@ -30,34 +31,34 @@ internal class AndroidDeviceManager(
     }
 
     override fun setAppSetId(appSetId: String) {
-        storage.setItem("app_set_id", appSetId)
+        storage.setItem("app_set_id", appSetId, stringAdapter)
     }
 
     override fun setGoogleAdvertisingId(gaid: String) {
-        storage.setItem("gaid", gaid)
+        storage.setItem("gaid", gaid, stringAdapter)
     }
 
 
     private fun getOrCreateLocalId(): String {
-        val savedId = storage.getItem("_marketap_local_id", getTypeToken<String>())
+        val savedId = storage.getItem("_marketap_local_id", stringAdapter)
         return if (savedId != null) {
             savedId
         } else {
             val newId = UUID.randomUUID().toString()
-            storage.setItem("_marketap_local_id", newId)
+            storage.setItem("_marketap_local_id", newId, stringAdapter)
             newId
         }
     }
 
     override fun isDeviceReady(): Boolean {
-        val isFirstOpen = storage.getItem("first_open", getTypeToken<Boolean>())
+        val isFirstOpen = storage.getItem("first_open", booleanAdapter)
         return isFirstOpen == true
     }
 
     override fun setFirstOpen(): Boolean {
-        val isFirstOpen = storage.getItem("first_open", getTypeToken<Boolean>())
+        val isFirstOpen = storage.getItem("first_open", booleanAdapter)
         if (isFirstOpen == null) {
-            storage.setItem("first_open", true)
+            storage.setItem("first_open", true, booleanAdapter)
             return true
         }
         return false
@@ -74,8 +75,8 @@ internal class AndroidDeviceManager(
         )
 
         return Device(
-            gaid = storage.getItem("gaid", getTypeToken<String>()),
-            appSetId = storage.getItem("app_set_id", getTypeToken<String>()),
+            gaid = storage.getItem("gaid", stringAdapter),
+            appSetId = storage.getItem("app_set_id", stringAdapter),
             appLocalId = getOrCreateLocalId(),
             token = token,
             os = "Android ${Build.VERSION.RELEASE}",
