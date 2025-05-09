@@ -1,6 +1,5 @@
 package com.marketap.sdk.utils
 
-import android.util.Log
 import com.squareup.moshi.JsonAdapter
 import com.squareup.moshi.JsonClass
 import com.squareup.moshi.Moshi
@@ -23,7 +22,6 @@ internal fun <T> T.serialize(adapter: JsonAdapter<T>): String {
 
 internal fun <T> String.deserialize(adapter: JsonAdapter<T>): T {
     return try {
-        Log.d("Marketap", "deserialize: $this")
         adapter.fromJson(this)
     } catch (e: Exception) {
         e.printStackTrace()
