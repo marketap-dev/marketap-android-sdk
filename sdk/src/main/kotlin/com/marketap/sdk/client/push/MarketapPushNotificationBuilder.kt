@@ -7,7 +7,6 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.net.Uri
 import androidx.core.app.NotificationCompat
 import com.marketap.sdk.model.internal.push.AndroidPushButton
 import com.marketap.sdk.model.internal.push.PushData
@@ -19,7 +18,12 @@ class MarketapPushNotificationBuilder(
     private val context: Context,
     private val data: PushData
 ) {
-    private fun Intent.applyData(): Intent {
+    private fun Intent.applyData(
+        deepLink: String? = null,
+        url: String? = null
+    ): Intent {
+        putExtra(MarketapNotificationOpenHandler.NOTIFICATION_DEEP_LINK_KEY, deepLink)
+        putExtra(MarketapNotificationOpenHandler.NOTIFICATION_URL_KEY, url)
         putExtra(MarketapNotificationOpenHandler.IS_NOTIFICATION_FROM_MARKETAP, true)
         putExtra(
             MarketapNotificationOpenHandler.NOTIFICATION_ID_KEY,
@@ -41,26 +45,21 @@ class MarketapPushNotificationBuilder(
         }
     }
 
-    private fun getUrlIntent(url: String): Intent {
-        return Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK
-        }.applyData()
-    }
-
-    private fun getDeepLinkIntent(deepLink: String): Intent {
-        return Intent(Intent.ACTION_VIEW, Uri.parse(deepLink)).apply {
+    private fun createIntent(
+        deepLink: String? = null,
+        url: String? = null
+    ): Intent {
+        val intent = Intent(context, MarketapTrampolineActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-        }.applyData()
-    }
-
-    private fun getLaunchIntent(): Intent {
-        return context.packageManager.getLaunchIntentForPackage(context.packageName)?.apply {
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-        }?.applyData() ?: throw IllegalStateException("Launch intent not found")
+        }.applyData(
+            deepLink = deepLink,
+            url = url
+        )
+        return intent
     }
 
     private fun getPendingIntent(intent: Intent, flags: Int): PendingIntent {
-        return PendingIntent.getActivity(context, 0, intent, flags)
+        return PendingIntent.getActivity(context, data.notificationId, intent, flags)
     }
 
     private fun loadBitmapFromUrl(url: String): Bitmap? {
@@ -83,15 +82,15 @@ class MarketapPushNotificationBuilder(
     private fun getButtonIntent(button: AndroidPushButton): PendingIntent {
         val intent = when {
             button.url != null -> {
-                getUrlIntent(button.url)
+                createIntent(url = button.url)
             }
 
             button.deepLink != null -> {
-                getDeepLinkIntent(button.deepLink)
+                createIntent(deepLink = button.deepLink)
             }
 
             else -> {
-                getLaunchIntent()
+                createIntent()
             }
         }
         return getPendingIntent(
@@ -100,11 +99,9 @@ class MarketapPushNotificationBuilder(
         )
     }
 
-    private fun getContentIntent(deppLink: String?): PendingIntent {
+    private fun getContentIntent(deepLink: String?): PendingIntent {
         return getPendingIntent(
-            deppLink?.let {
-                getDeepLinkIntent(it)
-            } ?: getLaunchIntent(),
+            createIntent(deepLink = deepLink),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
     }

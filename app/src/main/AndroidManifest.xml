@@ -124,9 +124,8 @@
         </activity>
 
         <service
-            android:name=".MyFirebaseMessagingService"
-            android:exported="true"
-            android:permission="com.google.android.c2dm.permission.RECEIVE">
+            android:name="com.marketap.sdk.client.push.MarketapFirebaseMessagingService"
+            android:exported="false">
             <intent-filter>
                 <action android:name="com.google.firebase.MESSAGING_EVENT" />
             </intent-filter>

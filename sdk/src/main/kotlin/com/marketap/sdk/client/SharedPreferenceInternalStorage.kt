@@ -1,6 +1,5 @@
 package com.marketap.sdk.client
 
-import android.app.Application
 import android.content.Context
 import android.content.SharedPreferences
 import com.marketap.sdk.domain.repository.InternalStorage
@@ -10,11 +9,15 @@ import com.squareup.moshi.JsonAdapter
 import java.util.concurrent.ConcurrentHashMap
 
 
-class SharedPreferenceInternalStorage(
-    application: Application
+internal class SharedPreferenceInternalStorage(
+    context: Context
 ) : InternalStorage {
-    private val sharedPreference: SharedPreferences = application.getSharedPreferences(
-        "_marketap_sdk_storage",
+    companion object {
+        const val MARKETAP_SDK_STORAGE = "_marketap_sdk_storage"
+    }
+
+    private val sharedPreference: SharedPreferences = context.getSharedPreferences(
+        MARKETAP_SDK_STORAGE,
         Context.MODE_PRIVATE
     )
 

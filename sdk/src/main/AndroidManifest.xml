@@ -9,15 +9,13 @@
             android:hardwareAccelerated="true"
             android:theme="@style/InAppMessageTheme" />
 
-        <receiver
-            android:name="com.marketap.sdk.client.push.MarketapBroadcastReceiver"
-            android:exported="true"
-            android:permission="com.google.android.c2dm.permission.SEND">
-            <intent-filter android:priority="999">
-                <action android:name="com.google.android.c2dm.intent.RECEIVE" />
-
-                <category android:name="${applicationId}" />
-            </intent-filter>
-        </receiver>
+        <activity
+            android:name="com.marketap.sdk.client.push.MarketapTrampolineActivity"
+            android:autoRemoveFromRecents="true"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:launchMode="singleInstance"
+            android:taskAffinity=".NotificationTrampolineActivity"
+            android:theme="@style/Marketap.PushTrampoline.Transparent" />
     </application>
 </manifest>

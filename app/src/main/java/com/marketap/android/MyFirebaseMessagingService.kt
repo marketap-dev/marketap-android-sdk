@@ -10,6 +10,7 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
+import com.marketap.sdk.client.push.MarketapFirebaseMessagingService
 
 class MyFirebaseMessagingService : FirebaseMessagingService() {
     override fun onNewToken(token: String) {
@@ -21,6 +22,9 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
 
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
         super.onMessageReceived(remoteMessage)
+        if (MarketapFirebaseMessagingService.handleMarketapRemoteMessage(this, remoteMessage)) {
+            return
+        }
 
         // Log the message details
         Log.d("FCM Message", "From: ${remoteMessage.from}")

@@ -1,21 +1,12 @@
 package com.marketap.sdk.client.push
 
-import android.app.Activity
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
 import android.graphics.Color
 import android.os.Build
-import com.marketap.sdk.domain.repository.MarketapBackend
-import com.marketap.sdk.model.internal.AppEventProperty
-import com.marketap.sdk.model.internal.api.DeviceReq
-import com.marketap.sdk.model.internal.api.IngestEventRequest
-import com.marketap.sdk.model.internal.push.DeliveryData
-
-import com.marketap.sdk.utils.getNow
 
 internal class MarketapNotificationOpenHandler(
-    private val marketapBackend: MarketapBackend,
     context: Context
 ) {
     init {
@@ -29,6 +20,8 @@ internal class MarketapNotificationOpenHandler(
         const val NOTIFICATION_ID_KEY = "_marketap_notification_id"
         const val IS_NOTIFICATION_FROM_MARKETAP = "_is_notification_from_marketap"
         const val CAMPAIGN_KEY = "_marketap_campaign_id"
+        const val NOTIFICATION_DEEP_LINK_KEY = "_marketap_notification_deep_link"
+        const val NOTIFICATION_URL_KEY = "_marketap_notification_url"
     }
 
     private fun createNotificationChannel(context: Context) {
@@ -49,33 +42,6 @@ internal class MarketapNotificationOpenHandler(
 
                 notificationManager.createNotificationChannel(channel)
             }
-        }
-    }
-
-    fun maybeClickPush(activity: Activity) {
-        val intent = activity.intent
-        if (intent.getBooleanExtra(IS_NOTIFICATION_FROM_MARKETAP, false)) {
-            val notificationManager =
-                activity.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            val data: DeliveryData? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                intent.getSerializableExtra(CAMPAIGN_KEY, DeliveryData::class.java)
-            } else {
-                intent.getSerializableExtra(CAMPAIGN_KEY) as? DeliveryData?
-            }
-
-            if (data != null) {
-                marketapBackend.track(
-                    data.projectId,
-                    IngestEventRequest.click(
-                        data.userId,
-                        DeviceReq(data.deviceId),
-                        AppEventProperty.offSite(data)
-                            .addLocationId("push"),
-                        getNow()
-                    )
-                )
-            }
-            notificationManager.cancel(intent.getIntExtra(NOTIFICATION_ID_KEY, 0))
         }
     }
 }

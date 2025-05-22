@@ -31,15 +31,8 @@ internal fun initializeCore(
     val clientStateManager = ClientStateManager(config, storage)
     val sessionManager = AndroidSessionManager(storage)
 
-    val notificationOpenHandler = MarketapNotificationOpenHandler(marketapBackend, application)
-    val activityManager = ActivityManager()
-    // Register activity lifecycle callbacks
-    MarketapActivityLifecycleCallbacks(
-        notificationOpenHandler = notificationOpenHandler,
-        application = application,
-        activityManager = activityManager
-    )
-
+    // Initialize handler
+    MarketapNotificationOpenHandler(application)
 
     val inAppService = InAppService(
         CampaignExposureService(storage),
