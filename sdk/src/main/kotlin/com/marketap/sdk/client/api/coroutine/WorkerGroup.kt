@@ -1,6 +1,6 @@
 package com.marketap.sdk.client.api.coroutine
 
-import android.util.Log
+import com.marketap.sdk.utils.logger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -28,7 +28,7 @@ class WorkerGroup(
                 try {
                     work()
                 } catch (e: Exception) {
-                    Log.e("WorkerGroup", "Error in worker", e)
+                    logger.e("WorkerGroup", "Error in worker", e)
                 }
             }
         }

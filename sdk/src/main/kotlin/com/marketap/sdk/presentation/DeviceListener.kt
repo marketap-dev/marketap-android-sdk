@@ -1,7 +1,6 @@
 package com.marketap.sdk.presentation
 
 import android.app.Application
-import android.util.Log
 import com.google.android.gms.ads.identifier.AdvertisingIdClient
 import com.google.android.gms.appset.AppSet
 import com.google.android.gms.appset.AppSetIdClient
@@ -10,6 +9,7 @@ import com.google.firebase.messaging.FirebaseMessaging
 import com.marketap.sdk.domain.repository.DeviceManager
 import com.marketap.sdk.domain.service.MarketapCoreService
 import com.marketap.sdk.domain.service.event.UserIngestionService
+import com.marketap.sdk.utils.logger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -38,7 +38,7 @@ internal class DeviceListener(
                 }
             }
         } catch (e: Exception) {
-            Log.e("MarketapSDK", "Failed to fetch FCM token: ${e.message}")
+            logger.e("MarketapSDK", "Failed to fetch FCM token: ${e.message}")
         }
     }
 
@@ -52,7 +52,7 @@ internal class DeviceListener(
                     userIngestionService.pushDevice()
                 }
             } catch (e: Exception) {
-                Log.e("MarketapSDK", "Failed to fetch GAID: ${e.message}")
+                logger.e("MarketapSDK", "Failed to fetch GAID: ${e.message}")
             } finally {
                 addAppSetIdListener()
             }
@@ -65,7 +65,7 @@ internal class DeviceListener(
             val appSetId = appSetIdInfo.id
             deviceManager.setAppSetId(appSetId)
         }.addOnFailureListener {
-            Log.e("MarketapSDK", "Failed to fetch AppSet ID: ${it.message}")
+            logger.e("MarketapSDK", "Failed to fetch AppSet ID: ${it.message}")
         }.addOnCompleteListener {
             userIngestionService.pushDevice()
             if (deviceManager.setFirstOpen()) {

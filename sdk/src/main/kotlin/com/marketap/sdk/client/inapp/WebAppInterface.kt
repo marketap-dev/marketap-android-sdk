@@ -3,9 +3,9 @@ package com.marketap.sdk.client.inapp
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.net.Uri
-import android.util.Log
 import android.webkit.JavascriptInterface
 import com.marketap.sdk.model.internal.inapp.HideType
+import com.marketap.sdk.utils.logger
 
 internal class WebAppInterface(
     private val callBack: InAppCallback?,
@@ -39,7 +39,7 @@ internal class WebAppInterface(
             try {
                 inAppMessageActivity.startActivity(deepLinkIntent)
             } catch (e: ActivityNotFoundException) {
-                Log.e("DeepLink", "딥링크를 처리할 액티비티가 없음: $uri")
+                logger.e("DeepLink", "딥링크를 처리할 액티비티가 없음: $uri")
             }
         }
 

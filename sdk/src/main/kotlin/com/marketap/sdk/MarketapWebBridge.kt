@@ -1,11 +1,11 @@
 package com.marketap.sdk
 
-import android.util.Log
 import android.webkit.JavascriptInterface
 import com.marketap.sdk.model.internal.bridge.BridgeEventReq
 import com.marketap.sdk.model.internal.bridge.BridgeUserReq
 import com.marketap.sdk.utils.adapter
 import com.marketap.sdk.utils.deserialize
+import com.marketap.sdk.utils.logger
 
 class MarketapWebBridge {
     companion object {
@@ -30,7 +30,7 @@ class MarketapWebBridge {
             }
 
             else -> {
-                Log.e("SDK", "Unknown type: $type")
+                logger.e("SDK", "Unknown type: $type")
             }
         }
     }

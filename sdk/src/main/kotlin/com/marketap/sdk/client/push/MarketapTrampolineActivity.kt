@@ -1,12 +1,11 @@
 package com.marketap.sdk.client.push
 
 import android.app.Activity
-import android.app.NotificationManager
-import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import com.marketap.sdk.Marketap.config
 import com.marketap.sdk.client.SharedPreferenceInternalStorage
 import com.marketap.sdk.client.api.MarketapApiImpl
 import com.marketap.sdk.client.push.MarketapNotificationOpenHandler.Companion.CAMPAIGN_KEY
@@ -25,7 +24,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 class MarketapTrampolineActivity : Activity() {
-    private val marketapApi = MarketapApiImpl(debug = true)
+    private val marketapApi = MarketapApiImpl(debug = config?.debug == true)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -34,8 +33,6 @@ class MarketapTrampolineActivity : Activity() {
         if (intent.getBooleanExtra(IS_NOTIFICATION_FROM_MARKETAP, false)) {
             val deepLink = intent.getStringExtra(NOTIFICATION_DEEP_LINK_KEY)
             val url = intent.getStringExtra(NOTIFICATION_URL_KEY)
-            val notificationManager =
-                getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             val data: DeliveryData? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 intent.getSerializableExtra(CAMPAIGN_KEY, DeliveryData::class.java)
             } else {

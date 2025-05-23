@@ -9,7 +9,7 @@ import com.marketap.sdk.presentation.initializeCore
 
 object Marketap {
     private var marketapCore: MarketapCoreService? = null
-    private var config: MarketapConfig? = null
+    internal var config: MarketapConfig? = null
     private var application: Application? = null
 
     /**

@@ -1,8 +1,8 @@
 package com.marketap.sdk.domain.service
 
-import android.util.Log
 import com.marketap.sdk.domain.service.event.EventIngestionService
 import com.marketap.sdk.domain.service.event.UserIngestionService
+import com.marketap.sdk.utils.logger
 
 internal class MarketapCoreService(
     private val eventIngestionService: EventIngestionService,
@@ -14,7 +14,7 @@ internal class MarketapCoreService(
             userIngestionService.identify(userId, properties ?: emptyMap())
         } catch (e: Exception) {
             // Ignore
-            Log.e("MarketapSDK", "Failed to identify user: ${e.message}")
+            logger.e("MarketapSDK", "Failed to identify user: ${e.message}")
         }
     }
 
@@ -23,7 +23,7 @@ internal class MarketapCoreService(
             userIngestionService.resetIdentity()
         } catch (e: Exception) {
             // Ignore
-            Log.e("MarketapSDK", "Failed to reset identity: ${e.message}")
+            logger.e("MarketapSDK", "Failed to reset identity: ${e.message}")
         }
     }
 
@@ -32,7 +32,7 @@ internal class MarketapCoreService(
             eventIngestionService.trackEvent(name, properties ?: emptyMap())
         } catch (e: Exception) {
             // Ignore
-            Log.e("MarketapSDK", "Failed to track event: ${e.message}")
+            logger.e("MarketapSDK", "Failed to track event: ${e.message}")
         }
     }
 }

@@ -3,12 +3,12 @@ package com.marketap.sdk.client.inapp
 import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Color
-import android.util.Log
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.widget.FrameLayout
 import androidx.appcompat.app.AppCompatActivity
 import com.marketap.sdk.utils.SafeAreaUtils
+import com.marketap.sdk.utils.logger
 import com.marketap.sdk.utils.postToMainThread
 
 @SuppressLint("SetJavaScriptEnabled")
@@ -123,7 +123,7 @@ internal class MarketapInAppView(
                     then()
                 }, 50)
             } catch (e: Exception) {
-                Log.w("MarketapSDK", "WebView destroy failed: ${e.message}")
+                logger.w("MarketapSDK", "WebView destroy failed: ${e.message}")
             }
         }
     }
