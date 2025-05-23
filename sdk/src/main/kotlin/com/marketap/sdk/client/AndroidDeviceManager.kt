@@ -11,7 +11,6 @@ import com.marketap.sdk.model.internal.Device
 import com.marketap.sdk.model.internal.Screen
 import com.marketap.sdk.utils.booleanAdapter
 import com.marketap.sdk.utils.stringAdapter
-import java.util.Locale
 import java.util.UUID
 
 internal class AndroidDeviceManager(
@@ -79,15 +78,7 @@ internal class AndroidDeviceManager(
             appSetId = storage.getItem("app_set_id", stringAdapter),
             appLocalId = getOrCreateLocalId(),
             token = token,
-            os = "Android ${Build.VERSION.RELEASE}",
-            osVersion = "Android ${Build.VERSION.RELEASE} (SDK ${Build.VERSION.SDK_INT})",
-            libraryVersion = "1.0.4",
-            model = Build.MODEL,
-            manufacturer = Build.MANUFACTURER,
             brand = Build.BRAND,
-            appVersion = "1.0.0",
-            appBuildNumber = "100",
-            locale = Locale.getDefault().toString(),
             screen = screen,
             maxTouchPoints = maxTouchPoints
         )
