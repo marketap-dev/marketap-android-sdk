@@ -14,8 +14,6 @@ object CurrentActivityHolder : Application.ActivityLifecycleCallbacks {
 
     fun useActivity(block: (Activity) -> Unit) {
         val activity = currentActivityRef?.get()
-        Log.d("CurrentActivityHolder", "useActivity: ${activity?.javaClass?.simpleName}")
-
         if (activity != null && !activity.isFinishing && !activity.isDestroyed) {
             block(activity)
         } else {
@@ -24,7 +22,6 @@ object CurrentActivityHolder : Application.ActivityLifecycleCallbacks {
     }
 
     fun set(activity: Activity) {
-        Log.d("CurrentActivityHolder", "set: ${activity.javaClass.simpleName}")
         currentActivityRef = WeakReference(activity)
         reservedAction?.let {
             reservedAction = null
@@ -35,7 +32,6 @@ object CurrentActivityHolder : Application.ActivityLifecycleCallbacks {
     fun get(): Activity? = currentActivityRef?.get()
 
     override fun onActivityResumed(activity: Activity) {
-        Log.d("CurrentActivityHolder", "onActivityResumed: ${activity.javaClass.simpleName}")
         currentActivityRef = WeakReference(activity)
         reservedAction?.let {
             reservedAction = null
@@ -59,6 +55,5 @@ object CurrentActivityHolder : Application.ActivityLifecycleCallbacks {
         }
         isRegistered = true
         application.registerActivityLifecycleCallbacks(this)
-        Log.d("CurrentActivityHolder", "applyToApplication: ${application.javaClass.simpleName}")
     }
 }
