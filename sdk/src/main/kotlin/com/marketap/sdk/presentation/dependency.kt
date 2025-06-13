@@ -1,6 +1,7 @@
 package com.marketap.sdk.presentation
 
 import android.app.Application
+import android.util.Log
 import com.marketap.sdk.client.AndroidDeviceManager
 import com.marketap.sdk.client.AndroidSessionManager
 import com.marketap.sdk.client.CurrentActivityHolder
@@ -32,6 +33,10 @@ internal fun initializeCore(
     val clientStateManager = ClientStateManager(config, storage)
     val sessionManager = AndroidSessionManager(storage)
     val holder = CurrentActivityHolder()
+
+    Log.d("Marketap", "Initializing Marketap SDK with config: $config")
+    Log.d("Marketap", "Current Activity Holder initialized: $holder")
+    Log.d("Marketap", "Application: ${application.packageName}, Debug mode: ${config.debug}")
     application.registerActivityLifecycleCallbacks(holder)
 
     // Initialize handler

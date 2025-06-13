@@ -16,7 +16,10 @@ class CurrentActivityHolder : Application.ActivityLifecycleCallbacks {
     }
 
     fun useActivity(block: (Activity) -> Unit) {
-        Log.d("CurrentActivityHolder", "useActivity called")
+        Log.d(
+            "CurrentActivityHolder",
+            "useActivity called, currentActivity: ${currentActivity?.packageName}, ${currentActivity?.javaClass?.simpleName}, ${currentActivity?.hashCode()}"
+        )
         val activity = currentActivity
         if (activity != null && !activity.isFinishing && !activity.isDestroyed) {
             Log.d(
@@ -27,6 +30,14 @@ class CurrentActivityHolder : Application.ActivityLifecycleCallbacks {
         } else {
             reservedAction = block
         }
+    }
+
+    fun set(activity: Activity?) {
+        Log.d(
+            "CurrentActivityHolder",
+            "set called with activity: ${activity?.javaClass?.simpleName}"
+        )
+        currentActivity = activity
     }
 
     fun get(): Activity? = currentActivity
