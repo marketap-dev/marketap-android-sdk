@@ -19,11 +19,6 @@ class AndroidInAppView : InAppView, InAppCallback {
     private var onClick: ((String) -> Unit)? = null
     private var onHide: ((HideType) -> Unit)? = null
     private var isShown = false
-    private var holder: CurrentActivityHolder? = null
-
-    fun init(holder: CurrentActivityHolder) {
-        this.holder = holder
-    }
 
     override fun show(
         html: String,
@@ -31,8 +26,7 @@ class AndroidInAppView : InAppView, InAppCallback {
         onClick: (String) -> Unit,
         onHide: (HideType) -> Unit
     ) {
-        val holder = this.holder
-        if (isShown || holder == null) {
+        if (isShown) {
             return
         }
         isShown = true
@@ -40,7 +34,7 @@ class AndroidInAppView : InAppView, InAppCallback {
         this.onClick = onClick
         this.onHide = onHide
 
-        holder.useActivity { activity ->
+        CurrentActivityHolder.useActivity { activity ->
             val intent = Intent(activity, InAppMessageActivity::class.java).apply {
                 putExtra("htmlData", html)
                 addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION)

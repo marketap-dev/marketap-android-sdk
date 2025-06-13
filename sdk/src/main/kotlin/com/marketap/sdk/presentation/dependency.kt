@@ -32,12 +32,10 @@ internal fun initializeCore(
     val marketapBackend = RetryMarketapBackend(storage, marketapApi, deviceManager)
     val clientStateManager = ClientStateManager(config, storage)
     val sessionManager = AndroidSessionManager(storage)
-    val holder = CurrentActivityHolder()
 
     Log.d("Marketap", "Initializing Marketap SDK with config: $config")
-    Log.d("Marketap", "Current Activity Holder initialized: $holder")
     Log.d("Marketap", "Application: ${application.packageName}, Debug mode: ${config.debug}")
-    application.registerActivityLifecycleCallbacks(holder)
+    CurrentActivityHolder.applyToApplication(application)
 
     // Initialize handler
     MarketapNotificationOpenHandler(application)
@@ -46,7 +44,7 @@ internal fun initializeCore(
         CampaignExposureService(storage),
         ConditionCheckerImpl(PropertyConditionCheckerImpl(ValueComparatorImpl())),
         CampaignFetchService(storage, marketapBackend, clientStateManager, deviceManager),
-        AndroidInAppView.getInstance().apply { init(holder) }
+        AndroidInAppView.getInstance()
     )
 
     val eventIngestionService = EventIngestionService(

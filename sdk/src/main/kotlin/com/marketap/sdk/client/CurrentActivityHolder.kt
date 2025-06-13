@@ -4,61 +4,61 @@ import android.app.Activity
 import android.app.Application
 import android.os.Bundle
 import android.util.Log
+import java.lang.ref.WeakReference
 
-class CurrentActivityHolder : Application.ActivityLifecycleCallbacks {
+object CurrentActivityHolder : Application.ActivityLifecycleCallbacks {
     @Volatile
-    private var currentActivity: Activity? = null
+    private var currentActivityRef: WeakReference<Activity>? = null
 
     private var reservedAction: ((Activity) -> Unit)? = null
 
-    init {
-        Log.d("CurrentActivityHolder", "CurrentActivityHolder initialized")
-    }
-
     fun useActivity(block: (Activity) -> Unit) {
-        Log.d(
-            "CurrentActivityHolder",
-            "useActivity called, currentActivity: ${currentActivity?.packageName}, ${currentActivity?.javaClass?.simpleName}, ${currentActivity?.hashCode()}"
-        )
-        val activity = currentActivity
+        val activity = currentActivityRef?.get()
+        Log.d("CurrentActivityHolder", "useActivity: ${activity?.javaClass?.simpleName}")
+
         if (activity != null && !activity.isFinishing && !activity.isDestroyed) {
-            Log.d(
-                "CurrentActivityHolder",
-                activity.packageName + " useActivity: " + activity.javaClass.simpleName
-            )
             block(activity)
         } else {
             reservedAction = block
         }
     }
 
-    fun set(activity: Activity?) {
-        Log.d(
-            "CurrentActivityHolder",
-            "set called with activity: ${activity?.javaClass?.simpleName}"
-        )
-        currentActivity = activity
-    }
-
-    fun get(): Activity? = currentActivity
-
-    override fun onActivityResumed(activity: Activity) {
-        Log.d("CurrentActivityHolder", "onActivityResumed: " + activity.javaClass.simpleName)
+    fun set(activity: Activity) {
+        Log.d("CurrentActivityHolder", "set: ${activity.javaClass.simpleName}")
+        currentActivityRef = WeakReference(activity)
         reservedAction?.let {
             reservedAction = null
             it(activity)
         }
-        currentActivity = activity
     }
 
-    override fun onActivityPaused(activity: Activity) {
-        Log.d("CurrentActivityHolder", "onActivityPaused: " + activity.javaClass.simpleName)
+    fun get(): Activity? = currentActivityRef?.get()
+
+    override fun onActivityResumed(activity: Activity) {
+        Log.d("CurrentActivityHolder", "onActivityResumed: ${activity.javaClass.simpleName}")
+        currentActivityRef = WeakReference(activity)
+        reservedAction?.let {
+            reservedAction = null
+            it(activity)
+        }
     }
 
-    // 나머지는 무시
+    override fun onActivityPaused(activity: Activity) {}
     override fun onActivityCreated(a: Activity, b: Bundle?) {}
     override fun onActivityStarted(a: Activity) {}
     override fun onActivityStopped(a: Activity) {}
     override fun onActivitySaveInstanceState(a: Activity, b: Bundle) {}
     override fun onActivityDestroyed(a: Activity) {}
+
+
+    private var isRegistered = false
+    fun applyToApplication(application: Application) {
+        if (isRegistered) {
+            Log.w("CurrentActivityHolder", "applyToApplication: Already registered")
+            return
+        }
+        isRegistered = true
+        application.registerActivityLifecycleCallbacks(this)
+        Log.d("CurrentActivityHolder", "applyToApplication: ${application.javaClass.simpleName}")
+    }
 }
