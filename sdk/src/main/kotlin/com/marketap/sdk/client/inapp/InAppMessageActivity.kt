@@ -44,7 +44,9 @@ class InAppMessageActivity : FragmentActivity() {
 
     override fun onResume() {
         super.onResume()
-        loadWebViewData()
+        window.decorView.post {
+            loadWebViewData()
+        }
     }
 
     override fun onDestroy() {

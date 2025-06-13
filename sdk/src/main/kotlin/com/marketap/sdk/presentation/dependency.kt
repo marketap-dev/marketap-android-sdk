@@ -3,6 +3,7 @@ package com.marketap.sdk.presentation
 import android.app.Application
 import com.marketap.sdk.client.AndroidDeviceManager
 import com.marketap.sdk.client.AndroidSessionManager
+import com.marketap.sdk.client.CurrentActivityHolder
 import com.marketap.sdk.client.SharedPreferenceInternalStorage
 import com.marketap.sdk.client.api.MarketapApiImpl
 import com.marketap.sdk.client.api.RetryMarketapBackend
@@ -30,6 +31,8 @@ internal fun initializeCore(
     val marketapBackend = RetryMarketapBackend(storage, marketapApi, deviceManager)
     val clientStateManager = ClientStateManager(config, storage)
     val sessionManager = AndroidSessionManager(storage)
+    val holder = CurrentActivityHolder()
+    application.registerActivityLifecycleCallbacks(holder)
 
     // Initialize handler
     MarketapNotificationOpenHandler(application)
@@ -38,7 +41,7 @@ internal fun initializeCore(
         CampaignExposureService(storage),
         ConditionCheckerImpl(PropertyConditionCheckerImpl(ValueComparatorImpl())),
         CampaignFetchService(storage, marketapBackend, clientStateManager, deviceManager),
-        AndroidInAppView.getInstance().apply { init(application) }
+        AndroidInAppView.getInstance().apply { init(holder) }
     )
 
     val eventIngestionService = EventIngestionService(
