@@ -5,10 +5,10 @@ import android.os.Bundle
 import android.view.WindowManager
 import android.widget.FrameLayout
 import androidx.activity.OnBackPressedCallback
-import androidx.appcompat.app.AppCompatActivity
+import androidx.fragment.app.FragmentActivity
 
 
-class InAppMessageActivity : AppCompatActivity() {
+class InAppMessageActivity : FragmentActivity() {
     private var messageView: MarketapInAppView? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -44,7 +44,9 @@ class InAppMessageActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        loadWebViewData()
+        window.decorView.post {
+            loadWebViewData()
+        }
     }
 
     override fun onDestroy() {

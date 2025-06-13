@@ -6,7 +6,7 @@ import android.graphics.Color
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.widget.FrameLayout
-import androidx.appcompat.app.AppCompatActivity
+import androidx.fragment.app.FragmentActivity
 import com.marketap.sdk.utils.SafeAreaUtils
 import com.marketap.sdk.utils.logger
 import com.marketap.sdk.utils.postToMainThread
@@ -89,7 +89,7 @@ internal class MarketapInAppView(
 
     fun show(
         html: String,
-        activity: AppCompatActivity
+        activity: FragmentActivity
     ) {
         postToMainThread {
             visibility = VISIBLE

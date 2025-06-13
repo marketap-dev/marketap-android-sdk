@@ -1,7 +1,7 @@
 package com.marketap.sdk.client.inapp
 
-import android.app.Application
 import android.content.Intent
+import com.marketap.sdk.client.CurrentActivityHolder
 import com.marketap.sdk.domain.repository.InAppView
 import com.marketap.sdk.model.internal.inapp.HideType
 
@@ -19,11 +19,6 @@ class AndroidInAppView : InAppView, InAppCallback {
     private var onClick: ((String) -> Unit)? = null
     private var onHide: ((HideType) -> Unit)? = null
     private var isShown = false
-    private var application: Application? = null
-
-    fun init(application: Application) {
-        this.application = application
-    }
 
     override fun show(
         html: String,
@@ -31,8 +26,7 @@ class AndroidInAppView : InAppView, InAppCallback {
         onClick: (String) -> Unit,
         onHide: (HideType) -> Unit
     ) {
-        val app = this.application
-        if (isShown || app == null) {
+        if (isShown) {
             return
         }
         isShown = true
@@ -40,14 +34,15 @@ class AndroidInAppView : InAppView, InAppCallback {
         this.onClick = onClick
         this.onHide = onHide
 
-        val intent = Intent(app, InAppMessageActivity::class.java).apply {
-            putExtra("htmlData", html)
-            addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION)
-            addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        }
+        CurrentActivityHolder.useActivity { activity ->
+            val intent = Intent(activity, InAppMessageActivity::class.java).apply {
+                putExtra("htmlData", html)
+                addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION)
+                addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
+            }
 
-        app.startActivity(intent)
+            activity.startActivity(intent)
+        }
     }
 
     override fun onHide(hideType: HideType) {
