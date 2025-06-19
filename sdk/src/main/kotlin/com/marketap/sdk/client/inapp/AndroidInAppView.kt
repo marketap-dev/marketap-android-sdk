@@ -53,7 +53,6 @@ class AndroidInAppView : InAppView, InAppCallback {
 
     override fun onClick(locationId: String): String? {
         val click = onClick
-        isShown = false
         onClick = null
         return click?.invoke(locationId)
     }

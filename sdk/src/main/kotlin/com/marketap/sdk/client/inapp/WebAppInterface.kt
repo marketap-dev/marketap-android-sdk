@@ -41,7 +41,6 @@ internal class WebAppInterface(
                     true
                 }
             }) {
-            inAppMessageActivity.hideQuietly()
             return
         }
 
@@ -62,7 +61,5 @@ internal class WebAppInterface(
                 logger.e("DeepLink", "딥링크를 처리할 액티비티가 없음: $uri")
             }
         }
-
-        inAppMessageActivity.hideQuietly()
     }
 }
