@@ -58,8 +58,8 @@ class MarketapPushNotificationBuilder(
         return intent
     }
 
-    private fun getPendingIntent(intent: Intent, flags: Int): PendingIntent {
-        return PendingIntent.getActivity(context, data.notificationId, intent, flags)
+    private fun getPendingIntent(intent: Intent, requestCode: Int, flags: Int): PendingIntent {
+        return PendingIntent.getActivity(context, data.notificationId + requestCode, intent, flags)
     }
 
     private fun loadBitmapFromUrl(url: String): Bitmap? {
@@ -79,7 +79,7 @@ class MarketapPushNotificationBuilder(
             .bigPicture(loadBitmapFromUrl(imageUrl)) // 비동기 로딩
     }
 
-    private fun getButtonIntent(button: AndroidPushButton): PendingIntent {
+    private fun getButtonIntent(index: Int, button: AndroidPushButton): PendingIntent {
         val intent = when {
             button.url != null -> {
                 createIntent(url = button.url)
@@ -95,6 +95,7 @@ class MarketapPushNotificationBuilder(
         }
         return getPendingIntent(
             intent,
+            index + 1,
             PendingIntent.FLAG_CANCEL_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
     }
@@ -102,6 +103,7 @@ class MarketapPushNotificationBuilder(
     private fun getContentIntent(deepLink: String?): PendingIntent {
         return getPendingIntent(
             createIntent(deepLink = deepLink),
+            0,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
     }
@@ -120,8 +122,8 @@ class MarketapPushNotificationBuilder(
         }
 
         data.buttons?.let {
-            for (button in it) {
-                notificationBuilder.addAction(0, button.name, getButtonIntent(button))
+            it.mapIndexed { idx, button ->
+                notificationBuilder.addAction(0, button.name, getButtonIntent(idx, button))
             }
         }
 
