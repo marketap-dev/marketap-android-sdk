@@ -4,7 +4,10 @@ import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.net.Uri
 import android.webkit.JavascriptInterface
+import com.marketap.sdk.model.external.MarketapCampaignType
+import com.marketap.sdk.model.external.MarketapClickEvent
 import com.marketap.sdk.model.internal.inapp.HideType
+import com.marketap.sdk.presentation.CustomHandlerStore
 import com.marketap.sdk.utils.logger
 
 internal class WebAppInterface(
@@ -23,7 +26,24 @@ internal class WebAppInterface(
     @JavascriptInterface
     fun trackClick(locationId: String, url: String) {
         val uri = Uri.parse(url)
-        callBack?.onClick(locationId)
+        val campaignId = callBack?.onClick(locationId)
+        if (CustomHandlerStore.useClickHandler {
+                if (campaignId == null) {
+                    false
+                } else {
+                    it.handleClick(
+                        MarketapClickEvent(
+                            MarketapCampaignType.IN_APP_MESSAGE,
+                            campaignId,
+                            url
+                        )
+                    )
+                    true
+                }
+            }) {
+            inAppMessageActivity.hideQuietly()
+            return
+        }
 
         // URL이 딥링크인지 확인
         if (uri.scheme == "http" || uri.scheme == "https") {

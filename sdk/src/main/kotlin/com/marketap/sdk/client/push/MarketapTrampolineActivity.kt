@@ -5,6 +5,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import androidx.core.app.NotificationManagerCompat
 import com.marketap.sdk.Marketap.config
 import com.marketap.sdk.client.SharedPreferenceInternalStorage
 import com.marketap.sdk.client.api.MarketapApiImpl
@@ -12,10 +13,13 @@ import com.marketap.sdk.client.push.MarketapNotificationOpenHandler.Companion.CA
 import com.marketap.sdk.client.push.MarketapNotificationOpenHandler.Companion.IS_NOTIFICATION_FROM_MARKETAP
 import com.marketap.sdk.client.push.MarketapNotificationOpenHandler.Companion.NOTIFICATION_DEEP_LINK_KEY
 import com.marketap.sdk.client.push.MarketapNotificationOpenHandler.Companion.NOTIFICATION_URL_KEY
+import com.marketap.sdk.model.external.MarketapCampaignType
+import com.marketap.sdk.model.external.MarketapClickEvent
 import com.marketap.sdk.model.internal.AppEventProperty
 import com.marketap.sdk.model.internal.api.DeviceReq
 import com.marketap.sdk.model.internal.api.IngestEventRequest
 import com.marketap.sdk.model.internal.push.DeliveryData
+import com.marketap.sdk.presentation.CustomHandlerStore
 import com.marketap.sdk.utils.PairEntry
 import com.marketap.sdk.utils.getNow
 import com.marketap.sdk.utils.pairAdapter
@@ -40,6 +44,20 @@ class MarketapTrampolineActivity : Activity() {
             }
             if (data != null) {
                 track(data)
+                if (CustomHandlerStore.useClickHandler {
+                        it.handleClick(
+                            MarketapClickEvent(
+                                MarketapCampaignType.PUSH,
+                                data.campaignId,
+                                deepLink ?: url
+                            )
+                        )
+                        true
+                    }
+                ) {
+                    quit()
+                    return
+                }
             }
 
             // 딥링크 or 앱 런치
@@ -64,6 +82,18 @@ class MarketapTrampolineActivity : Activity() {
             startActivity(packageManager.getLaunchIntentForPackage(packageName)?.apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             })
+        }
+
+        quit()
+    }
+
+    private fun quit() {
+        val id = intent.getIntExtra(
+            MarketapNotificationOpenHandler.NOTIFICATION_ID_KEY,
+            -1
+        )
+        if (id != -1) {
+            NotificationManagerCompat.from(this).cancel(id)
         }
 
         // 안전하게 finish() (onPause() 보장 안 될 수 있어서 딜레이 후 종료)

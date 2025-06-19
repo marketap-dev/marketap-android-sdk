@@ -4,6 +4,8 @@ import android.app.Application
 import com.marketap.sdk.domain.service.MarketapCoreService
 import com.marketap.sdk.model.MarketapConfig
 import com.marketap.sdk.model.external.EventProperty
+import com.marketap.sdk.model.external.MarketapClickHandler
+import com.marketap.sdk.presentation.CustomHandlerStore
 import com.marketap.sdk.presentation.initializeCore
 
 
@@ -154,4 +156,11 @@ object Marketap {
     fun resetIdentity() {
         marketapCore?.resetIdentity()
     }
+
+
+    @JvmStatic
+    fun setClickHandler(clickHandler: MarketapClickHandler) {
+        CustomHandlerStore.clickHandler = clickHandler
+    }
+
 }

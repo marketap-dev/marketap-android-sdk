@@ -6,7 +6,7 @@ interface InAppView {
     fun show(
         html: String,
         onShow: () -> Unit,
-        onClick: (String) -> Unit,
+        onClick: (String) -> String,
         onHide: (HideType) -> Unit
     )
 }

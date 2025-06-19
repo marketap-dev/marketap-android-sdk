@@ -16,14 +16,14 @@ class AndroidInAppView : InAppView, InAppCallback {
         }
     }
 
-    private var onClick: ((String) -> Unit)? = null
+    private var onClick: ((String) -> String)? = null
     private var onHide: ((HideType) -> Unit)? = null
     private var isShown = false
 
     override fun show(
         html: String,
         onShow: () -> Unit,
-        onClick: (String) -> Unit,
+        onClick: (String) -> String,
         onHide: (HideType) -> Unit
     ) {
         if (isShown) {
@@ -51,10 +51,11 @@ class AndroidInAppView : InAppView, InAppCallback {
         isShown = false
     }
 
-    override fun onClick(locationId: String) {
-        onClick?.invoke(locationId)
+    override fun onClick(locationId: String): String? {
+        val click = onClick
         isShown = false
         onClick = null
+        return click?.invoke(locationId)
     }
 
 }

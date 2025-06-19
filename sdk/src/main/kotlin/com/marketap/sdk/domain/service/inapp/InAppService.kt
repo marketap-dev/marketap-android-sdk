@@ -65,6 +65,7 @@ internal class InAppService(
             },
             { locationId ->
                 onClick(targetCampaign, locationId)
+                targetCampaign.id
             },
             { hideType ->
                 when (hideType) {
