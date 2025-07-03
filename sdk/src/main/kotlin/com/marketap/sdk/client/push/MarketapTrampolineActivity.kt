@@ -44,16 +44,13 @@ class MarketapTrampolineActivity : Activity() {
             }
             if (data != null) {
                 track(data)
-                if (CustomHandlerStore.useClickHandler {
-                        it.handleClick(
-                            MarketapClickEvent(
-                                MarketapCampaignType.PUSH,
-                                data.campaignId,
-                                deepLink ?: url
-                            )
+                if (CustomHandlerStore.maybeHandleClick(
+                        this, MarketapClickEvent(
+                            MarketapCampaignType.PUSH,
+                            data.campaignId,
+                            deepLink ?: url
                         )
-                        true
-                    }
+                    )
                 ) {
                     quit()
                     return

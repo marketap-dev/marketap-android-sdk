@@ -10,6 +10,7 @@ import android.graphics.BitmapFactory
 import androidx.core.app.NotificationCompat
 import com.marketap.sdk.model.internal.push.AndroidPushButton
 import com.marketap.sdk.model.internal.push.PushData
+import com.marketap.sdk.utils.ManifestUtils
 import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
@@ -110,7 +111,11 @@ class MarketapPushNotificationBuilder(
 
     fun build(): Notification {
         val notificationBuilder =
-            NotificationCompat.Builder(context, MarketapNotificationOpenHandler.CHANNEL_ID)
+            NotificationCompat.Builder(
+                context, ManifestUtils.getSystemString(
+                    context, ManifestUtils.SystemStringConstant.CHANNEL_ID
+                )
+            )
                 .setSmallIcon(getDefaultAppIcon())
                 .setContentTitle(data.title)
                 .setContentText(data.body)
