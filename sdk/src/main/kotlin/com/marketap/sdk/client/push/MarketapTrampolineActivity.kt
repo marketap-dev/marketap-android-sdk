@@ -6,7 +6,6 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import androidx.core.app.NotificationManagerCompat
-import com.marketap.sdk.Marketap.config
 import com.marketap.sdk.client.SharedPreferenceInternalStorage
 import com.marketap.sdk.client.api.MarketapApiImpl
 import com.marketap.sdk.client.push.MarketapNotificationOpenHandler.Companion.CAMPAIGN_KEY
@@ -20,6 +19,7 @@ import com.marketap.sdk.model.internal.api.DeviceReq
 import com.marketap.sdk.model.internal.api.IngestEventRequest
 import com.marketap.sdk.model.internal.push.DeliveryData
 import com.marketap.sdk.presentation.CustomHandlerStore
+import com.marketap.sdk.presentation.MarketapRegistry.config
 import com.marketap.sdk.utils.PairEntry
 import com.marketap.sdk.utils.getNow
 import com.marketap.sdk.utils.pairAdapter

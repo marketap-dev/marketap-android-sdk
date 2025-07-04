@@ -4,13 +4,13 @@ import android.app.NotificationManager
 import android.content.Context
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
-import com.marketap.sdk.Marketap.config
 import com.marketap.sdk.client.SharedPreferenceInternalStorage
 import com.marketap.sdk.client.api.MarketapApiImpl
 import com.marketap.sdk.model.internal.AppEventProperty
 import com.marketap.sdk.model.internal.api.DeviceReq
 import com.marketap.sdk.model.internal.api.IngestEventRequest
 import com.marketap.sdk.model.internal.push.PushData
+import com.marketap.sdk.presentation.MarketapRegistry.config
 import com.marketap.sdk.utils.PairEntry
 import com.marketap.sdk.utils.getNow
 import com.marketap.sdk.utils.pairAdapter

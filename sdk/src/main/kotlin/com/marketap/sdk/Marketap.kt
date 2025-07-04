@@ -2,19 +2,17 @@ package com.marketap.sdk
 
 import android.app.Activity
 import android.app.Application
-import com.marketap.sdk.domain.service.MarketapCoreService
 import com.marketap.sdk.model.MarketapConfig
 import com.marketap.sdk.model.external.EventProperty
 import com.marketap.sdk.model.external.MarketapClickHandler
+import com.marketap.sdk.model.external.MarketapLogLevel
 import com.marketap.sdk.presentation.CustomHandlerStore
+import com.marketap.sdk.presentation.MarketapRegistry
+import com.marketap.sdk.presentation.MarketapRegistry.marketapCore
 import com.marketap.sdk.presentation.initializeCore
 
 
 object Marketap {
-    private var marketapCore: MarketapCoreService? = null
-    internal var config: MarketapConfig? = null
-    private var application: Application? = null
-
     /**
      * SDK를 초기화합니다. Android의 가장 상단 Application 클래스에서 onCreate 메서드 내부에서 호출해야 합니다.
      *
@@ -26,10 +24,10 @@ object Marketap {
     @JvmStatic
     fun initialize(application: Application, projectId: String, debug: Boolean? = null) {
         val config = MarketapConfig(projectId, debug == true)
-        if (marketapCore == null || this.config?.projectId != config.projectId || application !== this.application) {
+        if (marketapCore == null || MarketapRegistry.config?.projectId != config.projectId || application !== MarketapRegistry.application) {
             marketapCore = try {
-                this.config = config
-                this.application = application
+                MarketapRegistry.config = config
+                MarketapRegistry.application = application
                 initializeCore(config, application)
             } catch (e: Exception) {
                 null
@@ -162,6 +160,11 @@ object Marketap {
     @JvmStatic
     fun setClickHandler(clickHandler: MarketapClickHandler) {
         CustomHandlerStore.setClickHandler(clickHandler)
+    }
+
+    @JvmStatic
+    fun setLogLevel(logLevel: MarketapLogLevel) {
+        MarketapRegistry.logLevel = logLevel
     }
 
     @JvmStatic
