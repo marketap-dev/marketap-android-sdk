@@ -8,6 +8,10 @@ import com.marketap.sdk.utils.deserialize
 import com.marketap.sdk.utils.logger
 
 class MarketapWebBridge {
+    init {
+        logger.d("SDK", "MarketapWebBridge initialized")
+    }
+
     companion object {
         const val NAME = "marketap"
     }

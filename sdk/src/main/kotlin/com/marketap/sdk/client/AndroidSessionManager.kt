@@ -2,6 +2,7 @@ package com.marketap.sdk.client
 
 import com.marketap.sdk.domain.repository.InternalStorage
 import com.marketap.sdk.domain.repository.SessionManager
+import com.marketap.sdk.utils.logger
 import com.marketap.sdk.utils.longAdapter
 import com.marketap.sdk.utils.stringAdapter
 import java.util.UUID
@@ -20,6 +21,7 @@ class AndroidSessionManager(
     override fun getSessionId(onSessionStart: (sessionId: String) -> Unit): String {
         val (sessionId, isNewSession) = getOrGenerateSessionId()
         if (isNewSession) {
+            logger.i("New session started", sessionId)
             onSessionStart(sessionId)
         }
         return sessionId
@@ -38,6 +40,11 @@ class AndroidSessionManager(
         val currentTime = System.currentTimeMillis()
 
         return if (activityTime == null || oldSessionId == null || activityTime + expirationTime < currentTime) {
+            if (activityTime == null) {
+                logger.i("Session expired, generating new session ID")
+            } else {
+                logger.i("No previous session found, generating new session ID")
+            }
             generateAndSaveSessionId() to true
         } else {
             oldSessionId to false

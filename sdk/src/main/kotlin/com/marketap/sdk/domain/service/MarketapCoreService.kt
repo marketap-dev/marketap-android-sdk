@@ -17,7 +17,7 @@ internal class MarketapCoreService(
             userIngestionService.identify(userId, properties ?: emptyMap())
         } catch (e: Exception) {
             // Ignore
-            logger.e("MarketapSDK", "Failed to identify user: ${e.message}")
+            logger.e("Failed to identify user", userId, exception = e)
         }
     }
 
@@ -26,7 +26,7 @@ internal class MarketapCoreService(
             userIngestionService.resetIdentity()
         } catch (e: Exception) {
             // Ignore
-            logger.e("MarketapSDK", "Failed to reset identity: ${e.message}")
+            logger.e("Failed to reset identity", exception = e)
         }
     }
 
@@ -35,7 +35,7 @@ internal class MarketapCoreService(
             eventIngestionService.trackEvent(name, properties ?: emptyMap())
         } catch (e: Exception) {
             // Ignore
-            logger.e("MarketapSDK", "Failed to track event: ${e.message}")
+            logger.e("Failed to track event", name, exception = e)
         }
     }
 
@@ -45,8 +45,8 @@ internal class MarketapCoreService(
         } catch (e: Exception) {
             // Ignore
             logger.e(
-                "MarketapSDK",
-                "Failed to request push notification authorization: ${e.message}"
+                "Failed to request push notification authorization",
+                exception = e
             )
         }
     }

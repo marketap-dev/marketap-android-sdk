@@ -6,6 +6,7 @@ import android.view.WindowManager
 import android.widget.FrameLayout
 import androidx.activity.OnBackPressedCallback
 import androidx.fragment.app.FragmentActivity
+import com.marketap.sdk.utils.logger
 
 
 class InAppMessageActivity : FragmentActivity() {
@@ -13,6 +14,7 @@ class InAppMessageActivity : FragmentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        logger.d("InAppMessage Activity created")
         window.setFlags(
             WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
             WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS

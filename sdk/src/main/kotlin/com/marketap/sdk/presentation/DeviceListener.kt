@@ -35,6 +35,9 @@ internal class DeviceListener(
                 if (task.isSuccessful) {
                     deviceManager.setToken(task.result)
                     userIngestionService.pushDevice()
+                    logger.i("FCM token fetched successfully", task.result)
+                } else {
+                    logger.e("Failed to fetch FCM token", exception = task.exception)
                 }
             }
         } catch (e: Exception) {
@@ -50,6 +53,7 @@ internal class DeviceListener(
                 if (id != null && id != "00000000-0000-0000-0000-000000000000") {
                     deviceManager.setGoogleAdvertisingId(id)
                     userIngestionService.pushDevice()
+                    logger.i("GAID fetched successfully", id)
                 }
             } catch (e: Exception) {
                 logger.e("MarketapSDK", "Failed to fetch GAID: ${e.message}")

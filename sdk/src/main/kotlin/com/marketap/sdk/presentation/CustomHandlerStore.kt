@@ -6,6 +6,7 @@ import com.marketap.sdk.model.external.MarketapClickEvent
 import com.marketap.sdk.model.external.MarketapClickHandler
 import com.marketap.sdk.presentation.MarketapRegistry.marketapClickHandler
 import com.marketap.sdk.utils.ManifestUtils
+import com.marketap.sdk.utils.logger
 
 internal object CustomHandlerStore {
     private fun isCustomized(context: Context): Boolean {
@@ -21,7 +22,9 @@ internal object CustomHandlerStore {
     ): Boolean {
         val handler = marketapClickHandler
         return if (isCustomized(activity.applicationContext)) {
+            logger.d("Marketap SDK click handled by custom handler")
             if (handler == null) {
+                logger.w("Marketap SDK click handler is not set, pending click and launching app if task root")
                 pendingClick = click
                 if (activity.isTaskRoot) {
                     activity.packageManager.getLaunchIntentForPackage(activity.packageName)?.let {
@@ -29,7 +32,15 @@ internal object CustomHandlerStore {
                     }
                 }
             } else {
-                handler.handleClick(click)
+                try {
+                    handler.handleClick(click)
+                    logger.d("Marketap SDK click handled by custom handler successfully")
+                } catch (e: Exception) {
+                    logger.e(
+                        "Error handling click with custom handler: ${e.message}",
+                        exception = e
+                    )
+                }
             }
             true
         } else {
@@ -38,8 +49,10 @@ internal object CustomHandlerStore {
     }
 
     fun setClickHandler(handler: MarketapClickHandler?) {
+        logger.d("Marketap SDK set click handler")
         marketapClickHandler = handler
         if (handler != null && pendingClick != null) {
+            logger.d("Marketap SDK pending click handled by custom handler")
             handler.handleClick(pendingClick!!)
             pendingClick = null
         }

@@ -11,6 +11,7 @@ import com.marketap.sdk.model.internal.api.InAppCampaignRes
 import com.marketap.sdk.model.internal.api.IngestEventRequest
 import com.marketap.sdk.model.internal.api.UpdateProfileRequest
 import com.marketap.sdk.utils.PairEntry
+import com.marketap.sdk.utils.logger
 import com.marketap.sdk.utils.pairAdapter
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.runBlocking
@@ -105,16 +106,21 @@ internal class RetryMarketapBackend(
     }
 
     override fun updateDevice(projectId: String, request: DeviceReq) {
+        logger.d(
+            "updating device of project $projectId",
+            "deviceId: ${request.deviceId}, properties: ${request.properties}"
+        )
         storage.queueItem("devices", PairEntry(projectId, request), pairAdapter())
         apiWorkGroup.dispatch(::checkDeviceQueue)
     }
 
     override fun fetchCampaigns(
         request: FetchCampaignReq,
-        inTimeout: ((InAppCampaignRes) -> Unit)?,
+        inTimeout: ((InAppCampaignRes) -> Unit)?, // timeout 이내에 호출 되면 실행
         onSuccess: (InAppCampaignRes) -> Unit
     ) {
         runBlocking {
+            logger.d("fetching campaigns", "request: $request")
             val deferredResponse = CompletableDeferred<InAppCampaignRes>()
 
             apiWorkGroup.dispatch {
@@ -137,11 +143,17 @@ internal class RetryMarketapBackend(
 
             if (result != null) {
                 inTimeout?.invoke(result)
+            } else {
+                logger.w("fetchCampaigns timed out", "request: $request")
             }
         }
     }
 
     override fun track(projectId: String, request: IngestEventRequest) {
+        logger.d(
+            "tracking event of project $projectId",
+            "name: ${request.name}, properties: ${request.properties}"
+        )
         storage.queueItem("events", PairEntry(projectId, request), pairAdapter())
         apiWorkGroup.dispatch(::checkEventQueue)
         apiWorkGroup.dispatch(::checkUserQueue)
@@ -149,6 +161,10 @@ internal class RetryMarketapBackend(
     }
 
     override fun updateProfile(projectId: String, request: UpdateProfileRequest) {
+        logger.d(
+            "updating profile of project $projectId",
+            "userId: ${request.userId}, properties: ${request.properties}"
+        )
         storage.queueItem("users", PairEntry(projectId, request), pairAdapter())
         apiWorkGroup.dispatch(::checkEventQueue)
         apiWorkGroup.dispatch(::checkUserQueue)

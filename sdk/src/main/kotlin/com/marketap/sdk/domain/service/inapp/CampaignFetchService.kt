@@ -9,6 +9,7 @@ import com.marketap.sdk.model.internal.api.DeviceReq.Companion.toReq
 import com.marketap.sdk.model.internal.api.FetchCampaignReq
 import com.marketap.sdk.model.internal.api.InAppCampaignRes
 import com.marketap.sdk.utils.adapter
+import com.marketap.sdk.utils.logger
 import com.marketap.sdk.utils.longAdapter
 
 
@@ -26,6 +27,7 @@ internal class CampaignFetchService(
     fun useCampaigns(block: (campaigns: List<InAppCampaign>) -> Unit) {
         val userId = clientStateManager.getUserId()
         fetchLocalCampaign(userId)?.let { localCampaigns ->
+            logger.d("Using local campaigns for user $userId")
             block(localCampaigns)
             return
         }
@@ -33,9 +35,11 @@ internal class CampaignFetchService(
         val device = deviceManager.getDevice()
 
         inAppCampaignApi.fetchCampaigns(FetchCampaignReq(projectId, userId, device.toReq()), {
+            logger.d("Fetching campaigns from API for user $userId")
             block(it.campaigns)
         })
         { campaigns ->
+            logger.d("Storing fetched campaigns for user $userId")
             internalStorage.setItem("$CAMPAIGN_CACHE_KEY:$userId", campaigns, adapter())
             internalStorage.setItem(
                 "$CAMPAIGN_CACHED_AT:$userId",

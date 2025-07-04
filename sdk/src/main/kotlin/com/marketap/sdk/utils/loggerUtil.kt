@@ -12,7 +12,7 @@ internal inline val <reified T> T.logger: MarketapLogger
                 if (MarketapLogLevel.VERBOSE.isEnabled()) return
                 Log.v(
                     MAIN_TAG,
-                    "[${this::class.java.name}]: $description${argument?.let { ": $it" } ?: ""}"
+                    "[${this::class.java.name}]: $description${argument?.let { "($it)" } ?: ""}"
                 )
             }
 
@@ -20,14 +20,14 @@ internal inline val <reified T> T.logger: MarketapLogger
                 if (MarketapLogLevel.DEBUG.isEnabled()) return
                 Log.d(
                     MAIN_TAG,
-                    "[${T::class.java.name}]: $description${argument?.let { ": $it" } ?: ""}")
+                    "[${T::class.java.name}]: $description${argument?.let { "($it)" } ?: ""}")
             }
 
             override fun e(description: String, argument: String?, exception: Exception?) {
                 if (MarketapLogLevel.ERROR.isEnabled()) return
                 Log.e(
                     MAIN_TAG,
-                    "[${T::class.java.name}]: $description${argument?.let { ": $it" } ?: ""}",
+                    "[${T::class.java.name}]: $description${argument?.let { "($it)" } ?: ""}",
                     exception
                 )
             }
@@ -36,22 +36,22 @@ internal inline val <reified T> T.logger: MarketapLogger
                 if (MarketapLogLevel.INFO.isEnabled()) return
                 Log.i(
                     MAIN_TAG,
-                    "[${T::class.java.name}]: $description${argument?.let { ": $it" } ?: ""}")
+                    "[${T::class.java.name}]: $description${argument?.let { "($it)" } ?: ""}")
             }
 
             override fun w(description: String, argument: String?) {
                 if (MarketapLogLevel.WARN.isEnabled()) return
                 Log.w(
                     MAIN_TAG,
-                    "[${T::class.java.name}]: $description${argument?.let { ": $it" } ?: ""}")
+                    "[${T::class.java.name}]: $description${argument?.let { "($it)" } ?: ""}")
             }
         }
     }
 
 internal interface MarketapLogger {
-    fun v(description: String, argument: String?) // verbose
-    fun d(description: String, argument: String?) // debug
-    fun i(description: String, argument: String?) // info
-    fun w(description: String, argument: String?) // warn
-    fun e(description: String, argument: String?, exception: Exception? = null) // error
+    fun v(description: String, argument: String? = null) // verbose
+    fun d(description: String, argument: String? = null) // debug
+    fun i(description: String, argument: String? = null) // info
+    fun w(description: String, argument: String? = null) // warn
+    fun e(description: String, argument: String? = null, exception: Exception? = null) // error
 }

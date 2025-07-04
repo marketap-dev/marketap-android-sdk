@@ -6,33 +6,20 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import androidx.core.app.NotificationManagerCompat
-import com.marketap.sdk.client.SharedPreferenceInternalStorage
-import com.marketap.sdk.client.api.MarketapApiImpl
 import com.marketap.sdk.client.push.MarketapNotificationOpenHandler.Companion.CAMPAIGN_KEY
 import com.marketap.sdk.client.push.MarketapNotificationOpenHandler.Companion.IS_NOTIFICATION_FROM_MARKETAP
 import com.marketap.sdk.client.push.MarketapNotificationOpenHandler.Companion.NOTIFICATION_DEEP_LINK_KEY
 import com.marketap.sdk.client.push.MarketapNotificationOpenHandler.Companion.NOTIFICATION_URL_KEY
 import com.marketap.sdk.model.external.MarketapCampaignType
 import com.marketap.sdk.model.external.MarketapClickEvent
-import com.marketap.sdk.model.internal.AppEventProperty
-import com.marketap.sdk.model.internal.api.DeviceReq
-import com.marketap.sdk.model.internal.api.IngestEventRequest
 import com.marketap.sdk.model.internal.push.DeliveryData
 import com.marketap.sdk.presentation.CustomHandlerStore
-import com.marketap.sdk.presentation.MarketapRegistry.config
-import com.marketap.sdk.utils.PairEntry
-import com.marketap.sdk.utils.getNow
-import com.marketap.sdk.utils.pairAdapter
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
+import com.marketap.sdk.utils.logger
 
 class MarketapTrampolineActivity : Activity() {
-    private val marketapApi = MarketapApiImpl(debug = config?.debug == true)
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
+        logger.d("MarketapTrampolineActivity(Push handling activity) onCreate() called")
 
         if (intent.getBooleanExtra(IS_NOTIFICATION_FROM_MARKETAP, false)) {
             val deepLink = intent.getStringExtra(NOTIFICATION_DEEP_LINK_KEY)
@@ -43,7 +30,7 @@ class MarketapTrampolineActivity : Activity() {
                 intent.getSerializableExtra(CAMPAIGN_KEY) as? DeliveryData?
             }
             if (data != null) {
-                track(data)
+                PushTracker.trackClick(this, data)
                 if (CustomHandlerStore.maybeHandleClick(
                         this, MarketapClickEvent(
                             MarketapCampaignType.PUSH,
@@ -52,6 +39,7 @@ class MarketapTrampolineActivity : Activity() {
                         )
                     )
                 ) {
+                    logger.d("Push Click handled by custom click handler")
                     quit()
                     return
                 }
@@ -72,10 +60,12 @@ class MarketapTrampolineActivity : Activity() {
                 }
             }
 
+            logger.d("Launching Marketap notification with deepLink: $deepLink, url: $url")
             launchIntent?.let {
                 startActivity(it)
             }
         } else {
+            logger.w("MarketapTrampolineActivity launched without valid Marketap notification data")
             startActivity(packageManager.getLaunchIntentForPackage(packageName)?.apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             })
@@ -99,36 +89,6 @@ class MarketapTrampolineActivity : Activity() {
         }, 200)
     }
 
-    private fun track(data: DeliveryData) {
-        CoroutineScope(Dispatchers.IO).launch {
-            try {
-                marketapApi.track(
-                    data.projectId,
-                    IngestEventRequest.click(
-                        data.userId,
-                        DeviceReq(data.deviceId),
-                        AppEventProperty.offSite(data)
-                            .addLocationId("push"),
-                        getNow()
-                    )
-                )
-            } catch (e: Exception) {
-                val storage = SharedPreferenceInternalStorage(this@MarketapTrampolineActivity)
-                storage.queueItem(
-                    "events", PairEntry(
-                        data.projectId, IngestEventRequest.click(
-                            data.userId,
-                            DeviceReq(data.deviceId),
-                            AppEventProperty.offSite(data)
-                                .addLocationId("push"),
-                            getNow()
-                        )
-                    ), pairAdapter()
-                )
-            }
-        }
-
-    }
 
     override fun onPause() {
         super.onPause()
