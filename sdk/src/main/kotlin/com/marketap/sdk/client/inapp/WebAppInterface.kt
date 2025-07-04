@@ -27,20 +27,12 @@ internal class WebAppInterface(
     fun trackClick(locationId: String, url: String) {
         val uri = Uri.parse(url)
         val campaignId = callBack?.onClick(locationId)
-        if (CustomHandlerStore.useClickHandler {
-                if (campaignId == null) {
-                    false
-                } else {
-                    it.handleClick(
-                        MarketapClickEvent(
-                            MarketapCampaignType.IN_APP_MESSAGE,
-                            campaignId,
-                            url
-                        )
-                    )
-                    true
-                }
-            }) {
+        val event = MarketapClickEvent(
+            MarketapCampaignType.IN_APP_MESSAGE,
+            campaignId ?: "",
+            url
+        )
+        if (CustomHandlerStore.maybeHandleClick(inAppMessageActivity, event)) {
             return
         }
 

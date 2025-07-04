@@ -1,12 +1,15 @@
 package com.marketap.sdk.domain.service
 
+import android.app.Activity
+import com.marketap.sdk.domain.repository.DeviceManager
 import com.marketap.sdk.domain.service.event.EventIngestionService
 import com.marketap.sdk.domain.service.event.UserIngestionService
 import com.marketap.sdk.utils.logger
 
 internal class MarketapCoreService(
     private val eventIngestionService: EventIngestionService,
-    private val userIngestionService: UserIngestionService
+    private val userIngestionService: UserIngestionService,
+    private val deviceManager: DeviceManager,
 ) {
 
     fun identify(userId: String, properties: Map<String, Any>?) {
@@ -33,6 +36,18 @@ internal class MarketapCoreService(
         } catch (e: Exception) {
             // Ignore
             logger.e("MarketapSDK", "Failed to track event: ${e.message}")
+        }
+    }
+
+    fun requestAuthorizationForPushNotifications(activity: Activity) {
+        try {
+            deviceManager.requestAuthorizationForPushNotifications(activity)
+        } catch (e: Exception) {
+            // Ignore
+            logger.e(
+                "MarketapSDK",
+                "Failed to request push notification authorization: ${e.message}"
+            )
         }
     }
 }

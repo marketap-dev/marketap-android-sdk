@@ -1,10 +1,19 @@
 package com.marketap.sdk.client
 
+import android.Manifest
+import android.app.Activity
+import android.app.Application
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.Resources
+import android.net.Uri
 import android.os.Build
+import android.provider.Settings
 import android.view.ViewConfiguration
+import androidx.core.app.ActivityCompat
+import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
 import com.marketap.sdk.domain.repository.DeviceManager
 import com.marketap.sdk.domain.repository.InternalStorage
 import com.marketap.sdk.model.internal.Device
@@ -15,7 +24,7 @@ import java.util.UUID
 
 internal class AndroidDeviceManager(
     private val storage: InternalStorage,
-    context: Context
+    context: Application
 ) : DeviceManager {
 
     init {
@@ -35,6 +44,42 @@ internal class AndroidDeviceManager(
 
     override fun setGoogleAdvertisingId(gaid: String) {
         storage.setItem("gaid", gaid, stringAdapter)
+    }
+
+    private val REQ_POST_NOTI = 0xA7
+    override fun requestAuthorizationForPushNotifications(activity: Activity) {
+        /* ───────────── Android 13+ (API 33) ───────────── */
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            // ① 이미 권한 있으면 끝
+            val permission = ContextCompat.checkSelfPermission(
+                activity, Manifest.permission.POST_NOTIFICATIONS
+            )
+            if (permission == PackageManager.PERMISSION_GRANTED) return
+
+            // ② 권한 없으면 요청 또는 설정 화면 유도
+            ActivityCompat.requestPermissions(
+                activity,
+                arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+                REQ_POST_NOTI
+            )
+            return
+        }
+
+        /* ───────────── Android 12 이하 ───────────── */
+        if (!NotificationManagerCompat.from(activity).areNotificationsEnabled()) {
+            val intent =
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {          // API 26+
+                    Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                        putExtra(Settings.EXTRA_APP_PACKAGE, activity.packageName)
+                    }
+                } else {                                                       // API 25 이하
+                    Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                        data = Uri.parse("package:${activity.packageName}")
+                    }
+                }
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            activity.startActivity(intent)
+        }
     }
 
 

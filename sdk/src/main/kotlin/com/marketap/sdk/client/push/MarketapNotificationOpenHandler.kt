@@ -5,6 +5,7 @@ import android.app.NotificationManager
 import android.content.Context
 import android.graphics.Color
 import android.os.Build
+import com.marketap.sdk.utils.ManifestUtils
 
 internal class MarketapNotificationOpenHandler(
     context: Context
@@ -14,9 +15,6 @@ internal class MarketapNotificationOpenHandler(
     }
 
     companion object {
-        const val CHANNEL_ID = "marketap"
-        const val CHANNEL_NAME = "Marketap Notifications"
-        const val CHANNEL_DESC = "Push notifications from Marketap SDK"
         const val NOTIFICATION_ID_KEY = "_marketap_notification_id"
         const val IS_NOTIFICATION_FROM_MARKETAP = "_is_notification_from_marketap"
         const val CAMPAIGN_KEY = "_marketap_campaign_id"
@@ -25,16 +23,27 @@ internal class MarketapNotificationOpenHandler(
     }
 
     private fun createNotificationChannel(context: Context) {
+        val channelId = ManifestUtils.getSystemString(
+            context, ManifestUtils.SystemStringConstant.CHANNEL_ID
+        )
+        val channelName = ManifestUtils.getSystemString(
+            context, ManifestUtils.SystemStringConstant.CHANNEL_NAME
+        )
+        val channelDescription = ManifestUtils.getSystemString(
+            context, ManifestUtils.SystemStringConstant.CHANNEL_DESC
+        )
+
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val notificationManager = context.getSystemService(NotificationManager::class.java)
             // 채널이 이미 존재하는지 확인
-            if (notificationManager.getNotificationChannel(CHANNEL_ID) == null) {
+            if (notificationManager.getNotificationChannel(channelId) == null) {
                 val channel = NotificationChannel(
-                    CHANNEL_ID,
-                    CHANNEL_NAME,
+                    channelId,
+                    channelName,
                     NotificationManager.IMPORTANCE_HIGH
                 ).apply {
-                    description = CHANNEL_DESC
+                    description = channelDescription
                     enableLights(true)
                     lightColor = Color.BLUE
                     enableVibration(true)

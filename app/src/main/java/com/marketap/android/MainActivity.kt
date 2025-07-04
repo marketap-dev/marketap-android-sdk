@@ -1,24 +1,18 @@
 package com.marketap.android
 
-import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.widget.Button
-import android.widget.TextView
 import androidx.activity.enableEdgeToEdge
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
-import com.google.firebase.messaging.FirebaseMessaging
 import com.marketap.sdk.Marketap
 import com.marketap.sdk.model.external.EventProperty
 
@@ -46,17 +40,26 @@ class MainActivity : AppCompatActivity() {
 
         val button2 = findViewById<Button>(R.id.button2)
         button2.setOnClickListener {
+            Marketap.setClickHandler {
+                if (it.url != null) {
+                    startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(it.url)).apply {
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                    })
+                } else {
+                    startActivity(packageManager.getLaunchIntentForPackage(packageName)?.apply {
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                    })
+                }
+            }
+        }
+
+        val button3 = findViewById<Button>(R.id.button3)
+        button3.setOnClickListener {
+            Marketap.requestAuthorizationForPushNotifications(this)
         }
 
         // 버튼 찾기
         val button4 = findViewById<Button>(R.id.button4)
-
-        val button5 = findViewById<Button>(R.id.button5)
-        button5.setOnClickListener {
-            val intent = Intent(this, LoginActivity::class.java)
-            startActivity(intent)
-        }
-
         // 버튼 클릭 이벤트 설정
         button4.setOnClickListener {
             val intent = Intent(this, DetailActivity::class.java)
@@ -65,46 +68,18 @@ class MainActivity : AppCompatActivity() {
             startActivity(intent)
         }
 
+        val button5 = findViewById<Button>(R.id.button5)
+        button5.setOnClickListener {
+            val intent = Intent(this, LoginActivity::class.java)
+            startActivity(intent)
+        }
+
+
+
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
             insets
-        }
-
-        if (ContextCompat.checkSelfPermission(
-                this,
-                Manifest.permission.POST_NOTIFICATIONS
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            ActivityCompat.requestPermissions(
-                this,
-                arrayOf(Manifest.permission.POST_NOTIFICATIONS),
-                1
-            )
-        } else {
-            printToken()
-        }
-    }
-
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray
-    ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        printToken()
-    }
-
-    private fun printToken() {
-        val tokenTextView: TextView = findViewById(R.id.textView3)
-        FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
-            if (task.isSuccessful) {
-                val token = task.result
-                tokenTextView.text = token
-                Log.d("FCM Token", "aaaToken: $token")
-            } else {
-                Log.w("FCM Token", "aaaFetching FCM token failed", task.exception)
-            }
         }
     }
 

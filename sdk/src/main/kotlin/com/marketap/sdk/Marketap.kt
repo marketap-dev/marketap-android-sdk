@@ -1,5 +1,6 @@
 package com.marketap.sdk
 
+import android.app.Activity
 import android.app.Application
 import com.marketap.sdk.domain.service.MarketapCoreService
 import com.marketap.sdk.model.MarketapConfig
@@ -160,7 +161,11 @@ object Marketap {
 
     @JvmStatic
     fun setClickHandler(clickHandler: MarketapClickHandler) {
-        CustomHandlerStore.clickHandler = clickHandler
+        CustomHandlerStore.setClickHandler(clickHandler)
     }
 
+    @JvmStatic
+    fun requestAuthorizationForPushNotifications(activity: Activity) {
+        marketapCore?.requestAuthorizationForPushNotifications(activity)
+    }
 }
