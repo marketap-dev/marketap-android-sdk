@@ -4,27 +4,27 @@ import android.util.Log
 import com.marketap.sdk.model.external.MarketapLogLevel
 
 
-private const val MAIN_TAG = "com.marketap.sdk"
+private const val MAIN_TAG = "MarketapSDK"
 internal inline val <reified T> T.logger: MarketapLogger
     get() {
         return object : MarketapLogger {
             override fun v(description: String, argument: String?) {
-                if (MarketapLogLevel.VERBOSE.isEnabled()) return
+                if (!MarketapLogLevel.VERBOSE.isEnabled()) return
                 Log.v(
                     MAIN_TAG,
-                    "[${this::class.java.name}]: $description${argument?.let { "($it)" } ?: ""}"
+                    "[${T::class.java.name}]: $description${argument?.let { "($it)" } ?: ""}"
                 )
             }
 
             override fun d(description: String, argument: String?) {
-                if (MarketapLogLevel.DEBUG.isEnabled()) return
+                if (!MarketapLogLevel.DEBUG.isEnabled()) return
                 Log.d(
                     MAIN_TAG,
                     "[${T::class.java.name}]: $description${argument?.let { "($it)" } ?: ""}")
             }
 
             override fun e(description: String, argument: String?, exception: Exception?) {
-                if (MarketapLogLevel.ERROR.isEnabled()) return
+                if (!MarketapLogLevel.ERROR.isEnabled()) return
                 Log.e(
                     MAIN_TAG,
                     "[${T::class.java.name}]: $description${argument?.let { "($it)" } ?: ""}",
@@ -33,14 +33,14 @@ internal inline val <reified T> T.logger: MarketapLogger
             }
 
             override fun i(description: String, argument: String?) {
-                if (MarketapLogLevel.INFO.isEnabled()) return
+                if (!MarketapLogLevel.INFO.isEnabled()) return
                 Log.i(
                     MAIN_TAG,
                     "[${T::class.java.name}]: $description${argument?.let { "($it)" } ?: ""}")
             }
 
             override fun w(description: String, argument: String?) {
-                if (MarketapLogLevel.WARN.isEnabled()) return
+                if (!MarketapLogLevel.WARN.isEnabled()) return
                 Log.w(
                     MAIN_TAG,
                     "[${T::class.java.name}]: $description${argument?.let { "($it)" } ?: ""}")

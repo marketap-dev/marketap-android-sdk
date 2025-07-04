@@ -49,12 +49,11 @@ class AndroidInAppView : InAppView, InAppCallback {
         onHide?.invoke(hideType)
         onHide = null
         isShown = false
+        onClick = null
     }
 
     override fun onClick(locationId: String): String? {
-        val click = onClick
-        onClick = null
-        return click?.invoke(locationId)
+        return onClick?.invoke(locationId)
     }
 
 }

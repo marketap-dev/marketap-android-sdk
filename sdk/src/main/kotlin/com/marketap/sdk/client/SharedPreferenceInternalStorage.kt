@@ -15,10 +15,6 @@ import java.util.concurrent.ConcurrentHashMap
 internal class SharedPreferenceInternalStorage(
     context: Context
 ) : InternalStorage {
-    init {
-        setMaxTouchPoints(context)
-    }
-
     companion object {
         const val MARKETAP_SDK_STORAGE = "_marketap_sdk_storage"
     }
@@ -28,16 +24,24 @@ internal class SharedPreferenceInternalStorage(
         Context.MODE_PRIVATE
     )
 
+    private val locks: ConcurrentHashMap<String, Any> = ConcurrentHashMap<String, Any>()
 
-    private val locks = ConcurrentHashMap<String, Any>()
+    fun initialize(context: Context): SharedPreferenceInternalStorage {
+        setMaxTouchPoints(context)
+        return this
+    }
 
     private fun setMaxTouchPoints(context: Context) {
         val packageManager = context.packageManager
         packageManager.hasSystemFeature(PackageManager.FEATURE_TOUCHSCREEN_MULTITOUCH_DISTINCT)
-        val config = ViewConfiguration.get(context)
+        val config = try {
+            ViewConfiguration.get(context).scaledMaximumFlingVelocity / 1000
+        } catch (e: Exception) {
+            1
+        }
         setItem(
             "max_touch_points",
-            (config.scaledMaximumFlingVelocity / 1000).coerceAtLeast(1).toLong(),
+            config.coerceAtLeast(1).toLong(),
             longAdapter
         )
     }

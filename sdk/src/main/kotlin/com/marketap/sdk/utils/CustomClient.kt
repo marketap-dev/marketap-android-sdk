@@ -31,7 +31,6 @@ internal class CustomClient(
             setBody(body)
         }
         val res = getResponse.bodyAsText()
-
         logger.v("Response: $getResponse, body: $res")
         return res.deserialize(responseAdapter)
     }

@@ -28,7 +28,7 @@ object Dependency {
         config: MarketapConfig,
         application: Application
     ): MarketapCoreService {
-        val storage = SharedPreferenceInternalStorage(application)
+        val storage = SharedPreferenceInternalStorage(application).initialize(application)
         val marketapApi = MarketapApiImpl()
         val deviceManager = AndroidDeviceManager(storage)
         val marketapBackend = RetryMarketapBackend(storage, marketapApi, deviceManager)

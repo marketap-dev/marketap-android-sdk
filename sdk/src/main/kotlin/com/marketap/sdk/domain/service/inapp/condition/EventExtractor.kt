@@ -16,8 +16,8 @@ object EventExtractor {
             DataType.DATETIME -> (this as? String)?.toDate()
             DataType.DATE -> (this as? String)
             DataType.STRING_ARRAY -> (this as? List<*>)?.mapNotNull { it as? String }
-            DataType.OBJECT -> TODO()
-            DataType.OBJECT_ARRAY -> TODO()
+            DataType.OBJECT -> TODO("Object extraction not implemented")
+            DataType.OBJECT_ARRAY -> TODO("Object array extraction not implemented")
         }
     }
 

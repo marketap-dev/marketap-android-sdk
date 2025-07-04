@@ -8,6 +8,6 @@ class MyApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         Marketap.setLogLevel(MarketapLogLevel.VERBOSE)
-        Marketap.initialize(this, "kx43pz7", true)
+        Marketap.initialize(this, "kx43pz7")
     }
 }

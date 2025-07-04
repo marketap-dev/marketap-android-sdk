@@ -52,7 +52,7 @@ internal object CustomHandlerStore {
         logger.d("Marketap SDK set click handler")
         marketapClickHandler = handler
         if (handler != null && pendingClick != null) {
-            logger.d("Marketap SDK pending click handled by custom handler")
+            logger.d("Marketap SDK pending click handled by custom handler", "$pendingClick")
             handler.handleClick(pendingClick!!)
             pendingClick = null
         }
