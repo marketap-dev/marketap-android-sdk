@@ -106,10 +106,10 @@ internal class RetryMarketapBackend(
     }
 
     override fun updateDevice(projectId: String, request: DeviceReq) {
-        logger.d(
-            "updating device of project $projectId",
-            "deviceId: ${request.deviceId}, properties: ${request.properties}"
-        )
+        logger.d {
+            "updating device of project $projectId, " +
+                    "deviceId: ${request.deviceId}, properties: ${request.properties}"
+        }
         storage.queueItem("devices", PairEntry(projectId, request), pairAdapter())
         apiWorkGroup.dispatch(::checkDeviceQueue)
     }
@@ -120,7 +120,7 @@ internal class RetryMarketapBackend(
         onSuccess: (InAppCampaignRes) -> Unit
     ) {
         runBlocking {
-            logger.d("fetching campaigns", "request: $request")
+            logger.d { "fetching campaigns, request: $request" }
             val deferredResponse = CompletableDeferred<InAppCampaignRes>()
 
             apiWorkGroup.dispatch {
@@ -144,16 +144,16 @@ internal class RetryMarketapBackend(
             if (result != null) {
                 inTimeout?.invoke(result)
             } else {
-                logger.w("fetchCampaigns timed out", "request: $request")
+                logger.w { "fetchCampaigns timed out for request: $request" }
             }
         }
     }
 
     override fun track(projectId: String, request: IngestEventRequest) {
-        logger.d(
-            "tracking event of project $projectId",
-            "name: ${request.name}, properties: ${request.properties}"
-        )
+        logger.d {
+            "tracking event for project $projectId, " +
+                    "eventName: ${request.name}, properties: ${request.properties}"
+        }
         storage.queueItem("events", PairEntry(projectId, request), pairAdapter())
         apiWorkGroup.dispatch(::checkEventQueue)
         apiWorkGroup.dispatch(::checkUserQueue)
@@ -161,10 +161,10 @@ internal class RetryMarketapBackend(
     }
 
     override fun updateProfile(projectId: String, request: UpdateProfileRequest) {
-        logger.d(
-            "updating profile of project $projectId",
-            "userId: ${request.userId}, properties: ${request.properties}"
-        )
+        logger.d {
+            "updating profile for project $projectId, " +
+                    "userId: ${request.userId}, properties: ${request.properties}"
+        }
         storage.queueItem("users", PairEntry(projectId, request), pairAdapter())
         apiWorkGroup.dispatch(::checkEventQueue)
         apiWorkGroup.dispatch(::checkUserQueue)

@@ -11,14 +11,15 @@ internal object MarketapRegistry {
     var marketapCore: MarketapCoreService? = null
         get() {
             if (field == null) {
-                logger.w(
+                logger.w {
                     "Marketap SDK is not initialized. Please call Marketap.initialize() in your Application class."
-                )
+                }
             }
             return field
         }
+    var isInitialized: Boolean = false
     var config: MarketapConfig? = null
     var application: Application? = null
     var marketapClickHandler: MarketapClickHandler? = null
-    var logLevel: MarketapLogLevel = MarketapLogLevel.NONE
+    var logLevel: MarketapLogLevel = MarketapLogLevel.INFO
 }

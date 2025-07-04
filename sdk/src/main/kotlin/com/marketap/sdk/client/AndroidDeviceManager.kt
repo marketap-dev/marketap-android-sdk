@@ -42,14 +42,14 @@ internal class AndroidDeviceManager(
 
     private val REQ_POST_NOTI = 0xA7
     override fun requestAuthorizationForPushNotifications(activity: Activity) {
-        logger.i("Requesting push notification authorization")
+        logger.i { "Requesting push notification authorization" }
         /* ───────────── Android 13+ (API 33) ───────────── */
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             val permission = ContextCompat.checkSelfPermission(
                 activity, Manifest.permission.POST_NOTIFICATIONS
             )
             if (permission == PackageManager.PERMISSION_GRANTED) {
-                logger.d("Notification permission already granted")
+                logger.d { "Notification permission already granted $token" }
                 return
             }
 
@@ -58,7 +58,7 @@ internal class AndroidDeviceManager(
                 arrayOf(Manifest.permission.POST_NOTIFICATIONS),
                 REQ_POST_NOTI
             )
-            logger.d("Requesting notification permission")
+            logger.d { "Requesting notification permission" }
             return
         }
 
@@ -75,10 +75,10 @@ internal class AndroidDeviceManager(
                     }
                 }
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            logger.d("Requesting notification settings")
+            logger.d { "Requesting notification settings" }
             activity.startActivity(intent)
         } else {
-            logger.d("Notification permission already granted")
+            logger.d { "Notification permission already granted" }
         }
     }
 
@@ -103,7 +103,7 @@ internal class AndroidDeviceManager(
         val isFirstOpen = storage.getItem("first_open", booleanAdapter)
         if (isFirstOpen == null) {
             storage.setItem("first_open", true, booleanAdapter)
-            logger.d("Device marked as first open")
+            logger.d { "Device marked as first open" }
             return true
         }
         return false

@@ -18,7 +18,7 @@ class ClientStateManager(
     }
 
     fun setUserId(userId: String?) {
-        logger.d("Setting user ID", userId ?: "null")
+        logger.d { "Setting user ID:  ${userId ?: "null"}" }
         internalStorage.setItem("user_id", userId, stringAdapter)
     }
 }

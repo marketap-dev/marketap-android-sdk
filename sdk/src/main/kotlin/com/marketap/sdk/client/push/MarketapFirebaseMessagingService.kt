@@ -20,16 +20,16 @@ class MarketapFirebaseMessagingService : FirebaseMessagingService() {
     companion object {
         @JvmStatic
         fun handleMarketapRemoteMessage(context: Context, remoteMessage: RemoteMessage): Boolean {
-            logger.d(
-                "MarketapFirebaseMessagingService: Received remote message",
-                "data: ${remoteMessage.data}"
-            )
+            logger.d {
+                "MarketapFirebaseMessagingService: Received remote message, " +
+                        "data: ${remoteMessage.data}"
+            }
             if (!isMarketapPushNotification(remoteMessage)) {
-                logger.d("Not a Marketap push notification, ignoring")
+                logger.d { "Not a Marketap push notification, ignoring" }
                 return false
             }
 
-            logger.d("Marketap push notification detected, processing")
+            logger.d { "Marketap push notification detected, processing" }
             handleMarketapPush(context, remoteMessage.data)
             return true
         }
@@ -42,14 +42,14 @@ class MarketapFirebaseMessagingService : FirebaseMessagingService() {
         private fun handleMarketapPush(context: Context, data: Map<String, String>) {
             val pushData = PushData.fromMap(data)
             if (pushData == null) {
-                logger.w("Received invalid Marketap push notification data, ignoring")
+                logger.w { "Received invalid Marketap push notification data, ignoring" }
                 return
             }
 
             if (PushDedupStore.isDuplicate(context, pushData.notificationId.toString())) {
-                logger.w(
+                logger.w {
                     "Marketap push notification with ID ${pushData.notificationId} is a duplicate, ignoring"
-                )
+                }
                 return
             }
 
@@ -57,10 +57,7 @@ class MarketapFirebaseMessagingService : FirebaseMessagingService() {
             val marketapPushNotification = try {
                 MarketapPushNotificationBuilder(context, pushData).build()
             } catch (e: Exception) {
-                logger.e(
-                    "Failed to build Marketap push notification for ID ${pushData.notificationId}",
-                    exception = e
-                )
+                logger.e(e) { "Failed to build Marketap push notification for ID ${pushData.notificationId}" }
                 return
             }
 

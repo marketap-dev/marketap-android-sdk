@@ -7,24 +7,16 @@ import android.os.Bundle
 internal object ManifestUtils {
     fun logSystemConstants(context: Context) {
         SystemBooleanConstant.values().forEach { constant ->
-            logger.d(
-                "Manifest boolean constant: ${constant.key} = ${
-                    getSystemBoolean(
-                        context,
-                        constant
-                    )
-                }"
-            )
+            logger.d {
+                "Manifest boolean constant: ${constant.key}" +
+                        " = ${getSystemBoolean(context, constant)}"
+            }
         }
         SystemStringConstant.values().forEach { constant ->
-            logger.d(
-                "Manifest string constant: ${constant.key} = ${
-                    getSystemString(
-                        context,
-                        constant
-                    )
-                }"
-            )
+            logger.d {
+                "Manifest string constant: ${constant.key}" +
+                        " = ${getSystemString(context, constant)}"
+            }
         }
     }
 

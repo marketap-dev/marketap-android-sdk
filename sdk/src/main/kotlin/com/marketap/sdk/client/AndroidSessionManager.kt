@@ -21,7 +21,7 @@ class AndroidSessionManager(
     override fun getSessionId(onSessionStart: (sessionId: String) -> Unit): String {
         val (sessionId, isNewSession) = getOrGenerateSessionId()
         if (isNewSession) {
-            logger.i("New session started", sessionId)
+            logger.d { "New session started: $sessionId" }
             onSessionStart(sessionId)
         }
         return sessionId
@@ -41,9 +41,9 @@ class AndroidSessionManager(
 
         return if (activityTime == null || oldSessionId == null || activityTime + expirationTime < currentTime) {
             if (activityTime == null) {
-                logger.i("Session expired, generating new session ID")
+                logger.d { "Session expired, generating new session ID" }
             } else {
-                logger.i("No previous session found, generating new session ID")
+                logger.d { "No previous session found, generating new session ID" }
             }
             generateAndSaveSessionId() to true
         } else {

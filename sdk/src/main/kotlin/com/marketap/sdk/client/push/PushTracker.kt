@@ -24,9 +24,9 @@ internal object PushTracker {
     private var deviceManager: DeviceManager? = null
 
     private fun initWithContext(context: Context) {
-        logger.d("Initializing PushTracker with context")
+        logger.d { "Initializing PushTracker with context" }
         if (marketapBackend != null && deviceManager != null) {
-            logger.d("PushTracker already initialized, skipping re-initialization")
+            logger.d { "PushTracker already initialized, skipping re-initialization" }
             return
         }
         val storage = SharedPreferenceInternalStorage(context)
@@ -35,10 +35,10 @@ internal object PushTracker {
     }
 
     fun trackImpression(context: Context, data: PushData) {
-        logger.d(
-            "Tracking Marketap push notification with notificationId",
-            data.notificationId.toString()
-        )
+        logger.d {
+            "Tracking Marketap push notification with notificationId, " +
+                    data.notificationId.toString()
+        }
         initWithContext(context)
         data.deliveryData?.let {
             CoroutineScope(Dispatchers.IO).launch {
@@ -53,10 +53,7 @@ internal object PushTracker {
                         )
                     ) ?: throw IllegalStateException("MarketapBackend is not initialized")
                 } catch (e: Exception) {
-                    logger.e(
-                        "Failed to track push impression for project ${it.projectId}: ${e.message}",
-                        exception = e
-                    )
+                    logger.e(e) { "Failed to track push impression for project ${it.projectId}: ${e.message}" }
                 }
             }
         }
@@ -77,10 +74,7 @@ internal object PushTracker {
                     )
                 ) ?: throw IllegalStateException("MarketapBackend is not initialized")
             } catch (e: Exception) {
-                logger.e(
-                    "Failed to track push click for project ${data.projectId}: ${e.message}",
-                    exception = e
-                )
+                logger.e(e) { "Failed to track push click for project ${data.projectId}: ${e.message}" }
             }
         }
 

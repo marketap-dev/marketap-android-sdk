@@ -28,6 +28,7 @@ internal class DeviceListener(
     private fun addTokenListener() {
         try {
             if (FirebaseApp.getApps(application).isEmpty()) {
+                logger.d { "FirebaseApp not initialized, initializing now" }
                 FirebaseApp.initializeApp(application)
             }
 
@@ -35,13 +36,14 @@ internal class DeviceListener(
                 if (task.isSuccessful) {
                     deviceManager.setToken(task.result)
                     userIngestionService.pushDevice()
-                    logger.i("FCM token fetched successfully", task.result)
+                    logger.d { "FCM token fetched successfully" }
+                    logger.d { "This device's push token is [${task.result}]. Please use this token to test push message in Marketap console" }
                 } else {
-                    logger.e("Failed to fetch FCM token", exception = task.exception)
+                    logger.e(task.exception) { "Failed to fetch FCM token" }
                 }
             }
         } catch (e: Exception) {
-            logger.e("MarketapSDK", "Failed to fetch FCM token: ${e.message}")
+            logger.e(e) { "Failed to fetch FCM token" }
         }
     }
 
@@ -53,10 +55,11 @@ internal class DeviceListener(
                 if (id != null && id != "00000000-0000-0000-0000-000000000000") {
                     deviceManager.setGoogleAdvertisingId(id)
                     userIngestionService.pushDevice()
-                    logger.i("GAID fetched successfully", id)
+                    logger.d { "GAID fetched successfully with id: [$id]" }
+                    logger.d { "Your Marketap Device ID is [gaid:$id]" }
                 }
             } catch (e: Exception) {
-                logger.e("MarketapSDK", "Failed to fetch GAID: ${e.message}")
+                logger.e(e) { "Failed to fetch GAID" }
             } finally {
                 addAppSetIdListener()
             }
@@ -69,7 +72,7 @@ internal class DeviceListener(
             val appSetId = appSetIdInfo.id
             deviceManager.setAppSetId(appSetId)
         }.addOnFailureListener {
-            logger.e("MarketapSDK", "Failed to fetch AppSet ID: ${it.message}")
+            logger.e(it) { "Failed to fetch AppSet ID" }
         }.addOnCompleteListener {
             userIngestionService.pushDevice()
             if (deviceManager.setFirstOpen()) {

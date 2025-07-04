@@ -19,7 +19,7 @@ import com.marketap.sdk.utils.logger
 class MarketapTrampolineActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        logger.d("MarketapTrampolineActivity(Push handling activity) onCreate() called")
+        logger.d { "MarketapTrampolineActivity(Push handling activity) onCreate() called" }
 
         if (intent.getBooleanExtra(IS_NOTIFICATION_FROM_MARKETAP, false)) {
             val deepLink = intent.getStringExtra(NOTIFICATION_DEEP_LINK_KEY)
@@ -39,7 +39,7 @@ class MarketapTrampolineActivity : Activity() {
                         )
                     )
                 ) {
-                    logger.d("Push Click handled by custom click handler")
+                    logger.d { "Push Click handled by custom click handler" }
                     quit()
                     return
                 }
@@ -60,12 +60,12 @@ class MarketapTrampolineActivity : Activity() {
                 }
             }
 
-            logger.d("Launching Marketap notification with deepLink: $deepLink, url: $url")
+            logger.d { "Launching Marketap notification with deepLink: $deepLink, url: $url" }
             launchIntent?.let {
                 startActivity(it)
             }
         } else {
-            logger.w("MarketapTrampolineActivity launched without valid Marketap notification data")
+            logger.w { "MarketapTrampolineActivity launched without valid Marketap notification data" }
             startActivity(packageManager.getLaunchIntentForPackage(packageName)?.apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             })

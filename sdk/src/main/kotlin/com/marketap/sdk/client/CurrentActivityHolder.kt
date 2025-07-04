@@ -50,7 +50,7 @@ object CurrentActivityHolder : Application.ActivityLifecycleCallbacks {
     private var isRegistered = false
     fun applyToApplication(application: Application) {
         if (isRegistered) {
-            logger.w("applyToApplication: Already registered")
+            logger.w { "applyToApplication: Already registered" }
             return
         }
         isRegistered = true

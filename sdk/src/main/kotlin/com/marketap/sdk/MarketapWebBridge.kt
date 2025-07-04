@@ -9,7 +9,7 @@ import com.marketap.sdk.utils.logger
 
 class MarketapWebBridge {
     init {
-        logger.d("SDK", "MarketapWebBridge initialized")
+        logger.d { "MarketapWebBridge initialized" }
     }
 
     companion object {
@@ -34,7 +34,7 @@ class MarketapWebBridge {
             }
 
             else -> {
-                logger.e("SDK", "Unknown type: $type")
+                logger.e { "MarketapWebBridge received unknown type: $type" }
             }
         }
     }

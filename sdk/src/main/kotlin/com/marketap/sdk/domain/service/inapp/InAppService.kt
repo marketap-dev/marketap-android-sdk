@@ -27,13 +27,13 @@ internal class InAppService(
                         event.properties
                     )
                 ) {
-                    logger.d(
+                    logger.v {
                         "Campaign ${campaign.id} does not match event condition for event ${event.name}"
-                    )
+                    }
                     return@find false
                 }
                 if (campaignExposureService.isCampaignHidden(campaign.id)) {
-                    logger.d("Campaign ${campaign.id} is hidden")
+                    logger.v { "Campaign ${campaign.id} is hidden" }
                     return@find false
                 }
 
@@ -44,13 +44,13 @@ internal class InAppService(
                             frequencyCap.limit
                         )
                     ) {
-                        logger.d(
+                        logger.v {
                             "Campaign ${campaign.id} has reached frequency cap limit"
-                        )
+                        }
                         return@find false
                     }
                 }
-                logger.d("Campaign ${campaign.id} matches event condition for event ${event.name}")
+                logger.v { "Campaign ${campaign.id} matches event condition for event ${event.name}" }
                 true
             }
 
@@ -65,21 +65,21 @@ internal class InAppService(
         onImpression: (campaign: InAppCampaign) -> Unit,
         onClick: (campaign: InAppCampaign, locationId: String) -> Unit
     ) {
-        logger.i("Showing in-app campaign: ${targetCampaign.id} with layout type: ${targetCampaign.layout.layoutType}")
+        logger.d { "Showing in-app campaign: ${targetCampaign.id} with layout type: ${targetCampaign.layout.layoutType}" }
         inAppView.show(
             targetCampaign.html,
             {
                 campaignExposureService.recordImpression(targetCampaign.id)
                 onImpression(targetCampaign)
-                logger.d("Recorded impression for campaign: ${targetCampaign.id}")
+                logger.d { "Recorded impression for campaign: ${targetCampaign.id}" }
             },
             { locationId ->
                 onClick(targetCampaign, locationId)
-                logger.d("Recorded click for campaign: ${targetCampaign.id} at location: $locationId")
+                logger.d { "Recorded click for campaign: ${targetCampaign.id} at location: $locationId" }
                 targetCampaign.id
             },
             { hideType ->
-                logger.d("Hiding campaign: ${targetCampaign.id} with hide type: $hideType")
+                logger.d { "Hiding campaign: ${targetCampaign.id} with hide type: $hideType" }
                 when (hideType) {
                     HideType.HIDE_FOR_ONE_DAY -> campaignExposureService.hideCampaign(
                         targetCampaign.id, System.currentTimeMillis() + 1000 * 60 * 60 * 24

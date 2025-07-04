@@ -28,13 +28,12 @@ class PropertyConditionCheckerImpl(
                 )
             }
         } catch (e: Exception) {
-            logger.e(
-                "Error checking property condition",
-                "Property: ${eventPropertyCondition.extractionStrategy.propertySchema.name}, " +
+            logger.e(e) {
+                "Error checking property condition, " +
+                        "Property: ${eventPropertyCondition.extractionStrategy.propertySchema.name}, " +
                         "Operator: ${eventPropertyCondition.operator}, " +
-                        "Target Values: ${eventPropertyCondition.targetValues}",
-                exception = e
-            )
+                        "Target Values: ${eventPropertyCondition.targetValues}"
+            }
             false
         }
         return result

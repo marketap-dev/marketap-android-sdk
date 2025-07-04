@@ -28,7 +28,7 @@ class WorkerGroup(
                 try {
                     work()
                 } catch (e: Exception) {
-                    logger.e("Error in marketap background worker", exception = e)
+                    logger.e(e) { "Error in marketap background worker" }
                 }
             }
         }

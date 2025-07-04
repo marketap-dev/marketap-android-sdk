@@ -51,15 +51,15 @@ internal class MarketapNotificationOpenHandler(
                 }
 
                 notificationManager.createNotificationChannel(channel)
-                logger.i(
-                    "Notification channel created",
-                    "ID: $channelId, Name: $channelName, Description: $channelDescription"
-                )
+                logger.i {
+                    "Notification channel created, " +
+                            "ID: $channelId, Name: $channelName, Description: $channelDescription"
+                }
             } else {
-                logger.i(
-                    "Notification channel already exists",
-                    "ID: $channelId, Name: $channelName, Description: $channelDescription"
-                )
+                logger.d {
+                    "Notification channel already exists, " +
+                            "ID: $channelId, Name: $channelName, Description: $channelDescription"
+                }
             }
         }
     }

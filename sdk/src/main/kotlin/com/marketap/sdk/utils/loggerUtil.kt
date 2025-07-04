@@ -8,50 +8,53 @@ private const val MAIN_TAG = "MarketapSDK"
 internal inline val <reified T> T.logger: MarketapLogger
     get() {
         return object : MarketapLogger {
-            override fun v(description: String, argument: String?) {
+            override fun v(description: () -> String) {
                 if (!MarketapLogLevel.VERBOSE.isEnabled()) return
                 Log.v(
                     MAIN_TAG,
-                    "[${T::class.java.name}]: $description${argument?.let { "($it)" } ?: ""}"
+                    "[${T::class.java.name}]: ${description()}"
                 )
             }
 
-            override fun d(description: String, argument: String?) {
+            override fun d(description: () -> String) {
                 if (!MarketapLogLevel.DEBUG.isEnabled()) return
                 Log.d(
                     MAIN_TAG,
-                    "[${T::class.java.name}]: $description${argument?.let { "($it)" } ?: ""}")
+                    "[${T::class.java.name}]: ${description()}"
+                )
             }
 
-            override fun e(description: String, argument: String?, exception: Exception?) {
+            override fun e(exception: Exception?, description: () -> String) {
                 if (!MarketapLogLevel.ERROR.isEnabled()) return
                 Log.e(
                     MAIN_TAG,
-                    "[${T::class.java.name}]: $description${argument?.let { "($it)" } ?: ""}",
+                    "[${T::class.java.name}]: ${description()}",
                     exception
                 )
             }
 
-            override fun i(description: String, argument: String?) {
+            override fun i(description: () -> String) {
                 if (!MarketapLogLevel.INFO.isEnabled()) return
                 Log.i(
                     MAIN_TAG,
-                    "[${T::class.java.name}]: $description${argument?.let { "($it)" } ?: ""}")
+                    "[${T::class.java.name}]: ${description()}"
+                )
             }
 
-            override fun w(description: String, argument: String?) {
+            override fun w(description: () -> String) {
                 if (!MarketapLogLevel.WARN.isEnabled()) return
                 Log.w(
                     MAIN_TAG,
-                    "[${T::class.java.name}]: $description${argument?.let { "($it)" } ?: ""}")
+                    "[${T::class.java.name}]: ${description()}"
+                )
             }
         }
     }
 
 internal interface MarketapLogger {
-    fun v(description: String, argument: String? = null) // verbose
-    fun d(description: String, argument: String? = null) // debug
-    fun i(description: String, argument: String? = null) // info
-    fun w(description: String, argument: String? = null) // warn
-    fun e(description: String, argument: String? = null, exception: Exception? = null) // error
+    fun v(description: () -> String) // verbose
+    fun d(description: () -> String) // debug
+    fun i(description: () -> String) // info
+    fun w(description: () -> String) // warn
+    fun e(exception: Exception? = null, description: () -> String) // error
 }

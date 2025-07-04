@@ -70,7 +70,7 @@ object Dependency {
         val deviceListener = DeviceListener(deviceManager, userIngestionService, application, core)
         deviceListener.init()
         ManifestUtils.logSystemConstants(application)
-        logger.i("Marketap SDK successfully initialized with projectId", config.projectId)
+        logger.i { "Marketap SDK successfully initialized with projectId: ${config.projectId}" }
         return core
     }
 }

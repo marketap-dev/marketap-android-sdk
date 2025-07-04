@@ -22,9 +22,9 @@ internal object CustomHandlerStore {
     ): Boolean {
         val handler = marketapClickHandler
         return if (isCustomized(activity.applicationContext)) {
-            logger.d("Marketap SDK click handled by custom handler")
+            logger.d { "Marketap SDK click handled by custom handler" }
             if (handler == null) {
-                logger.w("Marketap SDK click handler is not set, pending click and launching app if task root")
+                logger.w { "Marketap SDK click handler is not set, pending click and launching app if task root" }
                 pendingClick = click
                 if (activity.isTaskRoot) {
                     activity.packageManager.getLaunchIntentForPackage(activity.packageName)?.let {
@@ -34,12 +34,9 @@ internal object CustomHandlerStore {
             } else {
                 try {
                     handler.handleClick(click)
-                    logger.d("Marketap SDK click handled by custom handler successfully")
+                    logger.d { "Marketap SDK click handled by custom handler successfully" }
                 } catch (e: Exception) {
-                    logger.e(
-                        "Error handling click with custom handler: ${e.message}",
-                        exception = e
-                    )
+                    logger.e(e) { "Error handling click with custom handler: ${e.message}" }
                 }
             }
             true
@@ -49,10 +46,10 @@ internal object CustomHandlerStore {
     }
 
     fun setClickHandler(handler: MarketapClickHandler?) {
-        logger.d("Marketap SDK set click handler")
+        logger.i { "Marketap SDK set click handler" }
         marketapClickHandler = handler
         if (handler != null && pendingClick != null) {
-            logger.d("Marketap SDK pending click handled by custom handler", "$pendingClick")
+            logger.d { "Marketap SDK pending click handled by custom handler: $pendingClick" }
             handler.handleClick(pendingClick!!)
             pendingClick = null
         }

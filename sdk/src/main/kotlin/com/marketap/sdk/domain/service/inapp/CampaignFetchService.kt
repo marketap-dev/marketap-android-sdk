@@ -20,14 +20,16 @@ internal class CampaignFetchService(
     private val deviceManager: DeviceManager
 ) {
 
-    private val CAMPAIGN_CACHE_KEY = "last_campaigns"
-    private val CAMPAIGN_CACHED_AT = "campaign_cached_at"
-    private val expirationTime: Long = 5 * 60 * 1000 // 5 minutes
+    companion object {
+        private const val CAMPAIGN_CACHE_KEY = "last_campaigns"
+        private const val CAMPAIGN_CACHED_AT = "campaign_cached_at"
+        private const val EXPIRATION_TIME: Long = 5 * 60 * 1000 // 5 minutes
+    }
 
     fun useCampaigns(block: (campaigns: List<InAppCampaign>) -> Unit) {
         val userId = clientStateManager.getUserId()
         fetchLocalCampaign(userId)?.let { localCampaigns ->
-            logger.d("Using local campaigns for user $userId")
+            logger.d { "Using cached campaigns for user $userId" }
             block(localCampaigns)
             return
         }
@@ -35,11 +37,11 @@ internal class CampaignFetchService(
         val device = deviceManager.getDevice()
 
         inAppCampaignApi.fetchCampaigns(FetchCampaignReq(projectId, userId, device.toReq()), {
-            logger.d("Fetching campaigns from API for user $userId")
+            logger.d { "Fetching campaigns from API for user $userId" }
             block(it.campaigns)
         })
         { campaigns ->
-            logger.d("Storing fetched campaigns for user $userId")
+            logger.d { "Storing fetched campaigns for user $userId" }
             internalStorage.setItem("$CAMPAIGN_CACHE_KEY:$userId", campaigns, adapter())
             internalStorage.setItem(
                 "$CAMPAIGN_CACHED_AT:$userId",
@@ -61,6 +63,6 @@ internal class CampaignFetchService(
 
         val currentTime = System.currentTimeMillis()
 
-        return if (lastFetchedAt + expirationTime < currentTime) null else campaigns.campaigns
+        return if (lastFetchedAt + EXPIRATION_TIME < currentTime) null else campaigns.campaigns
     }
 }

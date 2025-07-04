@@ -24,14 +24,14 @@ internal class CustomClient(
         builder: HttpRequestBuilder.() -> Unit = {},
     ): T {
         val body = request.serialize(requestAdapter)
-        logger.v("Request: $body, endpoint: $endpoint")
+        logger.v { "Request: $body, endpoint: $endpoint" }
         val getResponse = client.post(endpoint) {
             builder()
             header("Content-Type", "application/json")
             setBody(body)
         }
         val res = getResponse.bodyAsText()
-        logger.v("Response: $getResponse, body: $res")
+        logger.v { "Response: $getResponse, body: $res" }
         return res.deserialize(responseAdapter)
     }
 }
