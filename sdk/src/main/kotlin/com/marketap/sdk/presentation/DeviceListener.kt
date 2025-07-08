@@ -28,6 +28,7 @@ internal class DeviceListener(
     private fun addTokenListener() {
         try {
             if (FirebaseApp.getApps(application).isEmpty()) {
+                logger.d { "FirebaseApp not initialized, initializing now" }
                 FirebaseApp.initializeApp(application)
             }
 
@@ -35,10 +36,24 @@ internal class DeviceListener(
                 if (task.isSuccessful) {
                     deviceManager.setToken(task.result)
                     userIngestionService.pushDevice()
+                    logger.d { "FCM token fetched successfully" }
+                    logger.d { "This device's push token is [${task.result}]. " }
+                    logger.d {
+                        if (deviceManager.isPushNotificationEnabled(application)) {
+                            "Push permission is enabled for this device. " +
+                                    "You can test push messages by sending a test message from the Marketap console."
+                        } else {
+                            "Push notifications are not enabled for this device. " +
+                                    "Please enable this by calling " +
+                                    "`Marketap.requestAuthorizationForPushNotifications(activity)` "
+                        }
+                    }
+                } else {
+                    logger.e(task.exception) { "Failed to fetch FCM token" }
                 }
             }
         } catch (e: Exception) {
-            logger.e("MarketapSDK", "Failed to fetch FCM token: ${e.message}")
+            logger.e(e) { "Failed to fetch FCM token" }
         }
     }
 
@@ -50,9 +65,11 @@ internal class DeviceListener(
                 if (id != null && id != "00000000-0000-0000-0000-000000000000") {
                     deviceManager.setGoogleAdvertisingId(id)
                     userIngestionService.pushDevice()
+                    logger.d { "GAID fetched successfully with id: [$id]" }
+                    logger.d { "Your Marketap Device ID is [gaid:$id]" }
                 }
             } catch (e: Exception) {
-                logger.e("MarketapSDK", "Failed to fetch GAID: ${e.message}")
+                logger.e(e) { "Failed to fetch GAID" }
             } finally {
                 addAppSetIdListener()
             }
@@ -65,7 +82,7 @@ internal class DeviceListener(
             val appSetId = appSetIdInfo.id
             deviceManager.setAppSetId(appSetId)
         }.addOnFailureListener {
-            logger.e("MarketapSDK", "Failed to fetch AppSet ID: ${it.message}")
+            logger.e(it) { "Failed to fetch AppSet ID" }
         }.addOnCompleteListener {
             userIngestionService.pushDevice()
             if (deviceManager.setFirstOpen()) {

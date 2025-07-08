@@ -3,7 +3,7 @@ package com.marketap.sdk.client
 import android.app.Activity
 import android.app.Application
 import android.os.Bundle
-import android.util.Log
+import com.marketap.sdk.utils.logger
 import java.lang.ref.WeakReference
 
 object CurrentActivityHolder : Application.ActivityLifecycleCallbacks {
@@ -50,7 +50,7 @@ object CurrentActivityHolder : Application.ActivityLifecycleCallbacks {
     private var isRegistered = false
     fun applyToApplication(application: Application) {
         if (isRegistered) {
-            Log.w("CurrentActivityHolder", "applyToApplication: Already registered")
+            logger.w { "applyToApplication: Already registered" }
             return
         }
         isRegistered = true

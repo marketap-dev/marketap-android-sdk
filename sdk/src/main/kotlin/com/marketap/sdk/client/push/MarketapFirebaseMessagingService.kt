@@ -4,23 +4,13 @@ import android.app.NotificationManager
 import android.content.Context
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
-import com.marketap.sdk.Marketap.config
-import com.marketap.sdk.client.SharedPreferenceInternalStorage
-import com.marketap.sdk.client.api.MarketapApiImpl
-import com.marketap.sdk.model.internal.AppEventProperty
-import com.marketap.sdk.model.internal.api.DeviceReq
-import com.marketap.sdk.model.internal.api.IngestEventRequest
 import com.marketap.sdk.model.internal.push.PushData
-import com.marketap.sdk.utils.PairEntry
-import com.marketap.sdk.utils.getNow
-import com.marketap.sdk.utils.pairAdapter
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
+import com.marketap.sdk.utils.logger
 
 class MarketapFirebaseMessagingService : FirebaseMessagingService() {
 
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
+        logger.d { "MarketapFirebaseMessagingService: onMessageReceived called" }
         handleMarketapRemoteMessage(applicationContext, remoteMessage)
     }
 
@@ -29,14 +19,18 @@ class MarketapFirebaseMessagingService : FirebaseMessagingService() {
     }
 
     companion object {
-        private val marketapApi = MarketapApiImpl(debug = config?.debug == true)
-
         @JvmStatic
         fun handleMarketapRemoteMessage(context: Context, remoteMessage: RemoteMessage): Boolean {
+            logger.d {
+                "MarketapFirebaseMessagingCompanion: Received remote message, " +
+                        "data: ${remoteMessage.data}"
+            }
             if (!isMarketapPushNotification(remoteMessage)) {
+                logger.d { "Not a Marketap push notification, ignoring" }
                 return false
             }
 
+            logger.d { "Marketap push notification detected, processing" }
             handleMarketapPush(context, remoteMessage.data)
             return true
         }
@@ -47,48 +41,30 @@ class MarketapFirebaseMessagingService : FirebaseMessagingService() {
         }
 
         private fun handleMarketapPush(context: Context, data: Map<String, String>) {
-            val pushData = PushData.fromMap(data) ?: return
-            if (PushDedupStore.isDuplicate(context, pushData.notificationId.toString())) {
+            val pushData = PushData.fromMap(data)
+            if (pushData == null) {
+                logger.w { "Received invalid Marketap push notification data, ignoring" }
                 return
             }
 
-            track(context, pushData)
-            val marketapPushNotification =
+            if (PushDedupStore.isDuplicate(context, pushData.notificationId.toString())) {
+                logger.w {
+                    "Marketap push notification with ID ${pushData.notificationId} is a duplicate, ignoring"
+                }
+                return
+            }
+
+            PushTracker.trackImpression(context, pushData)
+            val marketapPushNotification = try {
                 MarketapPushNotificationBuilder(context, pushData).build()
+            } catch (e: Exception) {
+                logger.e(e) { "Failed to build Marketap push notification for ID ${pushData.notificationId}" }
+                return
+            }
+
             val notificationManager =
                 context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             notificationManager.notify(pushData.notificationId, marketapPushNotification)
-        }
-
-        private fun track(context: Context, data: PushData) {
-
-            data.deliveryData?.let {
-                CoroutineScope(Dispatchers.IO).launch {
-                    try {
-                        marketapApi.track(
-                            it.projectId,
-                            IngestEventRequest.impression(
-                                it.userId,
-                                DeviceReq(it.deviceId),
-                                AppEventProperty.offSite(it),
-                                getNow()
-                            )
-                        )
-                    } catch (e: Exception) {
-                        val storage = SharedPreferenceInternalStorage(context)
-                        storage.queueItem(
-                            "events", PairEntry(
-                                it.projectId, IngestEventRequest.impression(
-                                    it.userId,
-                                    DeviceReq(it.deviceId),
-                                    AppEventProperty.offSite(it),
-                                    getNow()
-                                )
-                            ), pairAdapter()
-                        )
-                    }
-                }
-            }
         }
     }
 }

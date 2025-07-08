@@ -2,6 +2,7 @@ package com.marketap.sdk.domain.service.inapp.condition
 
 import com.marketap.sdk.domain.service.inapp.condition.comparator.ValueComparator
 import com.marketap.sdk.model.internal.inapp.EventPropertyCondition
+import com.marketap.sdk.utils.logger
 
 class PropertyConditionCheckerImpl(
     private val comparator: ValueComparator
@@ -27,6 +28,12 @@ class PropertyConditionCheckerImpl(
                 )
             }
         } catch (e: Exception) {
+            logger.e(e) {
+                "Error checking property condition, " +
+                        "Property: ${eventPropertyCondition.extractionStrategy.propertySchema.name}, " +
+                        "Operator: ${eventPropertyCondition.operator}, " +
+                        "Target Values: ${eventPropertyCondition.targetValues}"
+            }
             false
         }
         return result

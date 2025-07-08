@@ -2,36 +2,39 @@ package com.marketap.sdk
 
 import android.app.Activity
 import android.app.Application
-import com.marketap.sdk.domain.service.MarketapCoreService
 import com.marketap.sdk.model.MarketapConfig
 import com.marketap.sdk.model.external.EventProperty
 import com.marketap.sdk.model.external.MarketapClickHandler
+import com.marketap.sdk.model.external.MarketapLogLevel
 import com.marketap.sdk.presentation.CustomHandlerStore
-import com.marketap.sdk.presentation.initializeCore
+import com.marketap.sdk.presentation.Dependency.initializeCore
+import com.marketap.sdk.presentation.MarketapRegistry
+import com.marketap.sdk.presentation.MarketapRegistry.marketapCore
+import com.marketap.sdk.utils.logger
+import com.marketap.sdk.utils.mapAdapter
+import com.marketap.sdk.utils.serialize
 
 
 object Marketap {
-    private var marketapCore: MarketapCoreService? = null
-    internal var config: MarketapConfig? = null
-    private var application: Application? = null
-
     /**
      * SDK를 초기화합니다. Android의 가장 상단 Application 클래스에서 onCreate 메서드 내부에서 호출해야 합니다.
      *
      * @param application Android Application 인스턴스
      * @param projectId 프로젝트 ID
-     * @param debug 디버그 모드 활성화 여부 (`null`일 경우 기본값 사용)
      */
-    @JvmOverloads
     @JvmStatic
-    fun initialize(application: Application, projectId: String, debug: Boolean? = null) {
-        val config = MarketapConfig(projectId, debug == true)
-        if (marketapCore == null || this.config?.projectId != config.projectId || application !== this.application) {
+    fun initialize(application: Application, projectId: String) {
+        logger.v { "Marketap SDK start initializing with projectId $projectId" }
+        val config = MarketapConfig(projectId)
+        if (!MarketapRegistry.isInitialized || MarketapRegistry.config?.projectId != config.projectId || application !== MarketapRegistry.application) {
             marketapCore = try {
-                this.config = config
-                this.application = application
-                initializeCore(config, application)
+                MarketapRegistry.config = config
+                MarketapRegistry.application = application
+                initializeCore(config, application).also {
+                    MarketapRegistry.isInitialized = true
+                }
             } catch (e: Exception) {
+                logger.e(e) { "Marketap SDK initialization failed with projectId  ${config.projectId}" }
                 null
             }
         }
@@ -53,9 +56,14 @@ object Marketap {
         userProperties: Map<String, Any>? = null,
         eventProperties: Map<String, Any>? = null
     ) {
+        logger.d {
+            "Marketap SDK login with " +
+                    "userId: $userId, " +
+                    "userProperties: ${userProperties?.serialize(mapAdapter<String, Any>())}, " +
+                    "eventProperties: ${eventProperties?.serialize(mapAdapter<String, Any>())}"
+        }
         marketapCore?.identify(userId, userProperties)
         marketapCore?.track("mkt_login", eventProperties)
-
     }
 
     /**
@@ -68,6 +76,9 @@ object Marketap {
     @JvmOverloads
     @JvmStatic
     fun logout(properties: Map<String, Any>? = null) {
+        logger.d {
+            "Marketap SDK logout with properties: ${properties?.serialize(mapAdapter<String, Any>())}"
+        }
         marketapCore?.track("mkt_logout", properties)
         marketapCore?.resetIdentity()
 
@@ -85,6 +96,10 @@ object Marketap {
         name: String,
         properties: Map<String, Any>? = null
     ) {
+        logger.d {
+            "Marketap SDK track event with name: $name, " +
+                    "properties: ${properties?.serialize(mapAdapter<String, Any>())}"
+        }
         marketapCore?.track(name, properties)
     }
 
@@ -99,6 +114,10 @@ object Marketap {
     @JvmOverloads
     @JvmStatic
     fun trackPurchase(revenue: Double, properties: Map<String, Any>? = null) {
+        logger.d {
+            "Marketap SDK track purchase" +
+                    "revenue: $revenue, properties: ${properties?.serialize(mapAdapter<String, Any>())}"
+        }
         marketapCore?.track(
             "mkt_purchase",
             mapOf("mkt_revenue" to revenue) + (properties ?: emptyMap()),
@@ -115,6 +134,10 @@ object Marketap {
     @JvmOverloads
     @JvmStatic
     fun trackRevenue(name: String, revenue: Double, properties: Map<String, Any>? = null) {
+        logger.d {
+            "Marketap SDK track revenue event with name: $name, " +
+                    "revenue: $revenue, properties: ${properties?.serialize(mapAdapter<String, Any>())}"
+        }
         marketapCore?.track(
             name,
             properties?.plus(EventProperty.Builder().setRevenue(revenue).build()),
@@ -130,6 +153,9 @@ object Marketap {
     @JvmOverloads
     @JvmStatic
     fun trackPageView(properties: Map<String, Any>? = null) {
+        logger.d {
+            "Marketap SDK track page view with properties: ${properties?.serialize(mapAdapter<String, Any>())}"
+        }
         marketapCore?.track("mkt_page_view", properties)
     }
 
@@ -144,6 +170,10 @@ object Marketap {
     @JvmOverloads
     @JvmStatic
     fun identify(userId: String, properties: Map<String, Any>? = null) {
+        logger.d {
+            "Marketap SDK identify user with userId: $userId, " +
+                    "properties: ${properties?.serialize(mapAdapter<String, Any>())}"
+        }
         marketapCore?.identify(userId, properties)
     }
 
@@ -155,17 +185,30 @@ object Marketap {
      */
     @JvmStatic
     fun resetIdentity() {
+        logger.d {
+            "Marketap SDK reset identity"
+        }
         marketapCore?.resetIdentity()
     }
 
 
     @JvmStatic
     fun setClickHandler(clickHandler: MarketapClickHandler) {
+        logger.i { "setClickHandler: ${clickHandler::class.java.name}" }
         CustomHandlerStore.setClickHandler(clickHandler)
     }
 
     @JvmStatic
+    fun setLogLevel(logLevel: MarketapLogLevel) {
+        logger.i {
+            "setLogLevel: ${logLevel.name}"
+        }
+        MarketapRegistry.logLevel = logLevel
+    }
+
+    @JvmStatic
     fun requestAuthorizationForPushNotifications(activity: Activity) {
+        logger.i { "requestAuthorizationForPushNotifications on ${activity::class.java.name}" }
         marketapCore?.requestAuthorizationForPushNotifications(activity)
     }
 }

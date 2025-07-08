@@ -1,30 +1,60 @@
 package com.marketap.sdk.utils
 
 import android.util.Log
+import com.marketap.sdk.model.external.MarketapLogLevel
 
 
 private const val MAIN_TAG = "MarketapSDK"
-internal val logger = object : MarketapLogger {
-    override fun d(tag: String, message: String) {
-        Log.d(MAIN_TAG, "$tag: $message")
+internal inline val <reified T> T.logger: MarketapLogger
+    get() {
+        return object : MarketapLogger {
+            override fun v(description: () -> String) {
+                if (!MarketapLogLevel.VERBOSE.isEnabled()) return
+                Log.v(
+                    MAIN_TAG,
+                    "[${T::class.java.name}]: ${description()}"
+                )
+            }
+
+            override fun d(description: () -> String) {
+                if (!MarketapLogLevel.DEBUG.isEnabled()) return
+                Log.d(
+                    MAIN_TAG,
+                    "[${T::class.java.name}]: ${description()}"
+                )
+            }
+
+            override fun e(exception: Exception?, description: () -> String) {
+                if (!MarketapLogLevel.ERROR.isEnabled()) return
+                Log.e(
+                    MAIN_TAG,
+                    "[${T::class.java.name}]: ${description()}",
+                    exception
+                )
+            }
+
+            override fun i(description: () -> String) {
+                if (!MarketapLogLevel.INFO.isEnabled()) return
+                Log.i(
+                    MAIN_TAG,
+                    "[${T::class.java.name}]: ${description()}"
+                )
+            }
+
+            override fun w(description: () -> String) {
+                if (!MarketapLogLevel.WARN.isEnabled()) return
+                Log.w(
+                    MAIN_TAG,
+                    "[${T::class.java.name}]: ${description()}"
+                )
+            }
+        }
     }
 
-    override fun e(tag: String, message: String, exception: Exception?) {
-        Log.e(MAIN_TAG, "$tag: $message", exception)
-    }
-
-    override fun i(tag: String, message: String) {
-        Log.i(MAIN_TAG, "$tag: $message")
-    }
-
-    override fun w(tag: String, message: String) {
-        Log.w(MAIN_TAG, "$tag: $message")
-    }
-}
-
-interface MarketapLogger {
-    fun d(tag: String, message: String)
-    fun e(tag: String, message: String, exception: Exception? = null)
-    fun i(tag: String, message: String)
-    fun w(tag: String, message: String)
+internal interface MarketapLogger {
+    fun v(description: () -> String) // verbose
+    fun d(description: () -> String) // debug
+    fun i(description: () -> String) // info
+    fun w(description: () -> String) // warn
+    fun e(exception: Exception? = null, description: () -> String) // error
 }

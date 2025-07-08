@@ -2,7 +2,6 @@ package com.marketap.sdk.client
 
 import android.Manifest
 import android.app.Activity
-import android.app.Application
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -10,7 +9,6 @@ import android.content.res.Resources
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
-import android.view.ViewConfiguration
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
@@ -19,17 +17,14 @@ import com.marketap.sdk.domain.repository.InternalStorage
 import com.marketap.sdk.model.internal.Device
 import com.marketap.sdk.model.internal.Screen
 import com.marketap.sdk.utils.booleanAdapter
+import com.marketap.sdk.utils.logger
+import com.marketap.sdk.utils.longAdapter
 import com.marketap.sdk.utils.stringAdapter
 import java.util.UUID
 
 internal class AndroidDeviceManager(
     private val storage: InternalStorage,
-    context: Application
 ) : DeviceManager {
-
-    init {
-        setMaxTouchPoints(context)
-    }
 
     private var token: String? = null
 
@@ -50,18 +45,30 @@ internal class AndroidDeviceManager(
     override fun requestAuthorizationForPushNotifications(activity: Activity) {
         /* ───────────── Android 13+ (API 33) ───────────── */
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            // ① 이미 권한 있으면 끝
             val permission = ContextCompat.checkSelfPermission(
                 activity, Manifest.permission.POST_NOTIFICATIONS
             )
-            if (permission == PackageManager.PERMISSION_GRANTED) return
+            if (permission == PackageManager.PERMISSION_GRANTED) {
+                logger.d { "Notification permission already granted" }
+                logger.d { "Token: $token" }
+                return
+            }
 
-            // ② 권한 없으면 요청 또는 설정 화면 유도
-            ActivityCompat.requestPermissions(
-                activity,
-                arrayOf(Manifest.permission.POST_NOTIFICATIONS),
-                REQ_POST_NOTI
-            )
+
+            if (!ActivityCompat.shouldShowRequestPermissionRationale(
+                    activity,
+                    Manifest.permission.POST_NOTIFICATIONS
+                )
+            ) {
+                logger.d { "Permission permanently denied." }
+            } else {
+                ActivityCompat.requestPermissions(
+                    activity,
+                    arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+                    REQ_POST_NOTI
+                )
+                logger.d { "Requesting notification permission" }
+            }
             return
         }
 
@@ -78,7 +85,26 @@ internal class AndroidDeviceManager(
                     }
                 }
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            logger.d { "Requesting notification settings" }
             activity.startActivity(intent)
+        } else {
+            logger.d { "Notification permission already granted" }
+        }
+    }
+
+    override fun isPushNotificationEnabled(context: Context): Boolean {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val permission = ContextCompat.checkSelfPermission(
+                context, Manifest.permission.POST_NOTIFICATIONS
+            )
+            if (permission == PackageManager.PERMISSION_GRANTED) {
+                logger.d { "Notification permission already granted $token" }
+                return true
+            } else {
+                return false
+            }
+        } else {
+            return NotificationManagerCompat.from(context).areNotificationsEnabled()
         }
     }
 
@@ -103,6 +129,7 @@ internal class AndroidDeviceManager(
         val isFirstOpen = storage.getItem("first_open", booleanAdapter)
         if (isFirstOpen == null) {
             storage.setItem("first_open", true, booleanAdapter)
+            logger.d { "Device marked as first open" }
             return true
         }
         return false
@@ -125,16 +152,11 @@ internal class AndroidDeviceManager(
             token = token,
             brand = Build.BRAND,
             screen = screen,
-            maxTouchPoints = maxTouchPoints
+            maxTouchPoints = getMaxTouchPoints().toInt()
         )
     }
 
-    private var maxTouchPoints: Int = 1
-    private fun setMaxTouchPoints(context: Context) {
-        val packageManager = context.packageManager
-        packageManager.hasSystemFeature(PackageManager.FEATURE_TOUCHSCREEN_MULTITOUCH_DISTINCT)
-        val config = ViewConfiguration.get(context)
-        maxTouchPoints = (config.scaledMaximumFlingVelocity / 1000).coerceAtLeast(1)
+    private fun getMaxTouchPoints(): Long {
+        return storage.getItem("max_touch_points", longAdapter) ?: 1
     }
-
 }

@@ -2,6 +2,7 @@ package com.marketap.sdk.domain.service.state
 
 import com.marketap.sdk.domain.repository.InternalStorage
 import com.marketap.sdk.model.MarketapConfig
+import com.marketap.sdk.utils.logger
 import com.marketap.sdk.utils.stringAdapter
 
 class ClientStateManager(
@@ -17,6 +18,7 @@ class ClientStateManager(
     }
 
     fun setUserId(userId: String?) {
+        logger.d { "Setting user ID:  ${userId ?: "null"}" }
         internalStorage.setItem("user_id", userId, stringAdapter)
     }
 }

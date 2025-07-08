@@ -6,6 +6,7 @@ import android.content.Context
 import android.graphics.Color
 import android.os.Build
 import com.marketap.sdk.utils.ManifestUtils
+import com.marketap.sdk.utils.logger
 
 internal class MarketapNotificationOpenHandler(
     context: Context
@@ -50,6 +51,15 @@ internal class MarketapNotificationOpenHandler(
                 }
 
                 notificationManager.createNotificationChannel(channel)
+                logger.i {
+                    "Notification channel created, " +
+                            "ID: $channelId, Name: $channelName, Description: $channelDescription"
+                }
+            } else {
+                logger.d {
+                    "Notification channel already exists, " +
+                            "ID: $channelId, Name: $channelName, Description: $channelDescription"
+                }
             }
         }
     }

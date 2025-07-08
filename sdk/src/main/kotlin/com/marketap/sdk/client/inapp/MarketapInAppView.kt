@@ -41,6 +41,7 @@ internal class MarketapInAppView(
         isFocusable = true
         isFocusableInTouchMode = true
         scrollBarStyle = SCROLLBARS_INSIDE_OVERLAY
+        logger.d { "WebView configured and ready for use" }
     }
 
 
@@ -112,6 +113,7 @@ internal class MarketapInAppView(
     }
 
     fun removeView(then: () -> Unit = {}) {
+        logger.d { "Removing MarketapInAppView" }
         postToMainThread {
             visibility = GONE
             try {
@@ -123,7 +125,7 @@ internal class MarketapInAppView(
                     then()
                 }, 50)
             } catch (e: Exception) {
-                logger.w("MarketapSDK", "WebView destroy failed: ${e.message}")
+                logger.e(e) { "WebView destroy failed" }
             }
         }
     }

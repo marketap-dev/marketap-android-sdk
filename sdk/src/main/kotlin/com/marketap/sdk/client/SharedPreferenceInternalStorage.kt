@@ -2,8 +2,11 @@ package com.marketap.sdk.client
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.content.pm.PackageManager
+import android.view.ViewConfiguration
 import com.marketap.sdk.domain.repository.InternalStorage
 import com.marketap.sdk.utils.deserialize
+import com.marketap.sdk.utils.longAdapter
 import com.marketap.sdk.utils.serialize
 import com.squareup.moshi.JsonAdapter
 import java.util.concurrent.ConcurrentHashMap
@@ -21,8 +24,27 @@ internal class SharedPreferenceInternalStorage(
         Context.MODE_PRIVATE
     )
 
+    private val locks: ConcurrentHashMap<String, Any> = ConcurrentHashMap<String, Any>()
 
-    private val locks = ConcurrentHashMap<String, Any>()
+    fun initialize(context: Context): SharedPreferenceInternalStorage {
+        setMaxTouchPoints(context)
+        return this
+    }
+
+    private fun setMaxTouchPoints(context: Context) {
+        val packageManager = context.packageManager
+        packageManager.hasSystemFeature(PackageManager.FEATURE_TOUCHSCREEN_MULTITOUCH_DISTINCT)
+        val config = try {
+            ViewConfiguration.get(context).scaledMaximumFlingVelocity / 1000
+        } catch (e: Exception) {
+            1
+        }
+        setItem(
+            "max_touch_points",
+            config.coerceAtLeast(1).toLong(),
+            longAdapter
+        )
+    }
 
     private fun getLockForKey(key: String): Any {
         return locks.getOrPut(key) { Any() }

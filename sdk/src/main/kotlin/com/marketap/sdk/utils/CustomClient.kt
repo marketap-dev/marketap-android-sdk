@@ -12,7 +12,6 @@ import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
 
 internal class CustomClient(
-    private val debug: Boolean = false,
     block: HttpClientConfig<HttpClientEngineConfig>.() -> Unit = {}
 ) {
     internal val client = HttpClient(Android, block)
@@ -25,15 +24,14 @@ internal class CustomClient(
         builder: HttpRequestBuilder.() -> Unit = {},
     ): T {
         val body = request.serialize(requestAdapter)
-        if (debug) logger.d("Marketap", "endpoint: $endpoint, Request: $body")
+        logger.v { "Request: $body, endpoint: $endpoint" }
         val getResponse = client.post(endpoint) {
             builder()
             header("Content-Type", "application/json")
             setBody(body)
         }
         val res = getResponse.bodyAsText()
-
-        if (debug) logger.d("Marketap", "Response: $getResponse, body: $res")
+        logger.v { "Response: $getResponse, body: $res" }
         return res.deserialize(responseAdapter)
     }
 }
