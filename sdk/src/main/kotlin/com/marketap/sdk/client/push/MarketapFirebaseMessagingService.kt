@@ -10,6 +10,7 @@ import com.marketap.sdk.utils.logger
 class MarketapFirebaseMessagingService : FirebaseMessagingService() {
 
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
+        logger.d { "MarketapFirebaseMessagingService: onMessageReceived called" }
         handleMarketapRemoteMessage(applicationContext, remoteMessage)
     }
 
@@ -21,7 +22,7 @@ class MarketapFirebaseMessagingService : FirebaseMessagingService() {
         @JvmStatic
         fun handleMarketapRemoteMessage(context: Context, remoteMessage: RemoteMessage): Boolean {
             logger.d {
-                "MarketapFirebaseMessagingService: Received remote message, " +
+                "MarketapFirebaseMessagingCompanion: Received remote message, " +
                         "data: ${remoteMessage.data}"
             }
             if (!isMarketapPushNotification(remoteMessage)) {

@@ -2,6 +2,7 @@ package com.marketap.sdk.client
 
 import android.Manifest
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.Resources
@@ -42,23 +43,32 @@ internal class AndroidDeviceManager(
 
     private val REQ_POST_NOTI = 0xA7
     override fun requestAuthorizationForPushNotifications(activity: Activity) {
-        logger.i { "Requesting push notification authorization" }
         /* ───────────── Android 13+ (API 33) ───────────── */
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             val permission = ContextCompat.checkSelfPermission(
                 activity, Manifest.permission.POST_NOTIFICATIONS
             )
             if (permission == PackageManager.PERMISSION_GRANTED) {
-                logger.d { "Notification permission already granted $token" }
+                logger.d { "Notification permission already granted" }
+                logger.d { "Token: $token" }
                 return
             }
 
-            ActivityCompat.requestPermissions(
-                activity,
-                arrayOf(Manifest.permission.POST_NOTIFICATIONS),
-                REQ_POST_NOTI
-            )
-            logger.d { "Requesting notification permission" }
+
+            if (!ActivityCompat.shouldShowRequestPermissionRationale(
+                    activity,
+                    Manifest.permission.POST_NOTIFICATIONS
+                )
+            ) {
+                logger.d { "Permission permanently denied." }
+            } else {
+                ActivityCompat.requestPermissions(
+                    activity,
+                    arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+                    REQ_POST_NOTI
+                )
+                logger.d { "Requesting notification permission" }
+            }
             return
         }
 
@@ -79,6 +89,22 @@ internal class AndroidDeviceManager(
             activity.startActivity(intent)
         } else {
             logger.d { "Notification permission already granted" }
+        }
+    }
+
+    override fun isPushNotificationEnabled(context: Context): Boolean {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val permission = ContextCompat.checkSelfPermission(
+                context, Manifest.permission.POST_NOTIFICATIONS
+            )
+            if (permission == PackageManager.PERMISSION_GRANTED) {
+                logger.d { "Notification permission already granted $token" }
+                return true
+            } else {
+                return false
+            }
+        } else {
+            return NotificationManagerCompat.from(context).areNotificationsEnabled()
         }
     }
 

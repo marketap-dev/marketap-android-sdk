@@ -194,19 +194,21 @@ object Marketap {
 
     @JvmStatic
     fun setClickHandler(clickHandler: MarketapClickHandler) {
+        logger.i { "setClickHandler: ${clickHandler::class.java.name}" }
         CustomHandlerStore.setClickHandler(clickHandler)
     }
 
     @JvmStatic
     fun setLogLevel(logLevel: MarketapLogLevel) {
-        MarketapRegistry.logLevel = logLevel
         logger.i {
-            "Marketap SDK log level set to ${logLevel.name}"
+            "setLogLevel: ${logLevel.name}"
         }
+        MarketapRegistry.logLevel = logLevel
     }
 
     @JvmStatic
     fun requestAuthorizationForPushNotifications(activity: Activity) {
+        logger.i { "requestAuthorizationForPushNotifications on ${activity::class.java.name}" }
         marketapCore?.requestAuthorizationForPushNotifications(activity)
     }
 }

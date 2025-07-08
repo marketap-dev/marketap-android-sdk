@@ -17,6 +17,7 @@ internal class WebAppInterface(
 
     @JavascriptInterface
     fun hideCampaign(hideType: String) {
+        logger.d { "hideCampaign called with hideType: $hideType" }
         val hideTypeEnum = HideType.valueOf(hideType.uppercase())
         callBack?.onHide(hideTypeEnum)
         inAppMessageActivity.hideQuietly()
@@ -25,6 +26,7 @@ internal class WebAppInterface(
 
     @JavascriptInterface
     fun trackClick(locationId: String, url: String) {
+        logger.d { "trackClick called with locationId: $locationId, url: $url" }
         val uri = Uri.parse(url)
         val campaignId = callBack?.onClick(locationId)
         val event = MarketapClickEvent(

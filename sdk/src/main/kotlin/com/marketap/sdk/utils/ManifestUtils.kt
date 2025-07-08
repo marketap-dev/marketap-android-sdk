@@ -6,6 +6,7 @@ import android.os.Bundle
 
 internal object ManifestUtils {
     fun logSystemConstants(context: Context) {
+        logger.d { "Logging Marketap system constants from manifest..." }
         SystemBooleanConstant.values().forEach { constant ->
             logger.d {
                 "Manifest boolean constant: ${constant.key}" +

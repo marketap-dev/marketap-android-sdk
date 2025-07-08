@@ -37,7 +37,17 @@ internal class DeviceListener(
                     deviceManager.setToken(task.result)
                     userIngestionService.pushDevice()
                     logger.d { "FCM token fetched successfully" }
-                    logger.d { "This device's push token is [${task.result}]. Please use this token to test push message in Marketap console" }
+                    logger.d { "This device's push token is [${task.result}]. " }
+                    logger.d {
+                        if (deviceManager.isPushNotificationEnabled(application)) {
+                            "Push permission is enabled for this device. " +
+                                    "You can test push messages by sending a test message from the Marketap console."
+                        } else {
+                            "Push notifications are not enabled for this device. " +
+                                    "Please enable this by calling " +
+                                    "`Marketap.requestAuthorizationForPushNotifications(activity)` "
+                        }
+                    }
                 } else {
                     logger.e(task.exception) { "Failed to fetch FCM token" }
                 }

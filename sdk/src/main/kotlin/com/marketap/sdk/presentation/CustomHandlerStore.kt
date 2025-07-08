@@ -46,7 +46,6 @@ internal object CustomHandlerStore {
     }
 
     fun setClickHandler(handler: MarketapClickHandler?) {
-        logger.i { "Marketap SDK set click handler" }
         marketapClickHandler = handler
         if (handler != null && pendingClick != null) {
             logger.d { "Marketap SDK pending click handled by custom handler: $pendingClick" }

@@ -1,6 +1,7 @@
 package com.marketap.sdk.domain.repository
 
 import android.app.Activity
+import android.content.Context
 import com.marketap.sdk.model.internal.Device
 
 internal interface DeviceManager {
@@ -11,4 +12,5 @@ internal interface DeviceManager {
     fun setAppSetId(appSetId: String)
     fun setGoogleAdvertisingId(gaid: String)
     fun requestAuthorizationForPushNotifications(activity: Activity)
+    fun isPushNotificationEnabled(context: Context): Boolean
 }
