@@ -6,6 +6,7 @@ import io.ktor.client.HttpClientConfig
 import io.ktor.client.engine.HttpClientEngineConfig
 import io.ktor.client.engine.android.Android
 import io.ktor.client.request.HttpRequestBuilder
+import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
@@ -32,6 +33,18 @@ internal class CustomClient(
         }
         val res = getResponse.bodyAsText()
         logger.v { "Response: $getResponse, body: $res" }
+        return res.deserialize(responseAdapter)
+    }
+
+    suspend inline fun <T> get(
+        endpoint: String,
+        responseAdapter: JsonAdapter<T>,
+        builder: HttpRequestBuilder.() -> Unit = {},
+    ): T {
+        logger.v { "GET Request: $endpoint" }
+        val getResponse = client.get(endpoint, builder)
+        val res = getResponse.bodyAsText()
+        logger.v { "GET Response: $getResponse, body: $res" }
         return res.deserialize(responseAdapter)
     }
 }

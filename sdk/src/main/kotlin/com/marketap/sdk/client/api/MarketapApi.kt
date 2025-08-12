@@ -27,4 +27,6 @@ internal interface MarketapApi {
         projectId: String,
         request: UpdateProfileRequest,
     ): ServerResponse<IngestRes>
+
+    suspend fun getServerTimeOffset(): Long
 }

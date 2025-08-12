@@ -9,5 +9,6 @@ internal data class UpdateProfileRequest(
     val userId: String,
 
     val properties: Map<String, Any> = emptyMap(),
-    val device: DeviceReq
+    val device: DeviceReq,
+    var timestamp: String? = null,
 ) : IngestRequest

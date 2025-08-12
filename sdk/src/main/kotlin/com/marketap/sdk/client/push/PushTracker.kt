@@ -13,7 +13,6 @@ import com.marketap.sdk.model.internal.api.DeviceReq.Companion.toReq
 import com.marketap.sdk.model.internal.api.IngestEventRequest
 import com.marketap.sdk.model.internal.push.DeliveryData
 import com.marketap.sdk.model.internal.push.PushData
-import com.marketap.sdk.utils.getNow
 import com.marketap.sdk.utils.logger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -49,7 +48,6 @@ internal object PushTracker {
                             it.userId,
                             deviceManager?.getDevice()?.toReq() ?: DeviceReq(it.deviceId),
                             AppEventProperty.offSite(it),
-                            getNow()
                         )
                     ) ?: throw IllegalStateException("MarketapBackend is not initialized")
                 } catch (e: Exception) {
@@ -70,7 +68,6 @@ internal object PushTracker {
                         deviceManager?.getDevice()?.toReq() ?: DeviceReq(data.deviceId),
                         AppEventProperty.offSite(data)
                             .addLocationId("push"),
-                        getNow()
                     )
                 ) ?: throw IllegalStateException("MarketapBackend is not initialized")
             } catch (e: Exception) {

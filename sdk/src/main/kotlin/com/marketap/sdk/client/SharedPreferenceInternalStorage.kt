@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.view.ViewConfiguration
+import androidx.core.content.edit
 import com.marketap.sdk.domain.repository.InternalStorage
 import com.marketap.sdk.utils.deserialize
 import com.marketap.sdk.utils.longAdapter
@@ -52,7 +53,7 @@ internal class SharedPreferenceInternalStorage(
 
     override fun <T> setItem(key: String, value: T?, adapter: JsonAdapter<T>) {
         synchronized(getLockForKey(key)) {
-            sharedPreference.edit().putString(key, value?.serialize(adapter)).apply()
+            sharedPreference.edit { putString(key, value?.serialize(adapter)) }
         }
     }
 
@@ -63,10 +64,43 @@ internal class SharedPreferenceInternalStorage(
         }
     }
 
+    override fun <T> cacheAndGetItem(
+        key: String,
+        value: () -> T,
+        adapter: JsonAdapter<T>,
+        invalidationTime: Long
+    ): T? {
+        return synchronized(getLockForKey(key)) {
+            val cachedValue = sharedPreference.getString(key, null)?.deserialize(adapter)
+            if (cachedValue != null && System.currentTimeMillis() < (getItem(
+                    "${key}_inv_time",
+                    longAdapter
+                ) ?: 0L)
+            ) {
+                return cachedValue
+            }
+
+            val newValue = try {
+                value()
+            } catch (e: Exception) {
+                // If the value function fails, we return null
+                // This is to avoid crashing the app due to an exception in the value function
+                null
+            } ?: return null
+            sharedPreference.edit { putString(key, newValue.serialize(adapter)) }
+            setItem(
+                "${key}_inv_time",
+                System.currentTimeMillis() + invalidationTime,
+                longAdapter
+            )
+            newValue
+        }
+    }
+
     override fun <T> queueItem(key: String, value: T, adapter: JsonAdapter<T>) {
         synchronized(getLockForKey(key)) {
             sharedPreference.getStringSet(key, mutableSetOf())?.let {
-                sharedPreference.edit().putStringSet(key, it.plus(value.serialize(adapter))).apply()
+                sharedPreference.edit { putStringSet(key, it.plus(value.serialize(adapter))) }
             }
         }
     }
@@ -91,14 +125,14 @@ internal class SharedPreferenceInternalStorage(
                 }
             }
 
-            sharedPreference.edit().putStringSet(key, remain).apply()
+            sharedPreference.edit { putStringSet(key, remain) }
             res
         }
     }
 
     override fun removeItem(key: String) {
         synchronized(getLockForKey(key)) {
-            sharedPreference.edit().remove(key).apply()
+            sharedPreference.edit { remove(key) }
         }
     }
 }

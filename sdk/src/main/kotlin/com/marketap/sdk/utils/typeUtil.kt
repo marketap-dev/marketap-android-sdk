@@ -7,6 +7,13 @@ import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
 
+fun getNowByMillis(currentMillis: Long, timeZone: TimeZone = TimeZone.getTimeZone("UTC")): String {
+    val df: DateFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US)
+    df.timeZone = timeZone
+    val date: String = df.format(Date(currentMillis))
+    return date
+}
+
 fun getNow(timeZone: TimeZone = TimeZone.getTimeZone("UTC")): String {
     val df: DateFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US)
     df.timeZone = timeZone
