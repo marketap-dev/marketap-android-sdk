@@ -35,7 +35,7 @@ class UserProperty private constructor(
         }
 
         fun setDateOfBirth(year: Int, month: Int, day: Int): Builder {
-            properties["mkt_date_of_birth"] = intsToDate(year, month, day)
+            properties["mkt_birth"] = intsToDate(year, month, day)
             return this
         }
 
