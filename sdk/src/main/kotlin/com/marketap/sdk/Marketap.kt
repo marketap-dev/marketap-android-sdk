@@ -67,6 +67,40 @@ object Marketap {
     }
 
     /**
+     * 사용자를 로그인합니다.
+     * 해당 함수에서는 로그인 이벤트와 함께 내부적으로 user Id를 설정합니다.
+     * track + identify와 동일한 동작을 수행합니다.
+     *
+     * @param userId 사용자 ID
+     * @param userProperties 사용자 속성 정보 (선택 사항)
+     * @param eventProperties 이벤트 속성 정보 (선택 사항)
+     * @param persistUser 사용자의 로그인 상태를 지속적으로 유지할지 여부 (기본값: true)
+     */
+    @JvmOverloads
+    @JvmStatic
+    fun signup(
+        userId: String,
+        userProperties: Map<String, Any>? = null,
+        eventProperties: Map<String, Any>? = null,
+        persistUser: Boolean = true
+    ) {
+        logger.d {
+            "Marketap SDK signup with " +
+                    "userId: $userId, " +
+                    "userProperties: ${userProperties?.serialize(mapAdapter<String, Any>())}, " +
+                    "eventProperties: ${eventProperties?.serialize(mapAdapter<String, Any>())}"
+        }
+        marketapCore?.identify(userId, userProperties)
+        marketapCore?.track("mkt_signup", eventProperties)
+        if (!persistUser) {
+            logger.d { "Marketap SDK signup with persistUser = false, resetting identity" }
+            marketapCore?.resetIdentity()
+        } else {
+            logger.d { "Marketap SDK signup with persistUser = true, identity will be retained" }
+        }
+    }
+
+    /**
      * 사용자를 로그아웃합니다.
      * 해당 함수에서는 로그아웃 이벤트와 함께 내부적으로 user Id를 초기화 합니다.
      * track + resetIdentity와 동일한 동작을 수행합니다.
