@@ -15,14 +15,14 @@ internal data class IngestEventRequest(
 
     val device: DeviceReq,
     val properties: Map<String, Any>?,
-    val timestamp: String?
+    var timestamp: String? = null
 ) : IngestRequest {
+
     companion object {
         fun delivery(
             userId: String?,
             device: DeviceReq,
             properties: AppEventProperty,
-            timestamp: String? = null
         ): IngestEventRequest {
             return IngestEventRequest(
                 id = null,
@@ -30,7 +30,6 @@ internal data class IngestEventRequest(
                 userId = userId,
                 device = device,
                 properties = properties.toMap(),
-                timestamp = timestamp
             )
         }
 
@@ -38,7 +37,6 @@ internal data class IngestEventRequest(
             userId: String?,
             device: DeviceReq,
             properties: AppEventProperty,
-            timestamp: String? = null
         ): IngestEventRequest {
             return IngestEventRequest(
                 id = null,
@@ -46,7 +44,6 @@ internal data class IngestEventRequest(
                 userId = userId,
                 device = device,
                 properties = properties.toMap(),
-                timestamp = timestamp
             )
         }
 
@@ -54,7 +51,6 @@ internal data class IngestEventRequest(
             userId: String?,
             device: DeviceReq,
             properties: AppEventProperty,
-            timestamp: String? = null
         ): IngestEventRequest {
             return IngestEventRequest(
                 id = null,
@@ -62,7 +58,6 @@ internal data class IngestEventRequest(
                 userId = userId,
                 device = device,
                 properties = properties.toMap(),
-                timestamp = timestamp
             )
         }
     }

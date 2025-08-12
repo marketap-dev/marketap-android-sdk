@@ -7,7 +7,6 @@ import com.marketap.sdk.domain.service.inapp.InAppService
 import com.marketap.sdk.domain.service.state.ClientStateManager
 import com.marketap.sdk.model.internal.api.DeviceReq.Companion.toReq
 import com.marketap.sdk.model.internal.api.IngestEventRequest
-import com.marketap.sdk.utils.getNow
 import java.util.UUID
 
 internal class EventIngestionService(
@@ -30,7 +29,6 @@ internal class EventIngestionService(
                     userId,
                     device,
                     mapOf("mkt_session_id" to sessionId),
-                    getNow()
                 )
             )
         }
@@ -42,13 +40,13 @@ internal class EventIngestionService(
             userId,
             device,
             eventProperties + ("mkt_session_id" to sessionId),
-            getNow()
         )
 
         marketapBackend.track(projectId, eventRequest)
 
         val messageId = generateRandomUUID()
-        inAppService.onEvent(eventRequest,
+        inAppService.onEvent(
+            eventRequest,
             { campaign ->
                 marketapBackend.track(
                     projectId, IngestEventRequest(
@@ -67,7 +65,6 @@ internal class EventIngestionService(
                             "mkt_message_id" to messageId,
                             "mkt_session_id" to sessionId
                         ),
-                        timestamp = getNow()
                     )
                 )
             },
@@ -90,7 +87,6 @@ internal class EventIngestionService(
                             "mkt_location_id" to locationId,
                             "mkt_session_id" to sessionId
                         ),
-                        getNow()
                     )
                 )
             }

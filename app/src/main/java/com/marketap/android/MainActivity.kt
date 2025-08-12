@@ -23,6 +23,7 @@ class MainActivity : AppCompatActivity() {
         createNotificationChannel()
         enableEdgeToEdge()
         setContentView(R.layout.activity_main)
+        Marketap.signup("test", mapOf(), mapOf(), false)
         Marketap.trackPageView(
             EventProperty.Builder()
                 .setAll(mapOf("mkt_page_title" to "홈", "mkt_page_name" to "상세화면"))

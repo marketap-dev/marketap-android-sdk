@@ -11,9 +11,14 @@ import com.marketap.sdk.model.internal.api.InAppCampaignRes
 import com.marketap.sdk.model.internal.api.IngestEventRequest
 import com.marketap.sdk.model.internal.api.UpdateProfileRequest
 import com.marketap.sdk.utils.PairEntry
+import com.marketap.sdk.utils.getNowByMillis
 import com.marketap.sdk.utils.logger
+import com.marketap.sdk.utils.longAdapter
 import com.marketap.sdk.utils.pairAdapter
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
 
@@ -154,10 +159,14 @@ internal class RetryMarketapBackend(
             "tracking event for project $projectId, " +
                     "eventName: ${request.name}, properties: ${request.properties}"
         }
-        storage.queueItem("events", PairEntry(projectId, request), pairAdapter())
-        apiWorkGroup.dispatch(::checkEventQueue)
-        apiWorkGroup.dispatch(::checkUserQueue)
-        apiWorkGroup.dispatch(::checkDeviceQueue)
+
+        CoroutineScope(Dispatchers.IO).launch {
+            request.timestamp = getNowAsString()
+            storage.queueItem("events", PairEntry(projectId, request), pairAdapter())
+            apiWorkGroup.dispatch(::checkEventQueue)
+            apiWorkGroup.dispatch(::checkUserQueue)
+            apiWorkGroup.dispatch(::checkDeviceQueue)
+        }
     }
 
     override fun updateProfile(projectId: String, request: UpdateProfileRequest) {
@@ -165,9 +174,38 @@ internal class RetryMarketapBackend(
             "updating profile for project $projectId, " +
                     "userId: ${request.userId}, properties: ${request.properties}"
         }
-        storage.queueItem("users", PairEntry(projectId, request), pairAdapter())
-        apiWorkGroup.dispatch(::checkEventQueue)
-        apiWorkGroup.dispatch(::checkUserQueue)
-        apiWorkGroup.dispatch(::checkDeviceQueue)
+        CoroutineScope(Dispatchers.IO).launch {
+            request.timestamp = getNowAsString()
+            storage.queueItem("users", PairEntry(projectId, request), pairAdapter())
+            apiWorkGroup.dispatch(::checkEventQueue)
+            apiWorkGroup.dispatch(::checkUserQueue)
+            apiWorkGroup.dispatch(::checkDeviceQueue)
+        }
+    }
+
+
+    private fun getNowAsString(): String {
+        val now = System.currentTimeMillis()
+        val offset = storage.cacheAndGetItem(
+            "server_time_offset",
+            {
+                runBlocking {
+                    val offset = withTimeoutOrNull(5000) {
+                        marketapApi.getServerTimeOffset()
+                    }
+
+                    if (offset != null) {
+                        logger.d { "Server time offset: $offset ms" }
+                        offset
+                    } else {
+                        logger.w { "Failed to get server time offset, using 0" }
+                        0L
+                    }
+                }
+            },
+            longAdapter,
+            60 * 1000L
+        ) ?: 0L
+        return getNowByMillis(now + offset)
     }
 }
