@@ -33,11 +33,15 @@ internal class AndroidDeviceManager(
         this.token = token
     }
 
+    private var gaid: String? = null
+    private var appSetId: String? = null
     override fun setAppSetId(appSetId: String) {
+        this.appSetId = appSetId
         storage.setItem("app_set_id", appSetId, stringAdapter)
     }
 
     override fun setGoogleAdvertisingId(gaid: String) {
+        this.gaid = gaid
         storage.setItem("gaid", gaid, stringAdapter)
     }
 
@@ -122,10 +126,12 @@ internal class AndroidDeviceManager(
 
     override fun isDeviceReady(): Boolean {
         val isFirstOpen = storage.getItem("first_open", booleanAdapter)
-        return isFirstOpen == true
+        return gaid != null || isFirstOpen == true || isFirstOpenChecked
     }
 
+    private var isFirstOpenChecked = false
     override fun setFirstOpen(): Boolean {
+        isFirstOpenChecked = true
         val isFirstOpen = storage.getItem("first_open", booleanAdapter)
         if (isFirstOpen == null) {
             storage.setItem("first_open", true, booleanAdapter)
@@ -146,8 +152,8 @@ internal class AndroidDeviceManager(
         )
 
         return Device(
-            gaid = storage.getItem("gaid", stringAdapter),
-            appSetId = storage.getItem("app_set_id", stringAdapter),
+            gaid = gaid ?: storage.getItem("gaid", stringAdapter),
+            appSetId = appSetId ?: storage.getItem("app_set_id", stringAdapter),
             appLocalId = getOrCreateLocalId(),
             token = token,
             brand = Build.BRAND,

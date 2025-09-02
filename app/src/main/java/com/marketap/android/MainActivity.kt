@@ -11,6 +11,7 @@ import android.widget.Button
 import androidx.activity.enableEdgeToEdge
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.edit
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.marketap.sdk.Marketap
@@ -23,12 +24,12 @@ class MainActivity : AppCompatActivity() {
         createNotificationChannel()
         enableEdgeToEdge()
         setContentView(R.layout.activity_main)
-        Marketap.signup("test", mapOf(), mapOf(), false)
-        Marketap.trackPageView(
-            EventProperty.Builder()
-                .setAll(mapOf("mkt_page_title" to "홈", "mkt_page_name" to "상세화면"))
-                .build()
-        )
+//        Marketap.signup("test", mapOf(), mapOf(), false)
+//        Marketap.trackPageView(
+//            EventProperty.Builder()
+//                .setAll(mapOf("mkt_page_title" to "홈", "mkt_page_name" to "상세화면"))
+//                .build()
+//        )
 
         val button = findViewById<Button>(R.id.button)
         button.setOnClickListener {
@@ -38,6 +39,14 @@ class MainActivity : AppCompatActivity() {
                     .build()
             )
         }
+
+        val resetButton = findViewById<Button>(R.id.button6)
+        resetButton.setOnClickListener {
+            val prefs = getSharedPreferences("_marketap_sdk_storage", MODE_PRIVATE)
+            prefs.edit { clear() }  // 전체 삭제
+            Marketap.initialize(this.application, "kx43pz7")
+        }
+
 
         val button2 = findViewById<Button>(R.id.button2)
         button2.setOnClickListener {
