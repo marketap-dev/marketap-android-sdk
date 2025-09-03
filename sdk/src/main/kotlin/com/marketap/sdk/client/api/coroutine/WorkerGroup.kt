@@ -11,11 +11,12 @@ class WorkerGroup(
     workerCount: Int = 5,
     private val scope: CoroutineScope = CoroutineScope(Dispatchers.IO),
 ) {
-    private val channel = Channel<suspend () -> Unit>()
+    private val channel = Channel<suspend () -> Unit>(capacity = 64)
     private val workers = List(workerCount) { createWorker() }
 
-    fun dispatch(work: suspend () -> Unit): Boolean {
-        return channel.trySend(work).isSuccess
+    suspend fun dispatch(work: suspend () -> Unit): Boolean {
+        channel.send(work)
+        return true
     }
 
     fun start() {

@@ -116,7 +116,9 @@ internal class RetryMarketapBackend(
                     "deviceId: ${request.deviceId}, properties: ${request.properties}"
         }
         storage.queueItem("devices", PairEntry(projectId, request), pairAdapter())
-        apiWorkGroup.dispatch(::checkDeviceQueue)
+        CoroutineScope(Dispatchers.IO).launch {
+            apiWorkGroup.dispatch(::checkDeviceQueue)
+        }
     }
 
     override fun fetchCampaigns(
