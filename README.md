@@ -16,7 +16,7 @@ dependencies {
 ```
 ## 문서
 
-[Marketap Android SDK 문서](https://marketap.gitbook.io/marketap-guide/developer/integration-guide/mobile-sdk/android)
+[Marketap Android SDK 문서](https://docs.marketap.io/t3ZS4WXNMj0HK27EtIMV/developer/push-notification/integration/android)
 
 ## 라이선스
 
