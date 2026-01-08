@@ -24,6 +24,7 @@ import java.util.UUID
 
 internal class AndroidDeviceManager(
     private val storage: InternalStorage,
+    private val context: Context,
 ) : DeviceManager {
 
     private var token: String? = null
@@ -143,6 +144,7 @@ internal class AndroidDeviceManager(
 
 
     override fun getDevice(): Device {
+        val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
 
         val displayMetrics = Resources.getSystem().displayMetrics
         val screen = Screen(
@@ -157,6 +159,8 @@ internal class AndroidDeviceManager(
             appLocalId = getOrCreateLocalId(),
             token = token,
             brand = Build.BRAND,
+            appVersion = packageInfo.versionName,
+            appBuildNumber = packageInfo.longVersionCode.toString(),
             screen = screen,
             maxTouchPoints = getMaxTouchPoints().toInt()
         )
