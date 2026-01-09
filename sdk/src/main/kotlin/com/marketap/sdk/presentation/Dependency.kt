@@ -47,18 +47,19 @@ object Dependency {
             AndroidInAppView.getInstance()
         )
 
+        val userIngestionService = UserIngestionService(
+            clientStateManager,
+            deviceManager,
+            marketapBackend,
+        )
+
         val eventIngestionService = EventIngestionService(
             marketapBackend,
             inAppService,
             clientStateManager,
             sessionManager,
-            deviceManager
-        )
-
-        val userIngestionService = UserIngestionService(
-            clientStateManager,
             deviceManager,
-            marketapBackend,
+            userIngestionService,
         )
 
         val core = MarketapCoreService(

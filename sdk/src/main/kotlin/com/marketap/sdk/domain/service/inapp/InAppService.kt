@@ -2,6 +2,8 @@ package com.marketap.sdk.domain.service.inapp
 
 import com.marketap.sdk.domain.repository.InAppView
 import com.marketap.sdk.domain.service.inapp.condition.ConditionChecker
+import com.marketap.sdk.model.external.EventProperty
+import com.marketap.sdk.model.external.UserProperty
 import com.marketap.sdk.model.internal.InAppCampaign
 import com.marketap.sdk.model.internal.api.IngestEventRequest
 import com.marketap.sdk.model.internal.inapp.HideType
@@ -17,7 +19,9 @@ internal class InAppService(
     fun onEvent(
         event: IngestEventRequest,
         onImpression: (campaign: InAppCampaign) -> Unit,
-        onClick: (campaign: InAppCampaign, locationId: String) -> Unit
+        onClick: (campaign: InAppCampaign, locationId: String) -> Unit,
+        onTrack: (campaign: InAppCampaign, eventName: String, properties: Map<String, Any>?) -> Unit,
+        onSetUserProperties: (properties: Map<String, Any>) -> Unit,
     ) {
         campaignFetchService.useCampaigns { campaigns ->
             val targetCampaign = campaigns.find { campaign ->
@@ -55,7 +59,7 @@ internal class InAppService(
             }
 
             targetCampaign?.let {
-                handleCampaign(it, onImpression, onClick)
+                handleCampaign(it, onImpression, onClick, onTrack, onSetUserProperties)
             }
         }
     }
@@ -63,7 +67,9 @@ internal class InAppService(
     private fun handleCampaign(
         targetCampaign: InAppCampaign,
         onImpression: (campaign: InAppCampaign) -> Unit,
-        onClick: (campaign: InAppCampaign, locationId: String) -> Unit
+        onClick: (campaign: InAppCampaign, locationId: String) -> Unit,
+        onTrack: (campaign: InAppCampaign, eventName: String, properties: Map<String, Any>?) -> Unit,
+        onSetUserProperties: (properties: Map<String, Any>) -> Unit,
     ) {
         logger.d { "Showing in-app campaign: ${targetCampaign.id} with layout type: ${targetCampaign.layout.layoutType}" }
         inAppView.show(
@@ -96,6 +102,11 @@ internal class InAppService(
 
                     HideType.CLOSE -> {}
                 }
-            })
+            },
+            { eventName, properties ->
+                onTrack(targetCampaign, eventName, properties)
+            },
+            onSetUserProperties,
+        )
     }
 }

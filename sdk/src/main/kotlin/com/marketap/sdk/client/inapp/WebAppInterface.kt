@@ -56,4 +56,16 @@ internal class WebAppInterface(
             }
         }
     }
+
+    @JavascriptInterface
+    fun trackEvent(eventName: String, eventPropertiesJson: String) {
+        logger.d { "trackEvent called with eventName: $eventName, properties: $eventPropertiesJson" }
+        callBack?.onTrack(eventName, eventPropertiesJson)
+    }
+
+    @JavascriptInterface
+    fun setUserProperties(userPropertiesJson: String) {
+        logger.d { "setUserProperties called with properties: $userPropertiesJson" }
+        callBack?.onSetUserProperties(userPropertiesJson)
+    }
 }
