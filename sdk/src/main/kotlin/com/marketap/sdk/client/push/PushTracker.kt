@@ -29,7 +29,7 @@ internal object PushTracker {
             return
         }
         val storage = SharedPreferenceInternalStorage(context)
-        deviceManager = AndroidDeviceManager(storage)
+        deviceManager = AndroidDeviceManager(storage, context)
         marketapBackend = RetryMarketapBackend(storage, MarketapApiImpl(), deviceManager!!)
     }
 

@@ -27,7 +27,7 @@ class DetailActivity : AppCompatActivity() {
             webViewClient = WebViewClient()
             webChromeClient = WebChromeClient()
 
-            this.addJavascriptInterface(MarketapWebBridge(), MarketapWebBridge.NAME)
+            this.addJavascriptInterface(MarketapWebBridge(webView), MarketapWebBridge.NAME)
         }
 
         webView.loadUrl("https://marketap.cafe24.com/shop2")
