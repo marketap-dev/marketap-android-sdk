@@ -15,6 +15,7 @@ internal class EventIngestionService(
     private val clientStateManager: ClientStateManager,
     private val sessionManager: SessionManager,
     private val deviceManager: DeviceManager,
+    private val userIngestionService: UserIngestionService,
 ) {
     fun trackEvent(eventName: String, eventProperties: Map<String, Any>) {
         val userId = clientStateManager.getUserId()
@@ -89,7 +90,24 @@ internal class EventIngestionService(
                         ),
                     )
                 )
-            }
+            },
+            { campaign, eventName, properties ->
+                val mergedProperties = (properties ?: emptyMap()) + mapOf(
+                    "mkt_campaign_id" to campaign.id,
+                    "mkt_campaign_category" to "ON_SITE",
+                    "mkt_channel_type" to "IN_APP_MESSAGE",
+                    "mkt_sub_channel_type" to campaign.layout.layoutSubType,
+                    "mkt_result_status" to 200000,
+                    "mkt_result_message" to "SUCCESS",
+                    "mkt_is_success" to true,
+                    "mkt_message_id" to messageId,
+                    "mkt_session_id" to sessionId
+                )
+                trackEvent(eventName, mergedProperties)
+            },
+            { properties ->
+                userIngestionService.setUserProperties(properties)
+            },
         )
 
         sessionManager.updateActivity()

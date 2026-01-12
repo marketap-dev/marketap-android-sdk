@@ -24,6 +24,19 @@ internal class UserIngestionService(
         )
     }
 
+    fun setUserProperties(userProperties: Map<String, Any>) {
+        val currentUserId = clientStateManager.getUserId() ?: return
+
+        marketapBackend.updateProfile(
+            clientStateManager.getProjectId(),
+            UpdateProfileRequest(
+                currentUserId,
+                userProperties,
+                deviceManager.getDevice().toReq()
+            )
+        )
+    }
+
     fun resetIdentity() {
         clientStateManager.setUserId(null)
         val device = deviceManager.getDevice().toReq(true)

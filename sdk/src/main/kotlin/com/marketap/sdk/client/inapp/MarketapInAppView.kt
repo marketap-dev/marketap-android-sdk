@@ -63,6 +63,16 @@ internal class MarketapInAppView(
                         window.MarketapSDK.trackClick(locationId, url);
                     }
                 },
+                track: function(eventName, eventPropertiesJson) {
+                    if (window.MarketapSDK) {
+                        window.MarketapSDK.trackEvent(eventName, eventPropertiesJson);
+                    }
+                },
+                setUserProperties: function(userPropertiesJson) {
+                    if (window.MarketapSDK) {
+                        window.MarketapSDK.setUserProperties(userPropertiesJson);
+                    }
+                },
                 topSafeArea: $topSafeArea / window.devicePixelRatio,
                 bottomSafeArea: $bottomSafeArea / window.devicePixelRatio,
             };
