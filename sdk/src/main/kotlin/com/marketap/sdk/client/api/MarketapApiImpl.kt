@@ -3,9 +3,11 @@ package com.marketap.sdk.client.api
 import com.marketap.sdk.model.internal.api.DEVICE_ENDPOINT
 import com.marketap.sdk.model.internal.api.DeviceReq
 import com.marketap.sdk.model.internal.api.FetchCampaignReq
+import com.marketap.sdk.model.internal.api.FetchCampaignsReq
 import com.marketap.sdk.model.internal.api.INGESTION_ENDPOINT
 import com.marketap.sdk.model.internal.api.IN_APP_MESSAGING_ENDPOINT
 import com.marketap.sdk.model.internal.api.InAppCampaignRes
+import com.marketap.sdk.model.internal.api.InAppCampaignSingleRes
 import com.marketap.sdk.model.internal.api.IngestEventRequest
 import com.marketap.sdk.model.internal.api.IngestRes
 import com.marketap.sdk.model.internal.api.META_ENDPOINT
@@ -51,13 +53,26 @@ internal class MarketapApiImpl(
     }
 
     override suspend fun fetchCampaigns(
-        request: FetchCampaignReq,
+        request: FetchCampaignsReq,
     ): ServerResponse<InAppCampaignRes> {
         val res = client.post(
             inAppMessagingEndpoint,
             request,
-            adapter<FetchCampaignReq>(),
+            adapter<FetchCampaignsReq>(),
             serverAdapter<InAppCampaignRes>()
+        )
+        return res
+    }
+
+    override suspend fun fetchCampaign(
+        campaignId: String,
+        request: FetchCampaignReq,
+    ): ServerResponse<InAppCampaignSingleRes> {
+        val res = client.post(
+            "$inAppMessagingEndpoint/$campaignId",
+            request,
+            adapter<FetchCampaignReq>(),
+            serverAdapter<InAppCampaignSingleRes>()
         )
         return res
     }

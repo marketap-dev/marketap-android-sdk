@@ -1,8 +1,10 @@
 package com.marketap.sdk.client.api
 
 import com.marketap.sdk.model.internal.api.DeviceReq
+import com.marketap.sdk.model.internal.api.FetchCampaignsReq
 import com.marketap.sdk.model.internal.api.FetchCampaignReq
 import com.marketap.sdk.model.internal.api.InAppCampaignRes
+import com.marketap.sdk.model.internal.api.InAppCampaignSingleRes
 import com.marketap.sdk.model.internal.api.IngestEventRequest
 import com.marketap.sdk.model.internal.api.IngestRes
 import com.marketap.sdk.model.internal.api.ServerResponse
@@ -15,8 +17,13 @@ internal interface MarketapApi {
     ): ServerResponse<IngestRes>
 
     suspend fun fetchCampaigns(
-        request: FetchCampaignReq,
+        request: FetchCampaignsReq,
     ): ServerResponse<InAppCampaignRes>
+
+    suspend fun fetchCampaign(
+        campaignId: String,
+        request: FetchCampaignReq,
+    ): ServerResponse<InAppCampaignSingleRes>
 
     suspend fun track(
         projectId: String,

@@ -9,3 +9,8 @@ internal data class InAppCampaignRes(
     val checksum: String,
     val campaigns: List<InAppCampaign>
 )
+
+@JsonClass(generateAdapter = true)
+internal data class InAppCampaignSingleRes(
+    val campaign: InAppCampaign?
+)

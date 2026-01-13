@@ -7,7 +7,9 @@ import com.marketap.sdk.domain.service.state.ClientStateManager
 import com.marketap.sdk.model.internal.InAppCampaign
 import com.marketap.sdk.model.internal.api.DeviceReq.Companion.toReq
 import com.marketap.sdk.model.internal.api.FetchCampaignReq
+import com.marketap.sdk.model.internal.api.FetchCampaignsReq
 import com.marketap.sdk.model.internal.api.InAppCampaignRes
+import com.marketap.sdk.model.internal.api.IngestEventRequest
 import com.marketap.sdk.utils.adapter
 import com.marketap.sdk.utils.logger
 import com.marketap.sdk.utils.longAdapter
@@ -36,7 +38,7 @@ internal class CampaignFetchService(
         val projectId = clientStateManager.getProjectId()
         val device = deviceManager.getDevice()
 
-        inAppCampaignApi.fetchCampaigns(FetchCampaignReq(projectId, userId, device.toReq()), {
+        inAppCampaignApi.fetchCampaigns(FetchCampaignsReq(projectId, userId, device.toReq()), {
             logger.d { "Fetching campaigns from API for user $userId" }
             block(it.campaigns)
         })
@@ -51,18 +53,54 @@ internal class CampaignFetchService(
         }
     }
 
-    private fun fetchLocalCampaign(userId: String?): List<InAppCampaign>? {
-        val campaigns =
-            internalStorage.getItem<InAppCampaignRes>("$CAMPAIGN_CACHE_KEY:$userId", adapter())
-        val lastFetchedAt =
-            internalStorage.getItem<Long>("$CAMPAIGN_CACHED_AT:$userId", longAdapter)
-
-        if (campaigns == null || lastFetchedAt == null) {
-            return null
+    fun resolveCampaignHtml(
+        campaign: InAppCampaign,
+        event: IngestEventRequest
+    ): InAppCampaign? {
+        if (campaign.html != null) {
+            return campaign
         }
 
-        val currentTime = System.currentTimeMillis()
+        val projectId = clientStateManager.getProjectId()
+        val userId = clientStateManager.getUserId()
+        val device = deviceManager.getDevice().toReq()
+        val request = FetchCampaignReq(
+            projectId = projectId,
+            userId = userId,
+            device = device,
+            eventName = event.name,
+            eventProperties = event.properties
+        )
 
-        return if (lastFetchedAt + EXPIRATION_TIME < currentTime) null else campaigns.campaigns
+        var resolved: InAppCampaign? = null
+        inAppCampaignApi.fetchCampaign(campaign.id, request, {
+            val fetched = it.campaign
+            if (fetched?.html != null) {
+                resolved = fetched
+            }
+        })
+        {
+            logger.d { "fetchCampaign completed for campaignId=${campaign.id}, hasHtml=${it.campaign?.html != null}" }
+        }
+        return resolved
+    }
+
+    private fun fetchLocalCampaign(userId: String?): List<InAppCampaign>? {
+        try {
+            val campaigns =
+                internalStorage.getItem<InAppCampaignRes>("$CAMPAIGN_CACHE_KEY:$userId", adapter())
+            val lastFetchedAt =
+                internalStorage.getItem<Long>("$CAMPAIGN_CACHED_AT:$userId", longAdapter)
+
+            if (campaigns == null || lastFetchedAt == null) {
+                return null
+            }
+
+            val currentTime = System.currentTimeMillis()
+
+            return if (lastFetchedAt + EXPIRATION_TIME < currentTime) null else campaigns.campaigns
+        } catch (e: Exception) {
+            return null
+        }
     }
 }
