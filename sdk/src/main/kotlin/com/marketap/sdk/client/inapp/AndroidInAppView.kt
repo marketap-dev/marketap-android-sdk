@@ -79,7 +79,7 @@ class AndroidInAppView : InAppView, InAppCallback {
             val userProperties = userPropertiesJson.deserialize(mapAdapter<String, Any>())
             onSetUserProperties?.invoke(userProperties)
         } catch (error: Exception) {
-            logger.e(error) { "Error parsing user properties JSON:: $userPropertiesJson" }
+            logger.e(error) { "Error parsing user properties JSON: $userPropertiesJson" }
         }
     }
 }

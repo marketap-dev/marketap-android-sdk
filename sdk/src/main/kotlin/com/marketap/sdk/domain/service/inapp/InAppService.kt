@@ -2,8 +2,6 @@ package com.marketap.sdk.domain.service.inapp
 
 import com.marketap.sdk.domain.repository.InAppView
 import com.marketap.sdk.domain.service.inapp.condition.ConditionChecker
-import com.marketap.sdk.model.external.EventProperty
-import com.marketap.sdk.model.external.UserProperty
 import com.marketap.sdk.model.internal.InAppCampaign
 import com.marketap.sdk.model.internal.api.IngestEventRequest
 import com.marketap.sdk.model.internal.inapp.HideType
@@ -59,44 +57,50 @@ internal class InAppService(
             }
 
             targetCampaign?.let {
-                handleCampaign(it, onImpression, onClick, onTrack, onSetUserProperties)
+                handleCampaign(it, event, onImpression, onClick, onTrack, onSetUserProperties)
             }
         }
     }
 
     private fun handleCampaign(
         targetCampaign: InAppCampaign,
+        event: IngestEventRequest,
         onImpression: (campaign: InAppCampaign) -> Unit,
         onClick: (campaign: InAppCampaign, locationId: String) -> Unit,
         onTrack: (campaign: InAppCampaign, eventName: String, properties: Map<String, Any>?) -> Unit,
         onSetUserProperties: (properties: Map<String, Any>) -> Unit,
     ) {
         logger.d { "Showing in-app campaign: ${targetCampaign.id} with layout type: ${targetCampaign.layout.layoutType}" }
+
+        val resolvedCampaign = campaignFetchService.resolveCampaignHtml(targetCampaign, event)
+            ?: return
+        val campaignHtml = resolvedCampaign.html ?: return
+
         inAppView.show(
-            targetCampaign.html,
+            campaignHtml,
             {
-                campaignExposureService.recordImpression(targetCampaign.id)
-                onImpression(targetCampaign)
-                logger.d { "Recorded impression for campaign: ${targetCampaign.id}" }
+                campaignExposureService.recordImpression(resolvedCampaign.id)
+                onImpression(resolvedCampaign)
+                logger.d { "Recorded impression for campaign: ${resolvedCampaign.id}" }
             },
             { locationId ->
-                onClick(targetCampaign, locationId)
-                logger.d { "Recorded click for campaign: ${targetCampaign.id} at location: $locationId" }
-                targetCampaign.id
+                onClick(resolvedCampaign, locationId)
+                logger.d { "Recorded click for campaign: ${resolvedCampaign.id} at location: $locationId" }
+                resolvedCampaign.id
             },
             { hideType ->
-                logger.d { "Hiding campaign: ${targetCampaign.id} with hide type: $hideType" }
+                logger.d { "Hiding campaign: ${resolvedCampaign.id} with hide type: $hideType" }
                 when (hideType) {
                     HideType.HIDE_FOR_ONE_DAY -> campaignExposureService.hideCampaign(
-                        targetCampaign.id, System.currentTimeMillis() + 1000 * 60 * 60 * 24
+                        resolvedCampaign.id, System.currentTimeMillis() + 1000 * 60 * 60 * 24
                     )
 
                     HideType.HIDE_FOR_SEVEN_DAYS -> campaignExposureService.hideCampaign(
-                        targetCampaign.id, System.currentTimeMillis() + 1000 * 60 * 60 * 24 * 7
+                        resolvedCampaign.id, System.currentTimeMillis() + 1000 * 60 * 60 * 24 * 7
                     )
 
                     HideType.HIDE_FOREVER -> campaignExposureService.hideCampaign(
-                        targetCampaign.id,
+                        resolvedCampaign.id,
                         System.currentTimeMillis() + 1000L * 60 * 60 * 24 * 365 * 10
                     )
 

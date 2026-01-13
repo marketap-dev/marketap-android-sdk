@@ -7,7 +7,9 @@ import com.marketap.sdk.domain.repository.MarketapBackend
 import com.marketap.sdk.model.internal.api.DeviceReq
 import com.marketap.sdk.model.internal.api.DeviceReq.Companion.toReq
 import com.marketap.sdk.model.internal.api.FetchCampaignReq
+import com.marketap.sdk.model.internal.api.FetchCampaignsReq
 import com.marketap.sdk.model.internal.api.InAppCampaignRes
+import com.marketap.sdk.model.internal.api.InAppCampaignSingleRes
 import com.marketap.sdk.model.internal.api.IngestEventRequest
 import com.marketap.sdk.model.internal.api.UpdateProfileRequest
 import com.marketap.sdk.utils.PairEntry
@@ -122,7 +124,7 @@ internal class RetryMarketapBackend(
     }
 
     override fun fetchCampaigns(
-        request: FetchCampaignReq,
+        request: FetchCampaignsReq,
         inTimeout: ((InAppCampaignRes) -> Unit)?, // timeout 이내에 호출 되면 실행
         onSuccess: (InAppCampaignRes) -> Unit
     ) {
@@ -144,7 +146,7 @@ internal class RetryMarketapBackend(
                 }
             }
 
-            val result = withTimeoutOrNull(500) {
+            val result = withTimeoutOrNull(1000) {
                 deferredResponse.await()
             }
 
@@ -152,6 +154,42 @@ internal class RetryMarketapBackend(
                 inTimeout?.invoke(result)
             } else {
                 logger.w { "fetchCampaigns timed out for request: $request" }
+            }
+        }
+    }
+
+    override fun fetchCampaign(
+        campaignId: String,
+        request: FetchCampaignReq,
+        inTimeout: ((InAppCampaignSingleRes) -> Unit)?,
+        onSuccess: (InAppCampaignSingleRes) -> Unit
+    ) {
+        runBlocking {
+            logger.d { "fetching campaign, campaignId: $campaignId, request: $request" }
+            val deferredResponse = CompletableDeferred<InAppCampaignSingleRes>()
+
+            apiWorkGroup.dispatch {
+                try {
+                    val res = marketapApi.fetchCampaign(campaignId, request)
+                    if (res.data != null) {
+                        onSuccess(res.data)
+                        deferredResponse.complete(res.data)
+                    } else {
+                        deferredResponse.cancel()
+                    }
+                } catch (e: Exception) {
+                    deferredResponse.cancel()
+                }
+            }
+
+            val result = withTimeoutOrNull(1000) {
+                deferredResponse.await()
+            }
+
+            if (result != null) {
+                inTimeout?.invoke(result)
+            } else {
+                logger.w { "fetchCampaign timed out for campaignId: $campaignId, request: $request" }
             }
         }
     }

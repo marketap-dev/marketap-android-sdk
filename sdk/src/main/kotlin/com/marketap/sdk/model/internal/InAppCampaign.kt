@@ -11,5 +11,6 @@ internal data class InAppCampaign(
 
     val triggerEventCondition: EventTriggerCondition,
     val priority: String,
-    val html: String
+    val html: String?,
+    val updatedAt: String,
 )
