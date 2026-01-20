@@ -24,12 +24,20 @@ import com.marketap.sdk.utils.logger
 import com.marketap.sdk.utils.serialize
 import java.lang.ref.WeakReference
 
-class MarketapWebBridge(private val webView: WebView) {
+/**
+ * MarketapWebBridge
+ * @param webView 웹뷰 인스턴스
+ * @param handleInAppInWebView 인앱 메시지를 웹뷰에서 처리할지 여부 (기본값: true, false면 네이티브에서 처리)
+ */
+class MarketapWebBridge @JvmOverloads constructor(
+    private val webView: WebView,
+    private val handleInAppInWebView: Boolean = true
+) {
     private var currentCampaign: InAppCampaign? = null
     private var currentMessageId: String? = null
 
     init {
-        logger.d { "MarketapWebBridge initialized" }
+        logger.d { "MarketapWebBridge initialized (handleInAppInWebView=$handleInAppInWebView)" }
     }
 
     companion object {
@@ -79,14 +87,18 @@ class MarketapWebBridge(private val webView: WebView) {
 
     private fun handleTrackEvent(params: String) {
         try {
-            // 이벤트가 들어온 웹브릿지를 활성 인스턴스로 등록 (캠페인이 이 웹뷰로 전달됨)
-            activeInstanceRef = WeakReference(this)
+            // 웹뷰에서 인앱 메시지를 처리하는 경우에만 활성 인스턴스로 등록
+            if (handleInAppInWebView) {
+                activeInstanceRef = WeakReference(this)
+            }
             val data = params.deserialize(adapter<BridgeEventReq>())
             // 웹브릿지 컨텍스트 표시하여 track 호출
             Marketap.trackFromWebBridge(data.eventName, data.eventProperties)
         } catch (e: Exception) {
             logger.e(e) { "Failed to handle track event: $params" }
-            activeInstanceRef = null
+            if (handleInAppInWebView) {
+                activeInstanceRef = null
+            }
         }
     }
 
