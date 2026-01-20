@@ -137,6 +137,25 @@ object Marketap {
         marketapCore?.track(name, properties)
     }
 
+    /**
+     * 웹브릿지에서 온 이벤트를 추적합니다. (internal)
+     * 인앱 캠페인이 웹으로 전달됩니다.
+     *
+     * @param name 이벤트 이름
+     * @param properties 이벤트 속성 정보 (선택 사항)
+     */
+    @JvmStatic
+    internal fun trackFromWebBridge(
+        name: String,
+        properties: Map<String, Any>? = null
+    ) {
+        logger.d {
+            "Marketap SDK track event from web bridge with name: $name, " +
+                    "properties: ${properties?.serialize(mapAdapter<String, Any>())}"
+        }
+        marketapCore?.trackFromWebBridge(name, properties)
+    }
+
 
     /**
      * 구매 이벤트를 추적합니다.

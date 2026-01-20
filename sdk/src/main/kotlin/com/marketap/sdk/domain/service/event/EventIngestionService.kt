@@ -18,6 +18,10 @@ internal class EventIngestionService(
     private val userIngestionService: UserIngestionService,
 ) {
     fun trackEvent(eventName: String, eventProperties: Map<String, Any>) {
+        trackEvent(eventName, eventProperties, fromWebBridge = false)
+    }
+
+    fun trackEvent(eventName: String, eventProperties: Map<String, Any>, fromWebBridge: Boolean) {
         val userId = clientStateManager.getUserId()
         val projectId = clientStateManager.getProjectId()
         val device = deviceManager.getDevice().toReq()
@@ -48,6 +52,7 @@ internal class EventIngestionService(
         val messageId = generateRandomUUID()
         inAppService.onEvent(
             eventRequest,
+            fromWebBridge,
             { campaign ->
                 marketapBackend.track(
                     projectId, IngestEventRequest(

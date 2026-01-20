@@ -16,6 +16,14 @@ internal object CustomHandlerStore {
         )
     }
 
+    /**
+     * 커스텀 클릭 핸들러가 등록되어 있는지 확인 (Application context 사용)
+     */
+    fun isCustomized(): Boolean {
+        val application = MarketapRegistry.application ?: return false
+        return isCustomized(application.applicationContext)
+    }
+
     private var pendingClick: MarketapClickEvent? = null
     fun maybeHandleClick(
         activity: Activity,

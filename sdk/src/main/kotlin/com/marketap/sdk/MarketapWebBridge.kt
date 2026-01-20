@@ -1,65 +1,261 @@
 package com.marketap.sdk
 
+import android.os.Handler
+import android.os.Looper
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
+import com.marketap.sdk.model.external.MarketapCampaignType
+import com.marketap.sdk.model.external.MarketapClickEvent
 import com.marketap.sdk.model.internal.Device
+import com.marketap.sdk.model.internal.InAppCampaign
 import com.marketap.sdk.model.internal.bridge.BridgeEventReq
 import com.marketap.sdk.model.internal.bridge.BridgeUserReq
+import com.marketap.sdk.model.internal.bridge.InAppClickParams
+import com.marketap.sdk.model.internal.bridge.InAppHideParams
+import com.marketap.sdk.model.internal.bridge.InAppImpressionParams
+import com.marketap.sdk.model.internal.bridge.InAppSetUserPropertiesParams
+import com.marketap.sdk.model.internal.bridge.InAppTrackParams
+import com.marketap.sdk.model.internal.inapp.HideType
+import com.marketap.sdk.presentation.CustomHandlerStore
+import com.marketap.sdk.presentation.MarketapRegistry
 import com.marketap.sdk.utils.adapter
 import com.marketap.sdk.utils.deserialize
 import com.marketap.sdk.utils.logger
+import com.marketap.sdk.utils.serialize
+import java.lang.ref.WeakReference
 
 class MarketapWebBridge(private val webView: WebView) {
+    private var currentCampaign: InAppCampaign? = null
+    private var currentMessageId: String? = null
+
     init {
         logger.d { "MarketapWebBridge initialized" }
     }
 
     companion object {
         const val NAME = "marketap"
+
+        private var activeInstanceRef: WeakReference<MarketapWebBridge>? = null
+
+        /**
+         * 현재 활성화된 웹브릿지가 있는지 확인
+         */
+        @JvmStatic
+        fun hasActiveWebBridge(): Boolean {
+            return activeInstanceRef?.get() != null
+        }
+
+        /**
+         * 현재 활성화된 웹브릿지로 캠페인 전달
+         * 전달 후 activeInstanceRef를 클리어하여 다음 이벤트에서 올바른 웹브릿지를 사용하도록 함
+         */
+        @JvmStatic
+        internal fun sendCampaignToActiveWeb(campaign: InAppCampaign, messageId: String) {
+            val bridge = activeInstanceRef?.get()
+            activeInstanceRef = null  // 전달 전에 클리어 (sendCampaignToWeb이 실패해도 클리어)
+            bridge?.sendCampaignToWeb(campaign, messageId)
+        }
     }
 
     @JavascriptInterface
     fun postMessage(type: String, params: String) {
         logger.d { "MarketapWebBridge.postMessage called - type: $type, params: $params" }
         when (type) {
-            "track" -> {
-                val data = params.deserialize(adapter<BridgeEventReq>())
-                Marketap.track(data.eventName, data.eventProperties)
-            }
-
-            "identify" -> {
-                val data = params.deserialize(adapter<BridgeUserReq>())
-                Marketap.identify(data.userId, data.userProperties)
-            }
-
-            "resetIdentity" -> {
-                Marketap.resetIdentity()
-            }
-
-            "marketapBridgeCheck" -> {
-                handleBridgeCheck()
-            }
-
+            "track" -> handleTrackEvent(params)
+            "identify" -> handleIdentifyEvent(params)
+            "resetIdentity" -> Marketap.resetIdentity()
+            "marketapBridgeCheck" -> handleBridgeCheck()
+            // 웹에서 인앱 메시지 이벤트 처리
+            "inAppMessageImpression" -> handleInAppImpression(params)
+            "inAppMessageClick" -> handleInAppClick(params)
+            "inAppMessageHide" -> handleInAppHide(params)
+            "inAppMessageTrack" -> handleInAppTrack(params)
+            "inAppMessageSetUserProperties" -> handleInAppSetUserProperties(params)
             else -> {
                 logger.e { "MarketapWebBridge received unknown type: $type" }
             }
         }
     }
 
+    private fun handleTrackEvent(params: String) {
+        try {
+            // 이벤트가 들어온 웹브릿지를 활성 인스턴스로 등록 (캠페인이 이 웹뷰로 전달됨)
+            activeInstanceRef = WeakReference(this)
+            val data = params.deserialize(adapter<BridgeEventReq>())
+            // 웹브릿지 컨텍스트 표시하여 track 호출
+            Marketap.trackFromWebBridge(data.eventName, data.eventProperties)
+        } catch (e: Exception) {
+            logger.e(e) { "Failed to handle track event: $params" }
+            activeInstanceRef = null
+        }
+    }
+
+    private fun handleIdentifyEvent(params: String) {
+        try {
+            val data = params.deserialize(adapter<BridgeUserReq>())
+            Marketap.identify(data.userId, data.userProperties)
+        } catch (e: Exception) {
+            logger.e(e) { "Failed to handle identify event: $params" }
+        }
+    }
+
     private fun handleBridgeCheck() {
         val device = Device()
 
-        webView.post {
-            webView.evaluateJavascript("""
-                window.postMessage({ 
-                    type: 'marketapBridgeAck',
-                    metadata: {
-                        sdk_type: 'android',
-                        sdk_version: '${device.libraryVersion}',
-                        platform: 'android'
-                    }
-                }, '*');
-            """.trimIndent(), null)
+        evaluateJavaScript("""
+            window.postMessage({
+                type: 'marketapBridgeAck',
+                metadata: {
+                    sdk_type: 'android',
+                    sdk_version: '${device.libraryVersion}',
+                    platform: 'android'
+                }
+            }, '*');
+        """.trimIndent())
+    }
+
+    // MARK: - 인앱 메시지 이벤트 핸들러
+
+    private fun handleInAppImpression(params: String) {
+        try {
+            val data = params.deserialize(adapter<InAppImpressionParams>())
+            val campaignId = data.campaignId
+            val messageId = data.messageId
+
+            logger.d { "Web InApp Impression: campaignId=$campaignId, messageId=$messageId" }
+
+            // 캠페인 정보가 있으면 impression 이벤트 전송
+            val campaign = currentCampaign
+            if (campaign != null && campaign.id == campaignId) {
+                MarketapRegistry.marketapCore?.trackInAppImpression(campaign, messageId)
+            }
+        } catch (e: Exception) {
+            logger.e(e) { "Failed to handle inAppMessageImpression: $params" }
+        }
+    }
+
+    private fun handleInAppClick(params: String) {
+        try {
+            val data = params.deserialize(adapter<InAppClickParams>())
+            val campaignId = data.campaignId
+            val messageId = data.messageId
+            val locationId = data.locationId
+            val url = data.url
+
+            logger.d { "Web InApp Click: campaignId=$campaignId, locationId=$locationId, url=$url" }
+
+            val campaign = currentCampaign
+            if (campaign != null && campaign.id == campaignId) {
+                // 커스텀 클릭 핸들러 호출
+                val clickEvent = MarketapClickEvent(
+                    MarketapCampaignType.IN_APP_MESSAGE,
+                    campaign.id,
+                    url
+                )
+                MarketapRegistry.marketapClickHandler?.handleClick(clickEvent)
+
+                // click 이벤트 전송
+                MarketapRegistry.marketapCore?.trackInAppClick(campaign, messageId, locationId)
+            }
+        } catch (e: Exception) {
+            logger.e(e) { "Failed to handle inAppMessageClick: $params" }
+        }
+    }
+
+    private fun handleInAppHide(params: String) {
+        try {
+            val data = params.deserialize(adapter<InAppHideParams>())
+            val campaignId = data.campaignId
+            val hideTypeString = data.hideType
+
+            logger.d { "Web InApp Hide: campaignId=$campaignId, hideType=$hideTypeString" }
+
+            // 캠페인 숨김 처리
+            if (hideTypeString != null) {
+                try {
+                    val hideType = HideType.valueOf(hideTypeString.uppercase())
+                    MarketapRegistry.marketapCore?.hideCampaign(campaignId, hideType)
+                } catch (e: IllegalArgumentException) {
+                    logger.w { "Unknown hideType: $hideTypeString" }
+                }
+            }
+
+            // 현재 캠페인 정보 클리어
+            if (currentCampaign?.id == campaignId) {
+                currentCampaign = null
+                currentMessageId = null
+            }
+        } catch (e: Exception) {
+            logger.e(e) { "Failed to handle inAppMessageHide: $params" }
+        }
+    }
+
+    private fun handleInAppTrack(params: String) {
+        try {
+            val data = params.deserialize(adapter<InAppTrackParams>())
+            val eventName = data.eventName
+            val eventProperties = data.eventProperties
+
+            logger.d { "Web InApp Track: eventName=$eventName" }
+
+            Marketap.track(eventName, eventProperties)
+        } catch (e: Exception) {
+            logger.e(e) { "Failed to handle inAppMessageTrack: $params" }
+        }
+    }
+
+    private fun handleInAppSetUserProperties(params: String) {
+        try {
+            val data = params.deserialize(adapter<InAppSetUserPropertiesParams>())
+            val userProperties = data.userProperties
+
+            logger.d { "Web InApp SetUserProperties" }
+
+            MarketapRegistry.marketapCore?.setUserProperties(userProperties)
+        } catch (e: Exception) {
+            logger.e(e) { "Failed to handle inAppMessageSetUserProperties: $params" }
+        }
+    }
+
+    // MARK: - 캠페인을 웹으로 전달
+
+    /**
+     * 캠페인을 웹으로 전달
+     */
+    internal fun sendCampaignToWeb(campaign: InAppCampaign, messageId: String) {
+        this.currentCampaign = campaign
+        this.currentMessageId = messageId
+
+        // 캠페인 정보를 JSON으로 직렬화
+        val campaignJson = try {
+            campaign.serialize(adapter())
+        } catch (e: Exception) {
+            logger.e(e) { "sendCampaignToWeb: failed to encode campaign" }
+            return
+        }
+
+        // 커스텀 클릭 핸들러 등록 여부
+        val hasCustomClickHandler = CustomHandlerStore.isCustomized()
+
+        logger.d { "Sending campaign to web: ${campaign.id}, hasCustomClickHandler: $hasCustomClickHandler" }
+
+        evaluateJavaScript("""
+            window.postMessage({
+                type: 'marketapShowInAppMessage',
+                campaign: $campaignJson,
+                messageId: '$messageId',
+                hasCustomClickHandler: $hasCustomClickHandler
+            }, '*');
+        """.trimIndent())
+    }
+
+    private fun evaluateJavaScript(script: String) {
+        Handler(Looper.getMainLooper()).post {
+            webView.evaluateJavascript(script) { result ->
+                if (result != null && result != "null") {
+                    logger.v { "JavaScript evaluation result: $result" }
+                }
+            }
         }
     }
 }
