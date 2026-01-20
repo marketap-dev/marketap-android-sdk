@@ -46,11 +46,22 @@ class MarketapWebBridge @JvmOverloads constructor(
         private var activeInstanceRef: WeakReference<MarketapWebBridge>? = null
 
         /**
+         * 외부 인앱 메시지 콜백 (Flutter, React Native 등에서 등록)
+         */
+        private var externalInAppMessageCallback: ((Map<String, Any?>, String, Boolean) -> Unit)? = null
+
+        /**
+         * 외부 웹브릿지가 활성화되었는지 여부
+         */
+        private var isExternalWebBridgeActive: Boolean = false
+
+        /**
          * 현재 활성화된 웹브릿지가 있는지 확인
          */
         @JvmStatic
         fun hasActiveWebBridge(): Boolean {
-            return activeInstanceRef?.get() != null
+            // 네이티브 웹브릿지 또는 외부 웹브릿지가 활성화되어 있는지 확인
+            return activeInstanceRef?.get() != null || isExternalWebBridgeActive
         }
 
         /**
@@ -59,9 +70,42 @@ class MarketapWebBridge @JvmOverloads constructor(
          */
         @JvmStatic
         internal fun sendCampaignToActiveWeb(campaign: InAppCampaign, messageId: String) {
+            // 외부 웹브릿지가 활성화된 경우 외부로 전달
+            if (isExternalWebBridgeActive) {
+                isExternalWebBridgeActive = false  // 전달 후 클리어
+                externalInAppMessageCallback?.let { callback ->
+                    // InAppCampaign을 Map으로 변환
+                    val campaignMap = campaign.toMap()
+                    val hasCustomClickHandler = CustomHandlerStore.isCustomized()
+                    callback(campaignMap, messageId, hasCustomClickHandler)
+                }
+                return
+            }
+
+            // 네이티브 웹브릿지로 전달
             val bridge = activeInstanceRef?.get()
             activeInstanceRef = null  // 전달 전에 클리어 (sendCampaignToWeb이 실패해도 클리어)
             bridge?.sendCampaignToWeb(campaign, messageId)
+        }
+
+        // MARK: - External Bridge Support
+
+        /**
+         * 외부 인앱 메시지 콜백 등록 (Flutter, React Native 등에서 사용)
+         * @param callback 인앱 메시지를 받을 콜백 함수
+         */
+        @JvmStatic
+        fun setExternalInAppMessageCallback(callback: ((Map<String, Any?>, String, Boolean) -> Unit)?) {
+            externalInAppMessageCallback = callback
+        }
+
+        /**
+         * 외부 웹브릿지 활성화 상태 설정
+         * 외부에서 trackFromWebBridge 호출 시 true로 설정
+         */
+        @JvmStatic
+        fun setExternalWebBridgeActive(active: Boolean) {
+            isExternalWebBridgeActive = active
         }
     }
 
