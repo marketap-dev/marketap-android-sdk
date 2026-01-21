@@ -40,30 +40,15 @@ class MarketapWebBridge @JvmOverloads constructor(
         const val NAME = "marketap"
 
         private var activeInstanceRef: WeakReference<MarketapWebBridge>? = null
-
-        /**
-         * 외부 인앱 메시지 콜백 (Flutter, React Native 등에서 등록)
-         */
         private var externalInAppMessageCallback: ((Map<String, Any?>, String, Boolean) -> Unit)? = null
-
-        /**
-         * 외부 웹브릿지가 활성화되었는지 여부
-         */
         private var isExternalWebBridgeActive: Boolean = false
 
-        /**
-         * 현재 활성화된 웹브릿지가 있는지 확인
-         */
         @JvmStatic
         fun hasActiveWebBridge(): Boolean {
             // 네이티브 웹브릿지 또는 외부 웹브릿지가 활성화되어 있는지 확인
             return activeInstanceRef?.get() != null || isExternalWebBridgeActive
         }
 
-        /**
-         * 현재 활성화된 웹브릿지로 캠페인 전달
-         * 전달 후 activeInstanceRef를 클리어하여 다음 이벤트에서 올바른 웹브릿지를 사용하도록 함
-         */
         @JvmStatic
         internal fun sendCampaignToActiveWeb(campaign: InAppCampaign, messageId: String) {
             // 외부 웹브릿지가 활성화된 경우 외부로 전달
