@@ -4,8 +4,6 @@ import android.os.Handler
 import android.os.Looper
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
-import com.marketap.sdk.model.external.MarketapCampaignType
-import com.marketap.sdk.model.external.MarketapClickEvent
 import com.marketap.sdk.model.internal.Device
 import com.marketap.sdk.model.internal.InAppCampaign
 import com.marketap.sdk.model.internal.bridge.BridgeEventReq
@@ -15,9 +13,7 @@ import com.marketap.sdk.model.internal.bridge.InAppHideParams
 import com.marketap.sdk.model.internal.bridge.InAppImpressionParams
 import com.marketap.sdk.model.internal.bridge.InAppSetUserPropertiesParams
 import com.marketap.sdk.model.internal.bridge.InAppTrackParams
-import com.marketap.sdk.model.internal.inapp.HideType
 import com.marketap.sdk.presentation.CustomHandlerStore
-import com.marketap.sdk.presentation.MarketapRegistry
 import com.marketap.sdk.utils.adapter
 import com.marketap.sdk.utils.deserialize
 import com.marketap.sdk.utils.logger
@@ -137,7 +133,7 @@ class MarketapWebBridge @JvmOverloads constructor(
             }
             val data = params.deserialize(adapter<BridgeEventReq>())
             // 웹브릿지 컨텍스트 표시하여 track 호출
-            Marketap.trackFromWebBridge(data.eventName, data.eventProperties)
+            MarketapPlugin.trackEvent(data.eventName, data.eventProperties)
         } catch (e: Exception) {
             logger.e(e) { "Failed to handle track event: $params" }
             if (handleInAppInWebView) {
@@ -181,7 +177,7 @@ class MarketapWebBridge @JvmOverloads constructor(
             // 캠페인 정보가 있으면 impression 이벤트 전송
             val campaign = currentCampaign
             if (campaign != null && campaign.id == campaignId) {
-                Marketap.handleInAppImpression(
+                MarketapPlugin.trackInAppImpression(
                     campaignId = campaign.id,
                     messageId = messageId,
                     layoutSubType = campaign.layout.layoutSubType
@@ -202,7 +198,7 @@ class MarketapWebBridge @JvmOverloads constructor(
 
             val campaign = currentCampaign
             if (campaign != null && campaign.id == campaignId) {
-                Marketap.handleInAppClick(
+                MarketapPlugin.trackInAppClick(
                     campaignId = campaign.id,
                     messageId = messageId,
                     locationId = locationId,
@@ -222,7 +218,7 @@ class MarketapWebBridge @JvmOverloads constructor(
             val hideTypeString = data.hideType
 
             // 캠페인 숨김 처리
-            Marketap.handleInAppHide(campaignId, hideTypeString)
+            MarketapPlugin.hideInAppMessage(campaignId, hideTypeString)
 
             // 현재 캠페인 정보 클리어
             if (currentCampaign?.id == campaignId) {
@@ -255,7 +251,7 @@ class MarketapWebBridge @JvmOverloads constructor(
 
             logger.d { "Web InApp SetUserProperties" }
 
-            MarketapRegistry.marketapCore?.setUserProperties(userProperties)
+            MarketapPlugin.setUserProperties(userProperties)
         } catch (e: Exception) {
             logger.e(e) { "Failed to handle inAppMessageSetUserProperties: $params" }
         }

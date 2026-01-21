@@ -5,10 +5,7 @@ import android.app.Application
 import com.marketap.sdk.model.MarketapConfig
 import com.marketap.sdk.model.external.EventProperty
 import com.marketap.sdk.model.external.MarketapClickHandler
-import com.marketap.sdk.model.external.MarketapCampaignType
-import com.marketap.sdk.model.external.MarketapClickEvent
 import com.marketap.sdk.model.external.MarketapLogLevel
-import com.marketap.sdk.model.internal.inapp.HideType
 import com.marketap.sdk.presentation.CustomHandlerStore
 import com.marketap.sdk.presentation.Dependency.initializeCore
 import com.marketap.sdk.presentation.MarketapRegistry
@@ -140,42 +137,6 @@ object Marketap {
         marketapCore?.track(name, properties)
     }
 
-    // MARK: - Internal Methods (Flutter/React Native)
-
-    /**
-     * 웹브릿지에서 온 이벤트를 추적합니다.
-     * 인앱 캠페인이 웹으로 전달됩니다.
-     *
-     * @param name 이벤트 이름
-     * @param properties 이벤트 속성 정보 (선택 사항)
-     */
-    @JvmOverloads
-    @JvmStatic
-    internal fun trackFromWebBridge(
-        name: String,
-        properties: Map<String, Any>? = null
-    ) {
-        logger.d {
-            "Marketap SDK track event from web bridge with name: $name, " +
-                    "properties: ${properties?.serialize(mapAdapter<String, Any>())}"
-        }
-        marketapCore?.trackFromWebBridge(name, properties)
-    }
-
-    /**
-     * 사용자 속성을 설정합니다 (userId 없이).
-     *
-     * @param properties 사용자 속성 정보
-     */
-    @JvmStatic
-    internal fun setUserProperties(properties: Map<String, Any>) {
-        logger.d {
-            "Marketap SDK set user properties: ${properties.serialize(mapAdapter<String, Any>())}"
-        }
-        marketapCore?.setUserProperties(properties)
-    }
-
-
     /**
      * 구매 이벤트를 추적합니다.
      * track("mkt_purchase")와 동일한 동작을 수행합니다.
@@ -268,63 +229,6 @@ object Marketap {
     fun setClickHandler(clickHandler: MarketapClickHandler) {
         logger.i { "setClickHandler: ${clickHandler::class.java.name}" }
         CustomHandlerStore.setClickHandler(clickHandler)
-    }
-
-    // MARK: - 인앱 이벤트 처리 (공통 로직)
-
-    /**
-     * 인앱 메시지 노출 이벤트 처리
-     */
-    @JvmStatic
-    internal fun handleInAppImpression(
-        campaignId: String,
-        messageId: String,
-        layoutSubType: String?
-    ) {
-        logger.d { "handleInAppImpression: campaignId=$campaignId, messageId=$messageId" }
-        val props = InAppEventBuilder.impressionEventProperties(campaignId, messageId, layoutSubType)
-        track("mkt_delivery_message", props)
-    }
-
-    /**
-     * 인앱 메시지 클릭 이벤트 처리
-     * 클릭 핸들러 호출 + 이벤트 트래킹
-     */
-    @JvmStatic
-    internal fun handleInAppClick(
-        campaignId: String,
-        messageId: String,
-        locationId: String,
-        url: String?,
-        layoutSubType: String?
-    ) {
-        logger.d { "handleInAppClick: campaignId=$campaignId, locationId=$locationId, url=$url" }
-
-        // 클릭 핸들러 호출 (커스텀 핸들러 등록 시에만)
-        if (url != null && CustomHandlerStore.isCustomized()) {
-            val clickEvent = MarketapClickEvent(MarketapCampaignType.IN_APP_MESSAGE, campaignId, url)
-            MarketapRegistry.marketapClickHandler?.handleClick(clickEvent)
-        }
-
-        // 클릭 이벤트 트래킹
-        val props = InAppEventBuilder.clickEventProperties(campaignId, messageId, locationId, url, layoutSubType)
-        track("mkt_click_message", props)
-    }
-
-    /**
-     * 인앱 메시지 숨김 처리
-     */
-    @JvmStatic
-    internal fun handleInAppHide(campaignId: String, hideType: String?) {
-        logger.d { "handleInAppHide: campaignId=$campaignId, hideType=$hideType" }
-        if (hideType != null) {
-            try {
-                val type = HideType.valueOf(hideType.uppercase())
-                marketapCore?.hideCampaign(campaignId, type)
-            } catch (e: IllegalArgumentException) {
-                logger.w { "Unknown hideType: $hideType" }
-            }
-        }
     }
 
     @JvmStatic
