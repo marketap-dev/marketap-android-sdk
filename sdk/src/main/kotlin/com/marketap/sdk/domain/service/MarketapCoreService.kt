@@ -48,9 +48,6 @@ internal class MarketapCoreService(
         }
     }
 
-    /**
-     * 웹브릿지에서 온 이벤트 추적 (인앱 캠페인을 웹으로 전달)
-     */
     fun trackFromWebBridge(name: String, properties: Map<String, Any>?) {
         try {
             eventIngestionService.trackEvent(name, properties ?: emptyMap(), fromWebBridge = true)
@@ -59,9 +56,6 @@ internal class MarketapCoreService(
         }
     }
 
-    /**
-     * 캠페인 숨김 처리 (웹브릿지에서 호출)
-     */
     fun hideCampaign(campaignId: String, hideType: HideType) {
         try {
             inAppService.hideCampaign(campaignId, hideType)
@@ -70,9 +64,6 @@ internal class MarketapCoreService(
         }
     }
 
-    /**
-     * 사용자 속성 설정 (웹브릿지에서 호출)
-     */
     fun setUserProperties(userProperties: Map<String, Any>) {
         try {
             userIngestionService.setUserProperties(userProperties)

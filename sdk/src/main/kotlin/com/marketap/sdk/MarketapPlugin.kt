@@ -15,9 +15,6 @@ object MarketapPlugin {
 
     // MARK: - 인앱 이벤트 처리 (플러그인용)
 
-    /**
-     * 인앱 메시지 노출 이벤트 처리
-     */
     @JvmStatic
     fun trackInAppImpression(
         campaignId: String,
@@ -29,9 +26,6 @@ object MarketapPlugin {
         Marketap.track("mkt_delivery_message", props)
     }
 
-    /**
-     * 인앱 메시지 클릭 이벤트 처리
-     */
     @JvmStatic
     fun trackInAppClick(
         campaignId: String,
@@ -53,9 +47,6 @@ object MarketapPlugin {
         Marketap.track("mkt_click_message", props)
     }
 
-    /**
-     * 인앱 메시지 숨김 처리
-     */
     @JvmStatic
     fun hideInAppMessage(campaignId: String, hideType: String?) {
         logger.d { "hideInAppMessage: campaignId=$campaignId, hideType=$hideType" }
@@ -71,18 +62,12 @@ object MarketapPlugin {
 
     // MARK: - 이벤트 처리 (플러그인용)
 
-    /**
-     * 이벤트를 추적합니다. 인앱 캠페인이 플러그인으로 전달됩니다.
-     */
     @JvmOverloads
     @JvmStatic
     fun trackEvent(name: String, properties: Map<String, Any>? = null) {
         marketapCore?.trackFromWebBridge(name, properties)
     }
 
-    /**
-     * 유저 속성을 업데이트합니다.
-     */
     @JvmStatic
     fun setUserProperties(properties: Map<String, Any>) {
         marketapCore?.setUserProperties(properties)

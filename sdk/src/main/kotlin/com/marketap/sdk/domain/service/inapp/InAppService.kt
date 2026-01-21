@@ -82,10 +82,6 @@ internal class InAppService(
         }
     }
 
-    /**
-     * 캠페인을 웹으로 전달 (웹브릿지 환경)
-     * impression 이벤트는 웹에서 inAppMessageImpression이 올 때 전송됩니다.
-     */
     private fun handleCampaignForWeb(
         targetCampaign: InAppCampaign
     ) {

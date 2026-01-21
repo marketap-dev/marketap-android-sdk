@@ -23,7 +23,7 @@ import java.lang.ref.WeakReference
 /**
  * MarketapWebBridge
  * @param webView 웹뷰 인스턴스
- * @param handleInAppInWebView 인앱 메시지를 웹뷰에서 처리할지 여부 (기본값: true, false면 네이티브에서 처리)
+ * @param handleInAppInWebView 인앱 메시지를 웹뷰에서 처리할지 여부
  */
 class MarketapWebBridge @JvmOverloads constructor(
     private val webView: WebView,
@@ -257,11 +257,6 @@ class MarketapWebBridge @JvmOverloads constructor(
         }
     }
 
-    // MARK: - 캠페인을 웹으로 전달
-
-    /**
-     * 캠페인을 웹으로 전달
-     */
     internal fun sendCampaignToWeb(campaign: InAppCampaign, messageId: String) {
         this.currentCampaign = campaign
         this.currentMessageId = messageId

@@ -251,9 +251,6 @@ object Marketap {
  */
 internal object InAppEventBuilder {
 
-    /**
-     * 인앱 메시지 노출 이벤트 속성 생성
-     */
     @JvmOverloads
     fun impressionEventProperties(
         campaignId: String,
@@ -277,9 +274,6 @@ internal object InAppEventBuilder {
         return props
     }
 
-    /**
-     * 인앱 메시지 클릭 이벤트 속성 생성
-     */
     @JvmOverloads
     fun clickEventProperties(
         campaignId: String,

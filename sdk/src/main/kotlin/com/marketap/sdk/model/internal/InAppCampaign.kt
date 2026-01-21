@@ -17,9 +17,6 @@ internal data class InAppCampaign(
     val html: String?,
     val updatedAt: String,
 ) {
-    /**
-     * Map으로 변환 (Flutter 브릿지용)
-     */
     @Suppress("UNCHECKED_CAST")
     fun toMap(): Map<String, Any?> {
         return try {
