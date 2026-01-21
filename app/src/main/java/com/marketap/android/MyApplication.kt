@@ -7,7 +7,7 @@ import com.marketap.sdk.model.external.MarketapLogLevel
 class MyApplication : Application() {
     override fun onCreate() {
         super.onCreate()
-        Marketap.setLogLevel(MarketapLogLevel.VERBOSE)
+        Marketap.setLogLevel(MarketapLogLevel.DEBUG)
         Marketap.initialize(this, "kx43pz7")
     }
 }
