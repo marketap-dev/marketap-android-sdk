@@ -178,12 +178,14 @@ class MarketapWebBridge @JvmOverloads constructor(
             val campaignId = data.campaignId
             val messageId = data.messageId
 
-            logger.d { "Web InApp Impression: campaignId=$campaignId, messageId=$messageId" }
-
             // 캠페인 정보가 있으면 impression 이벤트 전송
             val campaign = currentCampaign
             if (campaign != null && campaign.id == campaignId) {
-                MarketapRegistry.marketapCore?.trackInAppImpression(campaign, messageId)
+                Marketap.handleInAppImpression(
+                    campaignId = campaign.id,
+                    messageId = messageId,
+                    layoutSubType = campaign.layout.layoutSubType
+                )
             }
         } catch (e: Exception) {
             logger.e(e) { "Failed to handle inAppMessageImpression: $params" }
@@ -198,20 +200,15 @@ class MarketapWebBridge @JvmOverloads constructor(
             val locationId = data.locationId
             val url = data.url
 
-            logger.d { "Web InApp Click: campaignId=$campaignId, locationId=$locationId, url=$url" }
-
             val campaign = currentCampaign
             if (campaign != null && campaign.id == campaignId) {
-                // 커스텀 클릭 핸들러 호출
-                val clickEvent = MarketapClickEvent(
-                    MarketapCampaignType.IN_APP_MESSAGE,
-                    campaign.id,
-                    url
+                Marketap.handleInAppClick(
+                    campaignId = campaign.id,
+                    messageId = messageId,
+                    locationId = locationId,
+                    url = url,
+                    layoutSubType = campaign.layout.layoutSubType
                 )
-                MarketapRegistry.marketapClickHandler?.handleClick(clickEvent)
-
-                // click 이벤트 전송
-                MarketapRegistry.marketapCore?.trackInAppClick(campaign, messageId, locationId)
             }
         } catch (e: Exception) {
             logger.e(e) { "Failed to handle inAppMessageClick: $params" }
@@ -224,17 +221,8 @@ class MarketapWebBridge @JvmOverloads constructor(
             val campaignId = data.campaignId
             val hideTypeString = data.hideType
 
-            logger.d { "Web InApp Hide: campaignId=$campaignId, hideType=$hideTypeString" }
-
             // 캠페인 숨김 처리
-            if (hideTypeString != null) {
-                try {
-                    val hideType = HideType.valueOf(hideTypeString.uppercase())
-                    MarketapRegistry.marketapCore?.hideCampaign(campaignId, hideType)
-                } catch (e: IllegalArgumentException) {
-                    logger.w { "Unknown hideType: $hideTypeString" }
-                }
-            }
+            Marketap.handleInAppHide(campaignId, hideTypeString)
 
             // 현재 캠페인 정보 클리어
             if (currentCampaign?.id == campaignId) {
