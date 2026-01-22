@@ -123,22 +123,7 @@ internal class InAppService(
             },
             { hideType ->
                 logger.d { "Hiding campaign: ${resolvedCampaign.id} with hide type: $hideType" }
-                when (hideType) {
-                    HideType.HIDE_FOR_ONE_DAY -> campaignExposureService.hideCampaign(
-                        resolvedCampaign.id, System.currentTimeMillis() + 1000 * 60 * 60 * 24
-                    )
-
-                    HideType.HIDE_FOR_SEVEN_DAYS -> campaignExposureService.hideCampaign(
-                        resolvedCampaign.id, System.currentTimeMillis() + 1000 * 60 * 60 * 24 * 7
-                    )
-
-                    HideType.HIDE_FOREVER -> campaignExposureService.hideCampaign(
-                        resolvedCampaign.id,
-                        System.currentTimeMillis() + 1000L * 60 * 60 * 24 * 365 * 10
-                    )
-
-                    HideType.CLOSE -> {}
-                }
+                hideCampaignByType(resolvedCampaign.id, hideType)
             },
             { eventName, properties ->
                 onTrack(targetCampaign, eventName, properties)
@@ -152,6 +137,10 @@ internal class InAppService(
      */
     fun hideCampaign(campaignId: String, hideType: HideType) {
         logger.d { "Hiding campaign from web bridge: $campaignId with hide type: $hideType" }
+        hideCampaignByType(campaignId, hideType)
+    }
+
+    private fun hideCampaignByType(campaignId: String, hideType: HideType) {
         when (hideType) {
             HideType.HIDE_FOR_ONE_DAY -> campaignExposureService.hideCampaign(
                 campaignId, System.currentTimeMillis() + 1000 * 60 * 60 * 24
