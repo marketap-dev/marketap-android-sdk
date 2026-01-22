@@ -1,11 +1,13 @@
 package com.marketap.sdk.domain.service.inapp
 
+import com.marketap.sdk.MarketapWebBridge
 import com.marketap.sdk.domain.repository.InAppView
 import com.marketap.sdk.domain.service.inapp.condition.ConditionChecker
 import com.marketap.sdk.model.internal.InAppCampaign
 import com.marketap.sdk.model.internal.api.IngestEventRequest
 import com.marketap.sdk.model.internal.inapp.HideType
 import com.marketap.sdk.utils.logger
+import java.util.UUID
 
 internal class InAppService(
     private val campaignExposureService: CampaignExposureService,
@@ -16,6 +18,17 @@ internal class InAppService(
 
     fun onEvent(
         event: IngestEventRequest,
+        onImpression: (campaign: InAppCampaign) -> Unit,
+        onClick: (campaign: InAppCampaign, locationId: String) -> Unit,
+        onTrack: (campaign: InAppCampaign, eventName: String, properties: Map<String, Any>?) -> Unit,
+        onSetUserProperties: (properties: Map<String, Any>) -> Unit,
+    ) {
+        onEvent(event, fromWebBridge = false, onImpression, onClick, onTrack, onSetUserProperties)
+    }
+
+    fun onEvent(
+        event: IngestEventRequest,
+        fromWebBridge: Boolean,
         onImpression: (campaign: InAppCampaign) -> Unit,
         onClick: (campaign: InAppCampaign, locationId: String) -> Unit,
         onTrack: (campaign: InAppCampaign, eventName: String, properties: Map<String, Any>?) -> Unit,
@@ -57,9 +70,29 @@ internal class InAppService(
             }
 
             targetCampaign?.let {
-                handleCampaign(it, event, onImpression, onClick, onTrack, onSetUserProperties)
+                // 웹브릿지에서 온 이벤트이고 활성 웹브릿지가 있으면 웹으로 캠페인 전달
+                val shouldDelegateToWeb = fromWebBridge && MarketapWebBridge.hasActiveWebBridge()
+
+                if (shouldDelegateToWeb) {
+                    handleCampaignForWeb(it)
+                } else {
+                    handleCampaign(it, event, onImpression, onClick, onTrack, onSetUserProperties)
+                }
             }
         }
+    }
+
+    private fun handleCampaignForWeb(
+        targetCampaign: InAppCampaign
+    ) {
+        logger.d { "Delegating in-app campaign to web: ${targetCampaign.id} with layout type: ${targetCampaign.layout.layoutType}" }
+
+        // 빈도 제한을 위한 노출 기록 (이벤트 전송은 웹에서 impression이 올 때 수행)
+        campaignExposureService.recordImpression(targetCampaign.id)
+
+        // 웹으로 캠페인 전달
+        val messageId = UUID.randomUUID().toString()
+        MarketapWebBridge.sendCampaignToActiveWeb(targetCampaign, messageId)
     }
 
     private fun handleCampaign(
@@ -90,27 +123,39 @@ internal class InAppService(
             },
             { hideType ->
                 logger.d { "Hiding campaign: ${resolvedCampaign.id} with hide type: $hideType" }
-                when (hideType) {
-                    HideType.HIDE_FOR_ONE_DAY -> campaignExposureService.hideCampaign(
-                        resolvedCampaign.id, System.currentTimeMillis() + 1000 * 60 * 60 * 24
-                    )
-
-                    HideType.HIDE_FOR_SEVEN_DAYS -> campaignExposureService.hideCampaign(
-                        resolvedCampaign.id, System.currentTimeMillis() + 1000 * 60 * 60 * 24 * 7
-                    )
-
-                    HideType.HIDE_FOREVER -> campaignExposureService.hideCampaign(
-                        resolvedCampaign.id,
-                        System.currentTimeMillis() + 1000L * 60 * 60 * 24 * 365 * 10
-                    )
-
-                    HideType.CLOSE -> {}
-                }
+                hideCampaignByType(resolvedCampaign.id, hideType)
             },
             { eventName, properties ->
                 onTrack(targetCampaign, eventName, properties)
             },
             onSetUserProperties,
         )
+    }
+
+    /**
+     * 캠페인 숨김 처리 (웹브릿지에서 호출)
+     */
+    fun hideCampaign(campaignId: String, hideType: HideType) {
+        logger.d { "Hiding campaign from web bridge: $campaignId with hide type: $hideType" }
+        hideCampaignByType(campaignId, hideType)
+    }
+
+    private fun hideCampaignByType(campaignId: String, hideType: HideType) {
+        when (hideType) {
+            HideType.HIDE_FOR_ONE_DAY -> campaignExposureService.hideCampaign(
+                campaignId, System.currentTimeMillis() + 1000 * 60 * 60 * 24
+            )
+
+            HideType.HIDE_FOR_SEVEN_DAYS -> campaignExposureService.hideCampaign(
+                campaignId, System.currentTimeMillis() + 1000 * 60 * 60 * 24 * 7
+            )
+
+            HideType.HIDE_FOREVER -> campaignExposureService.hideCampaign(
+                campaignId,
+                System.currentTimeMillis() + 1000L * 60 * 60 * 24 * 365 * 10
+            )
+
+            HideType.CLOSE -> {}
+        }
     }
 }

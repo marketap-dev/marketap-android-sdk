@@ -30,6 +30,6 @@ class DetailActivity : AppCompatActivity() {
             this.addJavascriptInterface(MarketapWebBridge(webView), MarketapWebBridge.NAME)
         }
 
-        webView.loadUrl("https://marketap.cafe24.com/shop2")
+        webView.loadUrl("https://static.marketap.io/sdk/dev/test_me.html")
     }
 }

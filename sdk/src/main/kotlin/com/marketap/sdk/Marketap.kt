@@ -137,7 +137,6 @@ object Marketap {
         marketapCore?.track(name, properties)
     }
 
-
     /**
      * 구매 이벤트를 추적합니다.
      * track("mkt_purchase")와 동일한 동작을 수행합니다.
@@ -244,5 +243,63 @@ object Marketap {
     fun requestAuthorizationForPushNotifications(activity: Activity) {
         logger.i { "requestAuthorizationForPushNotifications on ${activity::class.java.name}" }
         marketapCore?.requestAuthorizationForPushNotifications(activity)
+    }
+}
+
+/**
+ * 인앱 이벤트 속성 빌더
+ */
+internal object InAppEventBuilder {
+
+    @JvmOverloads
+    fun impressionEventProperties(
+        campaignId: String,
+        messageId: String,
+        layoutSubType: String?,
+        sessionId: String? = null
+    ): Map<String, Any> {
+        val props = mutableMapOf<String, Any>(
+            "mkt_campaign_id" to campaignId,
+            "mkt_campaign_category" to "ON_SITE",
+            "mkt_channel_type" to "IN_APP_MESSAGE",
+            "mkt_sub_channel_type" to (layoutSubType ?: "MODAL"),
+            "mkt_result_status" to 200000,
+            "mkt_result_message" to "SUCCESS",
+            "mkt_is_success" to true,
+            "mkt_message_id" to messageId
+        )
+        if (sessionId != null) {
+            props["mkt_session_id"] = sessionId
+        }
+        return props
+    }
+
+    @JvmOverloads
+    fun clickEventProperties(
+        campaignId: String,
+        messageId: String,
+        locationId: String,
+        url: String?,
+        layoutSubType: String?,
+        sessionId: String? = null
+    ): Map<String, Any> {
+        val props = mutableMapOf<String, Any>(
+            "mkt_campaign_id" to campaignId,
+            "mkt_campaign_category" to "ON_SITE",
+            "mkt_channel_type" to "IN_APP_MESSAGE",
+            "mkt_sub_channel_type" to (layoutSubType ?: "MODAL"),
+            "mkt_result_status" to 200000,
+            "mkt_result_message" to "SUCCESS",
+            "mkt_is_success" to true,
+            "mkt_message_id" to messageId,
+            "mkt_location_id" to locationId
+        )
+        if (url != null) {
+            props["mkt_url"] = url
+        }
+        if (sessionId != null) {
+            props["mkt_session_id"] = sessionId
+        }
+        return props
     }
 }

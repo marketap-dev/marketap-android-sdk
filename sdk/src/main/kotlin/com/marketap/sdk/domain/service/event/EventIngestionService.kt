@@ -1,5 +1,6 @@
 package com.marketap.sdk.domain.service.event
 
+import com.marketap.sdk.InAppEventBuilder
 import com.marketap.sdk.domain.repository.DeviceManager
 import com.marketap.sdk.domain.repository.MarketapBackend
 import com.marketap.sdk.domain.repository.SessionManager
@@ -18,6 +19,10 @@ internal class EventIngestionService(
     private val userIngestionService: UserIngestionService,
 ) {
     fun trackEvent(eventName: String, eventProperties: Map<String, Any>) {
+        trackEvent(eventName, eventProperties, fromWebBridge = false)
+    }
+
+    fun trackEvent(eventName: String, eventProperties: Map<String, Any>, fromWebBridge: Boolean) {
         val userId = clientStateManager.getUserId()
         val projectId = clientStateManager.getProjectId()
         val device = deviceManager.getDevice().toReq()
@@ -48,61 +53,51 @@ internal class EventIngestionService(
         val messageId = generateRandomUUID()
         inAppService.onEvent(
             eventRequest,
+            fromWebBridge,
             { campaign ->
+                val props = InAppEventBuilder.impressionEventProperties(
+                    campaignId = campaign.id,
+                    messageId = messageId,
+                    layoutSubType = campaign.layout.layoutSubType,
+                    sessionId = sessionId
+                )
                 marketapBackend.track(
                     projectId, IngestEventRequest(
                         generateRandomUUID(),
                         "mkt_delivery_message",
                         userId,
                         device,
-                        mapOf(
-                            "mkt_campaign_id" to campaign.id,
-                            "mkt_campaign_category" to "ON_SITE",
-                            "mkt_channel_type" to "IN_APP_MESSAGE",
-                            "mkt_sub_channel_type" to campaign.layout.layoutSubType,
-                            "mkt_result_status" to 200000,
-                            "mkt_result_message" to "SUCCESS",
-                            "mkt_is_success" to true,
-                            "mkt_message_id" to messageId,
-                            "mkt_session_id" to sessionId
-                        ),
+                        props,
                     )
                 )
             },
             { campaign, locationId ->
+                val props = InAppEventBuilder.clickEventProperties(
+                    campaignId = campaign.id,
+                    messageId = messageId,
+                    locationId = locationId,
+                    url = null,
+                    layoutSubType = campaign.layout.layoutSubType,
+                    sessionId = sessionId
+                )
                 marketapBackend.track(
                     projectId, IngestEventRequest(
                         generateRandomUUID(),
                         "mkt_click_message",
                         userId,
                         device,
-                        mapOf(
-                            "mkt_campaign_id" to campaign.id,
-                            "mkt_campaign_category" to "ON_SITE",
-                            "mkt_channel_type" to "IN_APP_MESSAGE",
-                            "mkt_sub_channel_type" to campaign.layout.layoutSubType,
-                            "mkt_result_status" to 200000,
-                            "mkt_result_message" to "SUCCESS",
-                            "mkt_is_success" to true,
-                            "mkt_message_id" to messageId,
-                            "mkt_location_id" to locationId,
-                            "mkt_session_id" to sessionId
-                        ),
+                        props,
                     )
                 )
             },
             { campaign, eventName, properties ->
-                val mergedProperties = (properties ?: emptyMap()) + mapOf(
-                    "mkt_campaign_id" to campaign.id,
-                    "mkt_campaign_category" to "ON_SITE",
-                    "mkt_channel_type" to "IN_APP_MESSAGE",
-                    "mkt_sub_channel_type" to campaign.layout.layoutSubType,
-                    "mkt_result_status" to 200000,
-                    "mkt_result_message" to "SUCCESS",
-                    "mkt_is_success" to true,
-                    "mkt_message_id" to messageId,
-                    "mkt_session_id" to sessionId
+                val baseProps = InAppEventBuilder.impressionEventProperties(
+                    campaignId = campaign.id,
+                    messageId = messageId,
+                    layoutSubType = campaign.layout.layoutSubType,
+                    sessionId = sessionId
                 )
+                val mergedProperties = (properties ?: emptyMap()) + baseProps
                 trackEvent(eventName, mergedProperties)
             },
             { properties ->

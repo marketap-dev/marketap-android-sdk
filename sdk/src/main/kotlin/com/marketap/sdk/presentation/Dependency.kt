@@ -66,6 +66,10 @@ object Dependency {
             eventIngestionService,
             userIngestionService,
             deviceManager,
+            inAppService,
+            marketapBackend,
+            clientStateManager,
+            sessionManager,
         )
 
         val deviceListener = DeviceListener(deviceManager, userIngestionService, application, core)
