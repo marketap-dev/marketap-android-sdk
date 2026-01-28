@@ -37,12 +37,18 @@ class MarketapPushNotificationBuilder(
         return this
     }
 
-    private fun getDefaultAppIcon(): Int {
+    private fun getNotificationIcon(): Int {
+        val customIcon = ManifestUtils.getSystemResource(
+            context, ManifestUtils.SystemResourceConstant.NOTIFICATION_ICON
+        )
+        if (customIcon != 0) {
+            return customIcon
+        }
         return try {
             val appInfo = context.packageManager.getApplicationInfo(context.packageName, 0)
-            appInfo.icon // 🔥 호스트 앱의 기본 아이콘 가져오기
+            appInfo.icon
         } catch (e: PackageManager.NameNotFoundException) {
-            android.R.drawable.stat_notify_chat // 기본 아이콘 (예비용)
+            android.R.drawable.stat_notify_chat
         }
     }
 
@@ -116,7 +122,7 @@ class MarketapPushNotificationBuilder(
                     context, ManifestUtils.SystemStringConstant.CHANNEL_ID
                 )
             )
-                .setSmallIcon(getDefaultAppIcon())
+                .setSmallIcon(getNotificationIcon())
                 .setContentTitle(data.title)
                 .setContentText(data.body)
                 .setAutoCancel(true)

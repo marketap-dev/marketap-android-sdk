@@ -19,6 +19,12 @@ internal object ManifestUtils {
                         " = ${getSystemString(context, constant)}"
             }
         }
+        SystemResourceConstant.values().forEach { constant ->
+            logger.d {
+                "Manifest resource constant: ${constant.key}" +
+                        " = ${getSystemResource(context, constant)}"
+            }
+        }
     }
 
     fun getSystemBoolean(
@@ -33,6 +39,14 @@ internal object ManifestUtils {
         key: SystemStringConstant
     ): String {
         return getBundle(context)?.getString(key.key) ?: key.defaultValue
+    }
+
+    fun getSystemResource(
+        context: Context,
+        key: SystemResourceConstant
+    ): Int {
+        val resourceId = getBundle(context)?.getInt(key.key) ?: 0
+        return if (resourceId != 0) resourceId else key.defaultValue
     }
 
     private fun getBundle(context: Context): Bundle? {
@@ -54,5 +68,9 @@ internal object ManifestUtils {
         CHANNEL_ID("com_marketap_push_channel_id", "default_channel_id"),
         CHANNEL_NAME("com_marketap_push_channel_name", "알림"),
         CHANNEL_DESC("com_marketap_push_channel_description", "푸시 알림 채널"),
+    }
+
+    enum class SystemResourceConstant(val key: String, val defaultValue: Int) {
+        NOTIFICATION_ICON("com_marketap_push_notification_icon", 0),
     }
 }
