@@ -11,16 +11,28 @@ class StringArrayComparator : TypeSafeComparator<List<String>> {
         operator: TaxonomyOperator
     ): Boolean {
         return when (operator) {
-            // `value`가 `targetValues` 리스트 중 하나라도 포함하면 true
             TaxonomyOperator.CONTAINS -> targetValues.getSingleOrNull<String>()?.let { it in value }
                 ?: false
 
             TaxonomyOperator.NOT_CONTAINS -> targetValues.getSingleOrNull<String>()
                 ?.let { it !in value } ?: false
 
-            // `value` 리스트에 `targetValues`의 모든 요소가 포함되면 true
             TaxonomyOperator.ANY -> targetValues.getList<String>().any { it in value }
             TaxonomyOperator.NONE -> targetValues.getList<String>().none { it in value }
+
+            TaxonomyOperator.ARRAY_LIKE -> {
+                val targets = targetValues.getList<String>()
+                targets.any { target ->
+                    value.any { it.contains(target, ignoreCase = true) }
+                }
+            }
+
+            TaxonomyOperator.ARRAY_NOT_LIKE -> {
+                val targets = targetValues.getList<String>()
+                targets.all { target ->
+                    value.none { it.contains(target, ignoreCase = true) }
+                }
+            }
 
             else -> throw IllegalArgumentException("Unsupported operator for List<String>: $operator")
         }

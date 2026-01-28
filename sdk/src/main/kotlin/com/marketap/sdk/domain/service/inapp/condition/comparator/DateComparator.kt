@@ -63,16 +63,50 @@ class DateComparator : TypeSafeComparator<Date> {
                 calendar.get(Calendar.YEAR) == year && calendar.get(Calendar.MONTH) == month - 1
             }
 
+            TaxonomyOperator.BEFORE -> targetValues.getSingleOrNull<Int>()?.let { days ->
+                val targetDate = startOfDay(daysAgo(days))
+                val sourceDate = startOfDay(value)
+                sourceDate == targetDate
+            } ?: false
+
+            TaxonomyOperator.PAST -> targetValues.getSingleOrNull<Int>()?.let { days ->
+                val targetDate = daysAgo(days)
+                value.before(targetDate)
+            } ?: false
+
+            TaxonomyOperator.WITHIN_PAST -> targetValues.getSingleOrNull<Int>()?.let { days ->
+                val targetDate = daysAgo(days)
+                val now = Date()
+                value.after(targetDate) && value.before(now)
+            } ?: false
+
+            TaxonomyOperator.AFTER -> targetValues.getSingleOrNull<Int>()?.let { days ->
+                val targetDate = startOfDay(daysFromNow(days))
+                val sourceDate = startOfDay(value)
+                sourceDate == targetDate
+            } ?: false
+
+            TaxonomyOperator.REMAINING -> targetValues.getSingleOrNull<Int>()?.let { days ->
+                val targetDate = daysFromNow(days)
+                value.after(targetDate)
+            } ?: false
+
+            TaxonomyOperator.WITHIN_REMAINING -> targetValues.getSingleOrNull<Int>()?.let { days ->
+                val targetDate = daysFromNow(days)
+                val now = Date()
+                value.after(now) && value.before(targetDate)
+            } ?: false
+
             TaxonomyOperator.LIKE,
             TaxonomyOperator.NOT_LIKE,
+            TaxonomyOperator.ARRAY_LIKE,
+            TaxonomyOperator.ARRAY_NOT_LIKE,
             TaxonomyOperator.CONTAINS,
             TaxonomyOperator.NOT_CONTAINS,
             TaxonomyOperator.ANY,
             TaxonomyOperator.NONE -> {
                 throw UnsupportedOperationException("Date type does not support $operator")
             }
-
-            else -> TODO()
         }
     }
 
@@ -85,6 +119,16 @@ class DateComparator : TypeSafeComparator<Date> {
     private fun daysFromNow(days: Int): Date {
         val calendar = Calendar.getInstance()
         calendar.add(Calendar.DAY_OF_YEAR, days)
+        return calendar.time
+    }
+
+    private fun startOfDay(date: Date): Date {
+        val calendar = Calendar.getInstance()
+        calendar.time = date
+        calendar.set(Calendar.HOUR_OF_DAY, 0)
+        calendar.set(Calendar.MINUTE, 0)
+        calendar.set(Calendar.SECOND, 0)
+        calendar.set(Calendar.MILLISECOND, 0)
         return calendar.time
     }
 }

@@ -12,21 +12,19 @@ class PropertyConditionCheckerImpl(
         eventProperty: Map<String, Any>?,
     ): Boolean {
         val result = try {
-            // Extract the value from the event
-            // Items에 포함된 값들은 배열로 반환
-            // 배열의 각 값들을 비교하여 하나라도 일치하면 true 반환
-            // 나중에 로직 변경시 여기 수정
-            EventExtractor.extract(
+            val operator = eventPropertyCondition.operator
+            val results = EventExtractor.extract(
                 eventProperty,
                 eventPropertyCondition.extractionStrategy
-            ).any { value ->
+            ).map { value ->
                 comparator.compare(
                     value,
                     eventPropertyCondition.extractionStrategy.propertySchema.dataType,
                     eventPropertyCondition.targetValues,
-                    eventPropertyCondition.operator
+                    operator
                 )
             }
+            operator.aggregate(results)
         } catch (e: Exception) {
             logger.e(e) {
                 "Error checking property condition, " +

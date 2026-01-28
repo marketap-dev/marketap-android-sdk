@@ -5,6 +5,7 @@ import com.marketap.sdk.domain.service.inapp.condition.comparator.TypeConverter.
 import com.marketap.sdk.domain.service.inapp.condition.comparator.TypeConverter.getSingleOrNull
 import com.marketap.sdk.model.internal.inapp.TaxonomyOperator
 import com.marketap.sdk.utils.MarketapDate
+import java.util.Calendar
 
 class MarketapDateComparator : TypeSafeComparator<MarketapDate> {
     override fun compare(
@@ -39,10 +40,9 @@ class MarketapDateComparator : TypeSafeComparator<MarketapDate> {
 
             TaxonomyOperator.IN -> targetValues.getList<MarketapDate>().contains(value)
             TaxonomyOperator.NOT_IN -> !targetValues.getList<MarketapDate>().contains(value)
-            TaxonomyOperator.IS_NULL -> false // MarketapDate는 null이 될 수 없으므로 항상 false
-            TaxonomyOperator.IS_NOT_NULL -> true // MarketapDate는 항상 존재함
+            TaxonomyOperator.IS_NULL -> false
+            TaxonomyOperator.IS_NOT_NULL -> true
 
-            // 날짜 관련 연산자
             TaxonomyOperator.YEAR_EQUAL -> targetValues.getSingleOrNull<Int>()
                 ?.let { value.year == it } ?: false
 
@@ -55,16 +55,76 @@ class MarketapDateComparator : TypeSafeComparator<MarketapDate> {
                 value.year == year && value.month == month
             }
 
+            TaxonomyOperator.BEFORE -> targetValues.getSingleOrNull<Int>()?.let { days ->
+                val targetDate = daysAgo(days)
+                value == targetDate
+            } ?: false
+
+            TaxonomyOperator.PAST -> targetValues.getSingleOrNull<Int>()?.let { days ->
+                val targetDate = daysAgo(days)
+                value < targetDate
+            } ?: false
+
+            TaxonomyOperator.WITHIN_PAST -> targetValues.getSingleOrNull<Int>()?.let { days ->
+                val targetDate = daysAgo(days)
+                val today = today()
+                value > targetDate && value < today
+            } ?: false
+
+            TaxonomyOperator.AFTER -> targetValues.getSingleOrNull<Int>()?.let { days ->
+                val targetDate = daysFromNow(days)
+                value == targetDate
+            } ?: false
+
+            TaxonomyOperator.REMAINING -> targetValues.getSingleOrNull<Int>()?.let { days ->
+                val targetDate = daysFromNow(days)
+                value > targetDate
+            } ?: false
+
+            TaxonomyOperator.WITHIN_REMAINING -> targetValues.getSingleOrNull<Int>()?.let { days ->
+                val targetDate = daysFromNow(days)
+                val today = today()
+                value > today && value < targetDate
+            } ?: false
+
             else -> throw IllegalArgumentException("Unsupported operator for MarketapDate: $operator")
         }
     }
 
-    // MarketapDate 비교 연산을 위해 Comparable 인터페이스를 구현
     private operator fun MarketapDate.compareTo(other: MarketapDate): Int {
         return when {
             this.year != other.year -> this.year.compareTo(other.year)
             this.month != other.month -> this.month.compareTo(other.month)
             else -> this.day.compareTo(other.day)
         }
+    }
+
+    private fun today(): MarketapDate {
+        val calendar = Calendar.getInstance()
+        return MarketapDate(
+            calendar.get(Calendar.YEAR),
+            calendar.get(Calendar.MONTH) + 1,
+            calendar.get(Calendar.DAY_OF_MONTH)
+        )
+    }
+
+    private fun daysAgo(days: Int): MarketapDate {
+        val calendar = Calendar.getInstance()
+        calendar.add(Calendar.DAY_OF_YEAR, -days)
+        return MarketapDate(
+            calendar.get(Calendar.YEAR),
+            calendar.get(Calendar.MONTH) + 1,
+            calendar.get(Calendar.DAY_OF_MONTH)
+        )
+    }
+
+    private fun daysFromNow(days: Int): MarketapDate {
+        val calendar = Calendar.getInstance()
+        calendar.add(Calendar.DAY_OF_YEAR, days)
+        return MarketapDate(
+            calendar.get(Calendar.YEAR),
+            calendar.get(Calendar.MONTH) + 1,
+            calendar.get(Calendar.DAY_OF_MONTH)
+        )
     }
 }
