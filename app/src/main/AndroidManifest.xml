@@ -31,6 +31,10 @@
             android:name="com_marketap_push_channel_description"
             android:value="마켓탭 커스텀 채널 설명입니다." />
 
+        <meta-data
+            android:name="com_marketap_push_notification_icon"
+            android:resource="@drawable/noti_icon" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true">

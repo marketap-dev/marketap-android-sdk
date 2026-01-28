@@ -1,0 +1,23 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+
+    <!-- 푸시 small icon: 단색(흰색), 배경 없음 -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M12,2
+                          C9.79,2 8,3.79 8,6
+                          V10.17
+                          L6.59,11.59
+                          C6.21,11.97 6,12.49 6,13
+                          V14
+                          H18
+                          V13
+                          C18,12.49 17.79,11.97 17.41,11.59
+                          L16,10.17
+                          V6
+                          C16,3.79 14.21,2 12,2
+                          Z" />
+</vector>
