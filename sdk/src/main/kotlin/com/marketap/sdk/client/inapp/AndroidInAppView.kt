@@ -19,6 +19,7 @@ class AndroidInAppView : InAppView, InAppCallback {
         }
     }
 
+    private var onShow: (() -> Unit)? = null
     private var onClick: ((String) -> String)? = null
     private var onHide: ((HideType) -> Unit)? = null
     private var onTrack: ((eventName: String, properties: Map<String, Any>?) -> Unit)? = null
@@ -37,7 +38,7 @@ class AndroidInAppView : InAppView, InAppCallback {
             return
         }
         isShown = true
-        onShow()
+        this.onShow = onShow
         this.onClick = onClick
         this.onHide = onHide
         this.onTrack = onTrack
@@ -54,9 +55,26 @@ class AndroidInAppView : InAppView, InAppCallback {
         }
     }
 
+    fun onWebViewLoaded() {
+        onShow?.invoke()
+        onShow = null
+    }
+
+    fun resetIfNeeded() {
+        if (isShown) {
+            onShow = null
+            onClick = null
+            onHide = null
+            onTrack = null
+            onSetUserProperties = null
+            isShown = false
+        }
+    }
+
     override fun onHide(hideType: HideType) {
         onHide?.invoke(hideType)
         onHide = null
+        onShow = null
         isShown = false
         onClick = null
     }

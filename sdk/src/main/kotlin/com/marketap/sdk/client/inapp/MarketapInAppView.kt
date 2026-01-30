@@ -5,6 +5,7 @@ import android.content.Context
 import android.graphics.Color
 import android.webkit.WebSettings
 import android.webkit.WebView
+import android.webkit.WebViewClient
 import android.widget.FrameLayout
 import androidx.fragment.app.FragmentActivity
 import com.marketap.sdk.utils.SafeAreaUtils
@@ -100,9 +101,16 @@ internal class MarketapInAppView(
 
     fun show(
         html: String,
-        activity: FragmentActivity
+        activity: FragmentActivity,
+        onPageLoaded: () -> Unit = {}
     ) {
         postToMainThread {
+            webViewClient = object : WebViewClient() {
+                override fun onPageFinished(view: WebView?, url: String?) {
+                    super.onPageFinished(view, url)
+                    onPageLoaded()
+                }
+            }
             visibility = VISIBLE
             loadDataWithBaseURL(
                 null,

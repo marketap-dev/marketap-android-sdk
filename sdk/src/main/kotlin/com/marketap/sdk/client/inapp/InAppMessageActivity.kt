@@ -1,25 +1,42 @@
 package com.marketap.sdk.client.inapp
 
 import android.content.Intent
+import android.graphics.Color
+import android.os.Build
 import android.os.Bundle
-import android.view.WindowManager
 import android.widget.FrameLayout
 import androidx.activity.OnBackPressedCallback
+import androidx.core.view.WindowCompat
 import androidx.fragment.app.FragmentActivity
 import com.marketap.sdk.utils.logger
 
 
 class InAppMessageActivity : FragmentActivity() {
     private var messageView: MarketapInAppView? = null
+    private var loaded = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         logger.d { "InAppMessage Activity created" }
-        window.setFlags(
-            WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
-            WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
-        )
-        window.setBackgroundDrawableResource(android.R.color.transparent)
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+            @Suppress("DEPRECATION")
+            window.statusBarColor = Color.TRANSPARENT
+            @Suppress("DEPRECATION")
+            window.navigationBarColor = Color.TRANSPARENT
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                @Suppress("DEPRECATION")
+                window.isStatusBarContrastEnforced = false
+                @Suppress("DEPRECATION")
+                window.isNavigationBarContrastEnforced = false
+            }
+        }
+
+        val htmlData = intent.getStringExtra("htmlData")
+        if (htmlData == null) {
+            finish()
+            return
+        }
 
         val rootView = FrameLayout(this).apply {
             layoutParams = FrameLayout.LayoutParams(
@@ -42,12 +59,16 @@ class InAppMessageActivity : FragmentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        loaded = false
     }
 
     override fun onResume() {
         super.onResume()
-        window.decorView.post {
-            loadWebViewData()
+        if (!loaded) {
+            loaded = true
+            window.decorView.post {
+                loadWebViewData()
+            }
         }
     }
 
@@ -55,6 +76,9 @@ class InAppMessageActivity : FragmentActivity() {
         super.onDestroy()
         messageView?.destroy()
         messageView = null
+        if (isFinishing) {
+            AndroidInAppView.getInstance().resetIfNeeded()
+        }
     }
 
     fun hideQuietly() {
@@ -74,9 +98,12 @@ class InAppMessageActivity : FragmentActivity() {
     }
 
     private fun loadWebViewData() {
-        val htmlData = intent.getStringExtra("htmlData")
-        htmlData?.let {
-            messageView?.show(it, this)
+        val htmlData = intent.getStringExtra("htmlData") ?: run {
+            finish()
+            return
+        }
+        messageView?.show(htmlData, this) {
+            AndroidInAppView.getInstance().onWebViewLoaded()
         }
     }
 }

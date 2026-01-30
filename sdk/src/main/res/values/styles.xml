@@ -1,7 +1,7 @@
 <resources>
 
     <style name="InAppMessageTheme" parent="Theme.AppCompat.NoActionBar">
-        <item name="android:windowBackground">@null</item> <!-- ✅ 초기 렌더링 속도 개선 -->
+        <item name="android:windowBackground">@android:color/transparent</item>
         <item name="android:windowIsTranslucent">true</item>
         <item name="android:windowAnimationStyle">@null</item> <!-- ✅ 초기 렌더링 속도 개선 -->
         <item name="android:windowNoTitle">true</item>
