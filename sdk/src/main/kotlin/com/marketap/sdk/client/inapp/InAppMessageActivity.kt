@@ -20,14 +20,10 @@ class InAppMessageActivity : FragmentActivity() {
         logger.d { "InAppMessage Activity created" }
         WindowCompat.setDecorFitsSystemWindows(window, false)
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.VANILLA_ICE_CREAM) {
-            @Suppress("DEPRECATION")
             window.statusBarColor = Color.TRANSPARENT
-            @Suppress("DEPRECATION")
             window.navigationBarColor = Color.TRANSPARENT
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                @Suppress("DEPRECATION")
                 window.isStatusBarContrastEnforced = false
-                @Suppress("DEPRECATION")
                 window.isNavigationBarContrastEnforced = false
             }
         }
