@@ -119,8 +119,8 @@ class MarketapWebBridge @JvmOverloads constructor(
             val data = params.deserialize(adapter<BridgeEventReq>())
             // 웹브릿지 컨텍스트 표시하여 track 호출
             MarketapPlugin.trackEvent(data.eventName, data.eventProperties)
-        } catch (e: Exception) {
-            logger.e(e) { "Failed to handle track event: $params" }
+        } catch (t: Throwable) {
+            logger.e(t) { "Failed to handle track event: $params" }
             if (handleInAppInWebView) {
                 activeInstanceRef = null
             }
@@ -131,8 +131,8 @@ class MarketapWebBridge @JvmOverloads constructor(
         try {
             val data = params.deserialize(adapter<BridgeUserReq>())
             Marketap.identify(data.userId, data.userProperties)
-        } catch (e: Exception) {
-            logger.e(e) { "Failed to handle identify event: $params" }
+        } catch (t: Throwable) {
+            logger.e(t) { "Failed to handle identify event: $params" }
         }
     }
 
@@ -168,8 +168,8 @@ class MarketapWebBridge @JvmOverloads constructor(
                     layoutSubType = campaign.layout.layoutSubType
                 )
             }
-        } catch (e: Exception) {
-            logger.e(e) { "Failed to handle inAppMessageImpression: $params" }
+        } catch (t: Throwable) {
+            logger.e(t) { "Failed to handle inAppMessageImpression: $params" }
         }
     }
 
@@ -191,8 +191,8 @@ class MarketapWebBridge @JvmOverloads constructor(
                     layoutSubType = campaign.layout.layoutSubType
                 )
             }
-        } catch (e: Exception) {
-            logger.e(e) { "Failed to handle inAppMessageClick: $params" }
+        } catch (t: Throwable) {
+            logger.e(t) { "Failed to handle inAppMessageClick: $params" }
         }
     }
 
@@ -210,8 +210,8 @@ class MarketapWebBridge @JvmOverloads constructor(
                 currentCampaign = null
                 currentMessageId = null
             }
-        } catch (e: Exception) {
-            logger.e(e) { "Failed to handle inAppMessageHide: $params" }
+        } catch (t: Throwable) {
+            logger.e(t) { "Failed to handle inAppMessageHide: $params" }
         }
     }
 
@@ -224,8 +224,8 @@ class MarketapWebBridge @JvmOverloads constructor(
             logger.d { "Web InApp Track: eventName=$eventName" }
 
             Marketap.track(eventName, eventProperties)
-        } catch (e: Exception) {
-            logger.e(e) { "Failed to handle inAppMessageTrack: $params" }
+        } catch (t: Throwable) {
+            logger.e(t) { "Failed to handle inAppMessageTrack: $params" }
         }
     }
 
@@ -237,8 +237,8 @@ class MarketapWebBridge @JvmOverloads constructor(
             logger.d { "Web InApp SetUserProperties" }
 
             MarketapPlugin.setUserProperties(userProperties)
-        } catch (e: Exception) {
-            logger.e(e) { "Failed to handle inAppMessageSetUserProperties: $params" }
+        } catch (t: Throwable) {
+            logger.e(t) { "Failed to handle inAppMessageSetUserProperties: $params" }
         }
     }
 
@@ -249,8 +249,8 @@ class MarketapWebBridge @JvmOverloads constructor(
         // 캠페인 정보를 JSON으로 직렬화
         val campaignJson = try {
             campaign.serialize(adapter())
-        } catch (e: Exception) {
-            logger.e(e) { "sendCampaignToWeb: failed to encode campaign" }
+        } catch (t: Throwable) {
+            logger.e(t) { "sendCampaignToWeb: failed to encode campaign" }
             return
         }
 

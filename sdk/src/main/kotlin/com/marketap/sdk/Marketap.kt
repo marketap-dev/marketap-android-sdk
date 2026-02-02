@@ -33,8 +33,8 @@ object Marketap {
                 initializeCore(config, application).also {
                     MarketapRegistry.isInitialized = true
                 }
-            } catch (e: Exception) {
-                logger.e(e) { "Marketap SDK initialization failed with projectId  ${config.projectId}" }
+            } catch (t: Throwable) {
+                logger.e(t) { "Marketap SDK initialization failed with projectId  ${config.projectId}" }
                 null
             }
         }

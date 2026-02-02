@@ -52,8 +52,8 @@ internal class DeviceListener(
                     logger.e(task.exception) { "Failed to fetch FCM token" }
                 }
             }
-        } catch (e: Exception) {
-            logger.e(e) { "Failed to fetch FCM token" }
+        } catch (t: Throwable) {
+            logger.e(t) { "Failed to fetch FCM token" }
         }
     }
 
@@ -68,8 +68,8 @@ internal class DeviceListener(
                     logger.d { "GAID fetched successfully with id: [$id]" }
                     logger.d { "Your Marketap Device ID is [gaid:$id]" }
                 }
-            } catch (e: Exception) {
-                logger.e(e) { "Failed to fetch GAID" }
+            } catch (t: Throwable) {
+                logger.e(t) { "Failed to fetch GAID" }
             } finally {
                 addAppSetIdListener()
             }
@@ -77,17 +77,21 @@ internal class DeviceListener(
     }
 
     private fun addAppSetIdListener() {
-        val client: AppSetIdClient = AppSet.getClient(application)
-        client.appSetIdInfo.addOnSuccessListener { appSetIdInfo ->
-            val appSetId = appSetIdInfo.id
-            deviceManager.setAppSetId(appSetId)
-        }.addOnFailureListener {
-            logger.e(it) { "Failed to fetch AppSet ID" }
-        }.addOnCompleteListener {
-            userIngestionService.pushDevice()
-            if (deviceManager.setFirstOpen()) {
-                core.track("mkt_first_visit", emptyMap())
+        try {
+            val client = AppSet.getClient(application)
+            client.appSetIdInfo.addOnSuccessListener { appSetIdInfo ->
+                val appSetId = appSetIdInfo.id
+                deviceManager.setAppSetId(appSetId)
+            }.addOnFailureListener {
+                logger.e(it) { "Failed to fetch AppSet ID" }
+            }.addOnCompleteListener {
+                userIngestionService.pushDevice()
+                if (deviceManager.setFirstOpen()) {
+                    core.track("mkt_first_visit", emptyMap())
+                }
             }
+        } catch (t: Throwable) {
+            logger.e(t) { "Failed to fetch AppSet ID" }
         }
     }
 }

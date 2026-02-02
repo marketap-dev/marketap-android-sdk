@@ -28,8 +28,8 @@ class WorkerGroup(
             for (work in channel) {
                 try {
                     work()
-                } catch (e: Exception) {
-                    logger.e(e) { "Error in marketap background worker" }
+                } catch (t: Throwable) {
+                    logger.e(t) { "Error in marketap background worker" }
                 }
             }
         }

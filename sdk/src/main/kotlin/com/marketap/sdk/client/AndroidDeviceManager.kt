@@ -4,6 +4,7 @@ import android.Manifest
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
 import android.content.res.Resources
 import android.net.Uri
@@ -144,26 +145,50 @@ internal class AndroidDeviceManager(
 
 
     override fun getDevice(): Device {
-        val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
+        return try {
+            val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
 
-        val displayMetrics = Resources.getSystem().displayMetrics
-        val screen = Screen(
-            width = displayMetrics.widthPixels,
-            height = displayMetrics.heightPixels,
-            pixelRatio = displayMetrics.density
-        )
+            val displayMetrics = Resources.getSystem().displayMetrics
+            val screen = Screen(
+                width = displayMetrics.widthPixels,
+                height = displayMetrics.heightPixels,
+                pixelRatio = displayMetrics.density
+            )
 
-        return Device(
-            gaid = gaid ?: storage.getItem("gaid", stringAdapter),
-            appSetId = appSetId ?: storage.getItem("app_set_id", stringAdapter),
-            appLocalId = getOrCreateLocalId(),
-            token = token,
-            brand = Build.BRAND,
-            appVersion = packageInfo.versionName,
-            appBuildNumber = packageInfo.longVersionCode.toString(),
-            screen = screen,
-            maxTouchPoints = getMaxTouchPoints().toInt()
-        )
+            Device(
+                gaid = gaid ?: storage.getItem("gaid", stringAdapter),
+                appSetId = appSetId ?: storage.getItem("app_set_id", stringAdapter),
+                appLocalId = getOrCreateLocalId(),
+                token = token,
+                brand = Build.BRAND,
+                appVersion = packageInfo.versionName,
+                appBuildNumber = getAppBuildNumber(packageInfo),
+                screen = screen,
+                maxTouchPoints = getMaxTouchPoints().toInt()
+            )
+        } catch (t: Throwable) {
+            logger.e(t) { "Failed to build device info, using safe defaults" }
+            Device(
+                gaid = gaid ?: storage.getItem("gaid", stringAdapter),
+                appSetId = appSetId ?: storage.getItem("app_set_id", stringAdapter),
+                appLocalId = getOrCreateLocalId(),
+                token = token,
+                brand = Build.BRAND,
+                appVersion = null,
+                appBuildNumber = null,
+                screen = null,
+                maxTouchPoints = getMaxTouchPoints().toInt()
+            )
+        }
+    }
+
+    private fun getAppBuildNumber(packageInfo: PackageInfo): String {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            packageInfo.longVersionCode.toString()
+        } else {
+            @Suppress("DEPRECATION")
+            packageInfo.versionCode.toString()
+        }
     }
 
     private fun getMaxTouchPoints(): Long {

@@ -50,8 +50,8 @@ internal object CustomHandlerStore {
                 try {
                     handler.handleClick(click)
                     logger.d { "Marketap SDK click handled by custom handler successfully" }
-                } catch (e: Exception) {
-                    logger.e(e) { "Error handling click with custom handler: ${e.message}" }
+                } catch (t: Throwable) {
+                    logger.e(t) { "Error handling click with custom handler: ${t.message}" }
                 }
             }
             true
@@ -64,7 +64,11 @@ internal object CustomHandlerStore {
         marketapClickHandler = handler
         if (handler != null && pendingClick != null) {
             logger.d { "Marketap SDK pending click handled by custom handler: $pendingClick" }
-            handler.handleClick(pendingClick!!)
+            try {
+                handler.handleClick(pendingClick!!)
+            } catch (t: Throwable) {
+                logger.e(t) { "Error handling pending click with custom handler: ${t.message}" }
+            }
             pendingClick = null
         }
     }

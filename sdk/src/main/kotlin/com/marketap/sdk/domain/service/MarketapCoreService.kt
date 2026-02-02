@@ -24,60 +24,60 @@ internal class MarketapCoreService(
     fun identify(userId: String, properties: Map<String, Any>?) {
         try {
             userIngestionService.identify(userId, properties ?: emptyMap())
-        } catch (e: Exception) {
+        } catch (t: Throwable) {
             // Ignore
-            logger.e(e) { "Failed to identify user: $userId" }
+            logger.e(t) { "Failed to identify user: $userId" }
         }
     }
 
     fun resetIdentity() {
         try {
             userIngestionService.resetIdentity()
-        } catch (e: Exception) {
+        } catch (t: Throwable) {
             // Ignore
-            logger.e(e) { "Failed to reset identity" }
+            logger.e(t) { "Failed to reset identity" }
         }
     }
 
     fun track(name: String, properties: Map<String, Any>?) {
         try {
             eventIngestionService.trackEvent(name, properties ?: emptyMap())
-        } catch (e: Exception) {
+        } catch (t: Throwable) {
             // Ignore
-            logger.e(e) { "Failed to track event $name" }
+            logger.e(t) { "Failed to track event $name" }
         }
     }
 
     fun trackFromWebBridge(name: String, properties: Map<String, Any>?) {
         try {
             eventIngestionService.trackEvent(name, properties ?: emptyMap(), fromWebBridge = true)
-        } catch (e: Exception) {
-            logger.e(e) { "Failed to track event from web bridge: $name" }
+        } catch (t: Throwable) {
+            logger.e(t) { "Failed to track event from web bridge: $name" }
         }
     }
 
     fun hideCampaign(campaignId: String, hideType: HideType) {
         try {
             inAppService.hideCampaign(campaignId, hideType)
-        } catch (e: Exception) {
-            logger.e(e) { "Failed to hide campaign: $campaignId" }
+        } catch (t: Throwable) {
+            logger.e(t) { "Failed to hide campaign: $campaignId" }
         }
     }
 
     fun setUserProperties(userProperties: Map<String, Any>) {
         try {
             userIngestionService.setUserProperties(userProperties)
-        } catch (e: Exception) {
-            logger.e(e) { "Failed to set user properties" }
+        } catch (t: Throwable) {
+            logger.e(t) { "Failed to set user properties" }
         }
     }
 
     fun requestAuthorizationForPushNotifications(activity: Activity) {
         try {
             deviceManager.requestAuthorizationForPushNotifications(activity)
-        } catch (e: Exception) {
+        } catch (t: Throwable) {
             // Ignore
-            logger.e(e) { "Failed to request push notification authorization" }
+            logger.e(t) { "Failed to request push notification authorization" }
         }
     }
 }

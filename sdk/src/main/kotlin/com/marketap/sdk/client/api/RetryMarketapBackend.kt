@@ -32,9 +32,14 @@ internal class RetryMarketapBackend(
     private val apiWorkGroup = WorkerGroup().apply { start() }
 
     private fun getSafeDevice(removeUserId: Boolean?): DeviceReq? {
-        return if (deviceManager.isDeviceReady()) {
-            deviceManager.getDevice().toReq(removeUserId)
-        } else {
+        return try {
+            if (deviceManager.isDeviceReady()) {
+                deviceManager.getDevice().toReq(removeUserId)
+            } else {
+                null
+            }
+        } catch (t: Throwable) {
+            logger.e(t) { "Failed to build device payload" }
             null
         }
     }

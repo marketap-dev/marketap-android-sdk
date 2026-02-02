@@ -50,8 +50,8 @@ internal object PushTracker {
                             AppEventProperty.offSite(it),
                         )
                     ) ?: throw IllegalStateException("MarketapBackend is not initialized")
-                } catch (e: Exception) {
-                    logger.e(e) { "Failed to track push impression for project ${it.projectId}: ${e.message}" }
+                } catch (t: Throwable) {
+                    logger.e(t) { "Failed to track push impression for project ${it.projectId}: ${t.message}" }
                 }
             }
         }
@@ -70,8 +70,8 @@ internal object PushTracker {
                             .addLocationId("push"),
                     )
                 ) ?: throw IllegalStateException("MarketapBackend is not initialized")
-            } catch (e: Exception) {
-                logger.e(e) { "Failed to track push click for project ${data.projectId}: ${e.message}" }
+            } catch (t: Throwable) {
+                logger.e(t) { "Failed to track push click for project ${data.projectId}: ${t.message}" }
             }
         }
 

@@ -34,6 +34,7 @@ internal data class DeviceReq(
             val props: Map<String, Any?> = mapOf(
                 "os_version" to osVersion,
                 "app_version" to appVersion,
+                "app_build_number" to appBuildNumber,
                 "brand" to brand,
                 "model" to model,
                 "manufacturer" to manufacturer,

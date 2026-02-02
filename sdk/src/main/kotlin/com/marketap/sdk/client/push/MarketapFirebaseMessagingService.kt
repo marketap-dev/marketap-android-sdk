@@ -10,8 +10,12 @@ import com.marketap.sdk.utils.logger
 class MarketapFirebaseMessagingService : FirebaseMessagingService() {
 
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
-        logger.d { "MarketapFirebaseMessagingService: onMessageReceived called" }
-        handleMarketapRemoteMessage(applicationContext, remoteMessage)
+        try {
+            logger.d { "MarketapFirebaseMessagingService: onMessageReceived called" }
+            handleMarketapRemoteMessage(applicationContext, remoteMessage)
+        } catch (t: Throwable) {
+            logger.e(t) { "MarketapFirebaseMessagingService: failed to handle message" }
+        }
     }
 
     override fun onNewToken(token: String) {
@@ -31,8 +35,13 @@ class MarketapFirebaseMessagingService : FirebaseMessagingService() {
             }
 
             logger.d { "Marketap push notification detected, processing" }
-            handleMarketapPush(context, remoteMessage.data)
-            return true
+            return try {
+                handleMarketapPush(context, remoteMessage.data)
+                true
+            } catch (t: Throwable) {
+                logger.e(t) { "Failed to handle Marketap push notification" }
+                false
+            }
         }
 
         @JvmStatic
@@ -57,8 +66,8 @@ class MarketapFirebaseMessagingService : FirebaseMessagingService() {
             PushTracker.trackImpression(context, pushData)
             val marketapPushNotification = try {
                 MarketapPushNotificationBuilder(context, pushData).build()
-            } catch (e: Exception) {
-                logger.e(e) { "Failed to build Marketap push notification for ID ${pushData.notificationId}" }
+            } catch (t: Throwable) {
+                logger.e(t) { "Failed to build Marketap push notification for ID ${pushData.notificationId}" }
                 return
             }
 

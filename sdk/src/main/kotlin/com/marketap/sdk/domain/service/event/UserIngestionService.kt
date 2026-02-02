@@ -5,6 +5,7 @@ import com.marketap.sdk.domain.repository.MarketapBackend
 import com.marketap.sdk.domain.service.state.ClientStateManager
 import com.marketap.sdk.model.internal.api.DeviceReq.Companion.toReq
 import com.marketap.sdk.model.internal.api.UpdateProfileRequest
+import com.marketap.sdk.utils.logger
 
 internal class UserIngestionService(
     private val clientStateManager: ClientStateManager,
@@ -14,39 +15,55 @@ internal class UserIngestionService(
 
     fun identify(userId: String, userProperties: Map<String, Any>?) {
         clientStateManager.setUserId(userId)
-        marketapBackend.updateProfile(
-            clientStateManager.getProjectId(),
-            UpdateProfileRequest(
-                userId,
-                (userProperties ?: emptyMap()),
-                deviceManager.getDevice().toReq()
+        try {
+            marketapBackend.updateProfile(
+                clientStateManager.getProjectId(),
+                UpdateProfileRequest(
+                    userId,
+                    (userProperties ?: emptyMap()),
+                    deviceManager.getDevice().toReq()
+                )
             )
-        )
+        } catch (t: Throwable) {
+            logger.e(t) { "Failed to identify user: $userId" }
+        }
     }
 
     fun setUserProperties(userProperties: Map<String, Any>) {
         val currentUserId = clientStateManager.getUserId() ?: return
 
-        marketapBackend.updateProfile(
-            clientStateManager.getProjectId(),
-            UpdateProfileRequest(
-                currentUserId,
-                userProperties,
-                deviceManager.getDevice().toReq()
+        try {
+            marketapBackend.updateProfile(
+                clientStateManager.getProjectId(),
+                UpdateProfileRequest(
+                    currentUserId,
+                    userProperties,
+                    deviceManager.getDevice().toReq()
+                )
             )
-        )
+        } catch (t: Throwable) {
+            logger.e(t) { "Failed to set user properties" }
+        }
     }
 
     fun resetIdentity() {
         clientStateManager.setUserId(null)
-        val device = deviceManager.getDevice().toReq(true)
-        marketapBackend.updateDevice(clientStateManager.getProjectId(), device)
+        try {
+            val device = deviceManager.getDevice().toReq(true)
+            marketapBackend.updateDevice(clientStateManager.getProjectId(), device)
+        } catch (t: Throwable) {
+            logger.e(t) { "Failed to reset identity" }
+        }
     }
 
     fun pushDevice() {
-        marketapBackend.updateDevice(
-            clientStateManager.getProjectId(),
-            deviceManager.getDevice().toReq()
-        )
+        try {
+            marketapBackend.updateDevice(
+                clientStateManager.getProjectId(),
+                deviceManager.getDevice().toReq()
+            )
+        } catch (t: Throwable) {
+            logger.e(t) { "Failed to push device" }
+        }
     }
 }

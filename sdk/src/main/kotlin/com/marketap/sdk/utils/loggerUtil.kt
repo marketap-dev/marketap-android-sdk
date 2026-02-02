@@ -24,7 +24,7 @@ internal inline val <reified T> T.logger: MarketapLogger
                 )
             }
 
-            override fun e(exception: Exception?, description: () -> String) {
+            override fun e(exception: Throwable?, description: () -> String) {
                 if (!MarketapLogLevel.ERROR.isEnabled()) return
                 Log.e(
                     MAIN_TAG,
@@ -56,5 +56,5 @@ internal interface MarketapLogger {
     fun d(description: () -> String) // debug
     fun i(description: () -> String) // info
     fun w(description: () -> String) // warn
-    fun e(exception: Exception? = null, description: () -> String) // error
+    fun e(exception: Throwable? = null, description: () -> String) // error
 }
