@@ -239,6 +239,17 @@ object Marketap {
         MarketapRegistry.logLevel = logLevel
     }
 
+    /**
+     * 디바이스의 푸시 수신동의 여부를 설정합니다.
+     *
+     * @param optIn 수신동의 여부 (`true` 또는 `false`)
+     */
+    @JvmStatic
+    fun setDeviceOptIn(optIn: Boolean) {
+        logger.d { "Marketap SDK setDeviceOptIn: $optIn" }
+        marketapCore?.setDeviceOptIn(optIn)
+    }
+
     @JvmStatic
     fun requestAuthorizationForPushNotifications(activity: Activity) {
         logger.i { "requestAuthorizationForPushNotifications on ${activity::class.java.name}" }

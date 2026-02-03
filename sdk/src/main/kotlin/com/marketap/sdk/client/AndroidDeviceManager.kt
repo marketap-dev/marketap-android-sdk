@@ -29,10 +29,15 @@ internal class AndroidDeviceManager(
 ) : DeviceManager {
 
     private var token: String? = null
-
+    private var optIn: Boolean? = null
 
     override fun setToken(token: String) {
         this.token = token
+    }
+
+    override fun setDeviceOptIn(optIn: Boolean) {
+        this.optIn = optIn
+        storage.setItem("device_opt_in", optIn, booleanAdapter)
     }
 
     private var gaid: String? = null
@@ -160,6 +165,7 @@ internal class AndroidDeviceManager(
                 appSetId = appSetId ?: storage.getItem("app_set_id", stringAdapter),
                 appLocalId = getOrCreateLocalId(),
                 token = token,
+                optIn = optIn ?: storage.getItem("device_opt_in", booleanAdapter),
                 brand = Build.BRAND,
                 appVersion = packageInfo.versionName,
                 appBuildNumber = getAppBuildNumber(packageInfo),
@@ -173,6 +179,7 @@ internal class AndroidDeviceManager(
                 appSetId = appSetId ?: storage.getItem("app_set_id", stringAdapter),
                 appLocalId = getOrCreateLocalId(),
                 token = token,
+                optIn = optIn ?: storage.getItem("device_opt_in", booleanAdapter),
                 brand = Build.BRAND,
                 appVersion = null,
                 appBuildNumber = null,

@@ -14,6 +14,7 @@ internal data class Device(
     val manufacturer: String? = Build.MANUFACTURER,
     val brand: String? = Build.BRAND,
     val token: String? = null,
+    val optIn: Boolean? = null,
     val appVersion: String? = "1.0.0",
     val appBuildNumber: String? = "100",
     val browserName: String? = null,

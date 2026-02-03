@@ -72,6 +72,15 @@ internal class MarketapCoreService(
         }
     }
 
+    fun setDeviceOptIn(optIn: Boolean) {
+        try {
+            deviceManager.setDeviceOptIn(optIn)
+            userIngestionService.pushDevice()
+        } catch (t: Throwable) {
+            logger.e(t) { "Failed to set device opt-in" }
+        }
+    }
+
     fun requestAuthorizationForPushNotifications(activity: Activity) {
         try {
             deviceManager.requestAuthorizationForPushNotifications(activity)

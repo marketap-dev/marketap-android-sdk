@@ -57,7 +57,8 @@ internal data class DeviceReq(
                 "camera" to camera,
                 "microphone" to microphone,
                 "location" to location,
-                "notifications" to notifications
+                "notifications" to notifications,
+                "opt_in" to optIn
             ).filterValues { it != null }
 
             return DeviceReq(

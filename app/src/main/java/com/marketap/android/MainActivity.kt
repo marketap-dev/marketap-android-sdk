@@ -62,6 +62,7 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
+        Marketap.setDeviceOptIn(false)
 
         val button3 = findViewById<Button>(R.id.button3)
         button3.setOnClickListener {
