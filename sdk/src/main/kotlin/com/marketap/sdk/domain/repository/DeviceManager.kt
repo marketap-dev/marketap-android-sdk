@@ -9,7 +9,7 @@ internal interface DeviceManager {
     fun setFirstOpen(): Boolean
     fun getDevice(): Device
     fun setToken(token: String)
-    fun setDeviceOptIn(optIn: Boolean)
+    fun setDeviceOptIn(optIn: Boolean?)
     fun setAppSetId(appSetId: String)
     fun setGoogleAdvertisingId(gaid: String)
     fun requestAuthorizationForPushNotifications(activity: Activity)

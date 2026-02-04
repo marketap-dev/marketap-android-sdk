@@ -35,9 +35,13 @@ internal class AndroidDeviceManager(
         this.token = token
     }
 
-    override fun setDeviceOptIn(optIn: Boolean) {
+    override fun setDeviceOptIn(optIn: Boolean?) {
         this.optIn = optIn
-        storage.setItem("device_opt_in", optIn, booleanAdapter)
+        if (optIn != null) {
+            storage.setItem("device_opt_in", optIn, booleanAdapter)
+        } else {
+            storage.removeItem("device_opt_in")
+        }
     }
 
     private var gaid: String? = null

@@ -72,7 +72,7 @@ internal class MarketapCoreService(
         }
     }
 
-    fun setDeviceOptIn(optIn: Boolean) {
+    fun setDeviceOptIn(optIn: Boolean?) {
         try {
             deviceManager.setDeviceOptIn(optIn)
             userIngestionService.pushDevice()

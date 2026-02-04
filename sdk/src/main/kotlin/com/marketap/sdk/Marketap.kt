@@ -242,10 +242,10 @@ object Marketap {
     /**
      * 디바이스의 푸시 수신동의 여부를 설정합니다.
      *
-     * @param optIn 수신동의 여부 (`true` 또는 `false`)
+     * @param optIn 수신동의 여부 (`true`, `false`, 또는 `null`)
      */
     @JvmStatic
-    fun setDeviceOptIn(optIn: Boolean) {
+    fun setDeviceOptIn(optIn: Boolean?) {
         logger.d { "Marketap SDK setDeviceOptIn: $optIn" }
         marketapCore?.setDeviceOptIn(optIn)
     }
