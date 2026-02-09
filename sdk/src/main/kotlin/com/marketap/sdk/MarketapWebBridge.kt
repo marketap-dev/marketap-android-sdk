@@ -11,6 +11,7 @@ import com.marketap.sdk.model.internal.bridge.BridgeUserReq
 import com.marketap.sdk.model.internal.bridge.InAppClickParams
 import com.marketap.sdk.model.internal.bridge.InAppHideParams
 import com.marketap.sdk.model.internal.bridge.InAppImpressionParams
+import com.marketap.sdk.model.internal.bridge.BridgeDeviceOptInReq
 import com.marketap.sdk.model.internal.bridge.InAppSetUserPropertiesParams
 import com.marketap.sdk.model.internal.bridge.InAppTrackParams
 import com.marketap.sdk.presentation.CustomHandlerStore
@@ -104,6 +105,7 @@ class MarketapWebBridge @JvmOverloads constructor(
             "inAppMessageHide" -> handleInAppHide(params)
             "inAppMessageTrack" -> handleInAppTrack(params)
             "inAppMessageSetUserProperties" -> handleInAppSetUserProperties(params)
+            "setDeviceOptIn" -> handleSetDeviceOptIn(params)
             else -> {
                 logger.e { "MarketapWebBridge received unknown type: $type" }
             }
@@ -226,6 +228,15 @@ class MarketapWebBridge @JvmOverloads constructor(
             Marketap.track(eventName, eventProperties)
         } catch (t: Throwable) {
             logger.e(t) { "Failed to handle inAppMessageTrack: $params" }
+        }
+    }
+
+    private fun handleSetDeviceOptIn(params: String) {
+        try {
+            val data = params.deserialize(adapter<BridgeDeviceOptInReq>())
+            Marketap.setDeviceOptIn(data.optIn)
+        } catch (t: Throwable) {
+            logger.e(t) { "Failed to handle setDeviceOptIn: $params" }
         }
     }
 

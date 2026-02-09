@@ -9,7 +9,7 @@ internal data class Device(
     val appLocalId: String? = null,
     val os: String? = "Android ${Build.VERSION.RELEASE}",
     val osVersion: String? = "Android ${Build.VERSION.RELEASE} (SDK ${Build.VERSION.SDK_INT})",
-    val libraryVersion: String? = "1.3.0",
+    val libraryVersion: String? = "1.3.1",
     val model: String? = Build.MODEL,
     val manufacturer: String? = Build.MANUFACTURER,
     val brand: String? = Build.BRAND,
