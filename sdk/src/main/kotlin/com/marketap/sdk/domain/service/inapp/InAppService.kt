@@ -70,13 +70,16 @@ internal class InAppService(
             }
 
             targetCampaign?.let {
+                val resolvedCampaign = campaignFetchService.resolveCampaignHtml(it, event)
+                    ?: return@let
+
                 // 웹브릿지에서 온 이벤트이고 활성 웹브릿지가 있으면 웹으로 캠페인 전달
                 val shouldDelegateToWeb = fromWebBridge && MarketapWebBridge.hasActiveWebBridge()
 
                 if (shouldDelegateToWeb) {
-                    handleCampaignForWeb(it)
+                    handleCampaignForWeb(resolvedCampaign)
                 } else {
-                    handleCampaign(it, event, onImpression, onClick, onTrack, onSetUserProperties)
+                    handleCampaign(resolvedCampaign, onImpression, onClick, onTrack, onSetUserProperties)
                 }
             }
         }
@@ -97,33 +100,29 @@ internal class InAppService(
 
     private fun handleCampaign(
         targetCampaign: InAppCampaign,
-        event: IngestEventRequest,
         onImpression: (campaign: InAppCampaign) -> Unit,
         onClick: (campaign: InAppCampaign, locationId: String) -> Unit,
         onTrack: (campaign: InAppCampaign, eventName: String, properties: Map<String, Any>?) -> Unit,
         onSetUserProperties: (properties: Map<String, Any>) -> Unit,
     ) {
         logger.d { "Showing in-app campaign: ${targetCampaign.id} with layout type: ${targetCampaign.layout.layoutType}" }
-
-        val resolvedCampaign = campaignFetchService.resolveCampaignHtml(targetCampaign, event)
-            ?: return
-        val campaignHtml = resolvedCampaign.html ?: return
+        val campaignHtml = targetCampaign.html ?: return
 
         inAppView.show(
             campaignHtml,
             {
-                campaignExposureService.recordImpression(resolvedCampaign.id)
-                onImpression(resolvedCampaign)
-                logger.d { "Recorded impression for campaign: ${resolvedCampaign.id}" }
+                campaignExposureService.recordImpression(targetCampaign.id)
+                onImpression(targetCampaign)
+                logger.d { "Recorded impression for campaign: ${targetCampaign.id}" }
             },
             { locationId ->
-                onClick(resolvedCampaign, locationId)
-                logger.d { "Recorded click for campaign: ${resolvedCampaign.id} at location: $locationId" }
-                resolvedCampaign.id
+                onClick(targetCampaign, locationId)
+                logger.d { "Recorded click for campaign: ${targetCampaign.id} at location: $locationId" }
+                targetCampaign.id
             },
             { hideType ->
-                logger.d { "Hiding campaign: ${resolvedCampaign.id} with hide type: $hideType" }
-                hideCampaignByType(resolvedCampaign.id, hideType)
+                logger.d { "Hiding campaign: ${targetCampaign.id} with hide type: $hideType" }
+                hideCampaignByType(targetCampaign.id, hideType)
             },
             { eventName, properties ->
                 onTrack(targetCampaign, eventName, properties)
