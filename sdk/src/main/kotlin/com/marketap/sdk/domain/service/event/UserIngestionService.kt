@@ -3,6 +3,7 @@ package com.marketap.sdk.domain.service.event
 import com.marketap.sdk.domain.repository.DeviceManager
 import com.marketap.sdk.domain.repository.MarketapBackend
 import com.marketap.sdk.domain.service.state.ClientStateManager
+import com.marketap.sdk.model.internal.api.DeviceReq
 import com.marketap.sdk.model.internal.api.DeviceReq.Companion.toReq
 import com.marketap.sdk.model.internal.api.UpdateProfileRequest
 import com.marketap.sdk.utils.logger
@@ -12,6 +13,8 @@ internal class UserIngestionService(
     private val deviceManager: DeviceManager,
     private val marketapBackend: MarketapBackend,
 ) {
+    @Volatile
+    private var lastSentDeviceReq: DeviceReq? = null
 
     fun identify(userId: String, userProperties: Map<String, Any>?) {
         clientStateManager.setUserId(userId)
@@ -58,10 +61,16 @@ internal class UserIngestionService(
 
     fun pushDevice() {
         try {
+            val deviceReq = deviceManager.getDevice().toReq()
+            if (deviceReq == lastSentDeviceReq) {
+                logger.d { "Device info unchanged, skipping update" }
+                return
+            }
             marketapBackend.updateDevice(
                 clientStateManager.getProjectId(),
-                deviceManager.getDevice().toReq()
+                deviceReq
             )
+            lastSentDeviceReq = deviceReq
         } catch (t: Throwable) {
             logger.e(t) { "Failed to push device" }
         }
