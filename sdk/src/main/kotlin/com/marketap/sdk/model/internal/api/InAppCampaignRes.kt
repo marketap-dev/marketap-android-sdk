@@ -7,7 +7,7 @@ import com.squareup.moshi.JsonClass
 @JsonClass(generateAdapter = true)
 internal data class InAppCampaignRes(
     val checksum: String,
-    val campaigns: List<InAppCampaign>
+    val campaigns: List<InAppCampaign>?
 )
 
 @JsonClass(generateAdapter = true)

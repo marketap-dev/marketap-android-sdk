@@ -13,6 +13,7 @@ import com.marketap.sdk.model.internal.api.IngestEventRequest
 import com.marketap.sdk.utils.adapter
 import com.marketap.sdk.utils.logger
 import com.marketap.sdk.utils.longAdapter
+import com.marketap.sdk.utils.stringAdapter
 
 
 internal class CampaignFetchService(
@@ -25,6 +26,7 @@ internal class CampaignFetchService(
     companion object {
         private const val CAMPAIGN_CACHE_KEY = "last_campaigns"
         private const val CAMPAIGN_CACHED_AT = "campaign_cached_at"
+        private const val CAMPAIGN_CHECKSUM = "campaign_checksum"
         private const val EXPIRATION_TIME: Long = 5 * 60 * 1000 // 5 minutes
     }
 
@@ -37,14 +39,21 @@ internal class CampaignFetchService(
         }
         val projectId = clientStateManager.getProjectId()
         val device = deviceManager.getDevice()
+        val cachedChecksum = internalStorage.getItem<String>("$CAMPAIGN_CHECKSUM:$userId", stringAdapter)
 
-        inAppCampaignApi.fetchCampaigns(FetchCampaignsReq(projectId, userId, device.toReq()), {
+        inAppCampaignApi.fetchCampaigns(FetchCampaignsReq(projectId, userId, device.toReq(), cachedChecksum), {
             logger.d { "Fetching campaigns from API for user $userId" }
-            block(it.campaigns)
+            val campaigns = it.campaigns
+                ?: internalStorage.getItem<InAppCampaignRes>("$CAMPAIGN_CACHE_KEY:$userId", adapter())?.campaigns
+                ?: emptyList()
+            block(campaigns)
         })
-        { campaigns ->
+        { res ->
             logger.d { "Storing fetched campaigns for user $userId" }
-            internalStorage.setItem("$CAMPAIGN_CACHE_KEY:$userId", campaigns, adapter())
+            if (res.campaigns != null) {
+                internalStorage.setItem("$CAMPAIGN_CACHE_KEY:$userId", res, adapter())
+            }
+            internalStorage.setItem("$CAMPAIGN_CHECKSUM:$userId", res.checksum, stringAdapter)
             internalStorage.setItem(
                 "$CAMPAIGN_CACHED_AT:$userId",
                 System.currentTimeMillis(),

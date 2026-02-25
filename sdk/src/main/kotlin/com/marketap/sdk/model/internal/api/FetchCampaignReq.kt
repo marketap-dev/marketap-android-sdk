@@ -11,7 +11,9 @@ internal data class FetchCampaignsReq(
     @Json(name = "user_id")
     val userId: String?,
 
-    val device: DeviceReq
+    val device: DeviceReq,
+
+    val checksum: String? = null
 )
 
 @JsonClass(generateAdapter = true)
