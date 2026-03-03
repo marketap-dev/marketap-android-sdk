@@ -57,6 +57,7 @@ internal class AndroidDeviceManager(
     }
 
     private val REQ_POST_NOTI = 0xA7
+    private val KEY_POST_NOTI_REQUESTED = "post_noti_permission_requested"
     override fun requestAuthorizationForPushNotifications(activity: Activity) {
         /* ───────────── Android 13+ (API 33) ───────────── */
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -70,13 +71,17 @@ internal class AndroidDeviceManager(
             }
 
 
-            if (!ActivityCompat.shouldShowRequestPermissionRationale(
-                    activity,
-                    Manifest.permission.POST_NOTIFICATIONS
-                )
-            ) {
+            val shouldShowRationale = ActivityCompat.shouldShowRequestPermissionRationale(
+                activity,
+                Manifest.permission.POST_NOTIFICATIONS
+            )
+            val hasRequestedBefore =
+                storage.getItem(KEY_POST_NOTI_REQUESTED, booleanAdapter) == true
+
+            if (!shouldShowRationale && hasRequestedBefore) {
                 logger.d { "Permission permanently denied." }
             } else {
+                storage.setItem(KEY_POST_NOTI_REQUESTED, true, booleanAdapter)
                 ActivityCompat.requestPermissions(
                     activity,
                     arrayOf(Manifest.permission.POST_NOTIFICATIONS),
