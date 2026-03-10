@@ -10,10 +10,10 @@ import com.marketap.sdk.model.internal.api.InAppCampaignRes
 import com.marketap.sdk.model.internal.api.InAppCampaignSingleRes
 import com.marketap.sdk.model.internal.api.IngestEventRequest
 import com.marketap.sdk.model.internal.api.IngestRes
-import com.marketap.sdk.model.internal.api.META_ENDPOINT
+import com.marketap.sdk.model.internal.api.META_SERVER_INFO_ENDPOINT
 import com.marketap.sdk.model.internal.api.PROFILE_ENDPOINT
+import com.marketap.sdk.model.internal.api.ServerInfoRes
 import com.marketap.sdk.model.internal.api.ServerResponse
-import com.marketap.sdk.model.internal.api.ServerTimeOffsetRes
 import com.marketap.sdk.model.internal.api.UpdateProfileRequest
 import com.marketap.sdk.utils.CustomClient
 import com.marketap.sdk.utils.adapter
@@ -27,7 +27,7 @@ internal class MarketapApiImpl(
     private val ingestionEndpoint: String = INGESTION_ENDPOINT,
     private val inAppMessagingEndpoint: String = IN_APP_MESSAGING_ENDPOINT,
     private val profileEndpoint: String = PROFILE_ENDPOINT,
-    private val metaEndpoint: String = META_ENDPOINT,
+    private val metaServerInfoEndpoint: String = META_SERVER_INFO_ENDPOINT,
 ) : MarketapApi {
     private val client = CustomClient {
         headers {
@@ -101,12 +101,11 @@ internal class MarketapApiImpl(
         )
     }
 
-    override suspend fun getServerTimeOffset(): Long {
+    override suspend fun getServerInfo(projectId: String): ServerInfoRes {
         val res = client.get(
-            "$metaEndpoint/server-info?client_time=${System.currentTimeMillis()}",
-            serverAdapter<ServerTimeOffsetRes>()
+            "$metaServerInfoEndpoint?project_id=$projectId&client_time=${System.currentTimeMillis()}",
+            serverAdapter<ServerInfoRes>()
         )
-
-        return res.data?.serverTimeOffset ?: 0L
+        return res.data ?: ServerInfoRes(serverTimeOffset = 0L, useWebClickRouting = false)
     }
 }

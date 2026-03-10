@@ -15,13 +15,15 @@ import com.marketap.sdk.model.internal.api.UpdateProfileRequest
 import com.marketap.sdk.utils.PairEntry
 import com.marketap.sdk.utils.getNowByMillis
 import com.marketap.sdk.utils.logger
-import com.marketap.sdk.utils.longAdapter
+import com.marketap.sdk.model.internal.MarketapServerConfig
 import com.marketap.sdk.utils.pairAdapter
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
 
 internal class RetryMarketapBackend(
@@ -30,6 +32,7 @@ internal class RetryMarketapBackend(
     private val deviceManager: DeviceManager,
 ) : MarketapBackend {
     private val apiWorkGroup = WorkerGroup().apply { start() }
+    private val serverInfoMutex = Mutex()
 
     private fun getSafeDevice(removeUserId: Boolean?): DeviceReq? {
         return try {
@@ -206,7 +209,7 @@ internal class RetryMarketapBackend(
         }
 
         CoroutineScope(Dispatchers.IO).launch {
-            request.timestamp = getNowAsString()
+            request.timestamp = getNowAsString(projectId)
             storage.queueItem("events", PairEntry(projectId, request), pairAdapter())
             apiWorkGroup.dispatch(::checkEventQueue)
             apiWorkGroup.dispatch(::checkUserQueue)
@@ -220,7 +223,7 @@ internal class RetryMarketapBackend(
                     "userId: ${request.userId}, properties: ${request.properties}"
         }
         CoroutineScope(Dispatchers.IO).launch {
-            request.timestamp = getNowAsString()
+            request.timestamp = getNowAsString(projectId)
             storage.queueItem("users", PairEntry(projectId, request), pairAdapter())
             apiWorkGroup.dispatch(::checkEventQueue)
             apiWorkGroup.dispatch(::checkUserQueue)
@@ -228,29 +231,41 @@ internal class RetryMarketapBackend(
         }
     }
 
+    fun prefetchServerInfo(projectId: String) {
+        CoroutineScope(Dispatchers.IO).launch {
+            fetchServerInfoIfNeeded(projectId)
+        }
+    }
 
-    private fun getNowAsString(): String {
-        val now = System.currentTimeMillis()
-        val offset = storage.cacheAndGetItem(
-            "server_time_offset",
-            {
-                runBlocking {
-                    val offset = withTimeoutOrNull(5000) {
-                        marketapApi.getServerTimeOffset()
-                    }
+    private suspend fun fetchServerInfoIfNeeded(projectId: String) {
+        serverInfoMutex.withLock {
+            if (MarketapServerConfig.isCacheValid()) return
 
-                    if (offset != null) {
-                        logger.d { "Server time offset: $offset ms" }
-                        offset
-                    } else {
-                        logger.w { "Failed to get server time offset, using 0" }
-                        0L
-                    }
+            val serverInfo = try {
+                withTimeoutOrNull(5000) {
+                    marketapApi.getServerInfo(projectId)
                 }
-            },
-            longAdapter,
-            60 * 1000L
-        ) ?: 0L
-        return getNowByMillis(now + offset)
+            } catch (t: Throwable) {
+                logger.e(t) { "Failed to fetch server info for projectId: $projectId, using defaults" }
+                null
+            }
+
+            if (serverInfo != null) {
+                logger.d { "Server time offset: ${serverInfo.serverTimeOffset} ms" }
+                MarketapServerConfig.serverTimeOffset = serverInfo.serverTimeOffset
+                MarketapServerConfig.useWebClickRouting = serverInfo.useWebClickRouting
+                MarketapServerConfig.lastFetchedAtMs = System.currentTimeMillis()
+            } else {
+                logger.w { "Failed to get server info, using defaults" }
+            }
+        }
+    }
+
+    private fun getNowAsString(projectId: String): String {
+        val now = System.currentTimeMillis()
+        if (!MarketapServerConfig.isCacheValid()) {
+            runBlocking { fetchServerInfoIfNeeded(projectId) }
+        }
+        return getNowByMillis(now + MarketapServerConfig.serverTimeOffset)
     }
 }

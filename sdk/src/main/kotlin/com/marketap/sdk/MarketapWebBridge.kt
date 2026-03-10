@@ -14,6 +14,7 @@ import com.marketap.sdk.model.internal.bridge.InAppImpressionParams
 import com.marketap.sdk.model.internal.bridge.BridgeDeviceOptInReq
 import com.marketap.sdk.model.internal.bridge.InAppSetUserPropertiesParams
 import com.marketap.sdk.model.internal.bridge.InAppTrackParams
+import com.marketap.sdk.model.internal.MarketapServerConfig
 import com.marketap.sdk.presentation.CustomHandlerStore
 import com.marketap.sdk.utils.adapter
 import com.marketap.sdk.utils.deserialize
@@ -58,8 +59,8 @@ class MarketapWebBridge @JvmOverloads constructor(
                 externalInAppMessageCallback?.let { callback ->
                     // InAppCampaign을 Map으로 변환
                     val campaignMap = campaign.toMap()
-                    val hasCustomClickHandler = CustomHandlerStore.isCustomized()
-                    callback(campaignMap, messageId, hasCustomClickHandler)
+                    val shouldHandleUrlRouting = !CustomHandlerStore.isCustomized() && MarketapServerConfig.useWebClickRouting
+                    callback(campaignMap, messageId, shouldHandleUrlRouting)
                 }
                 return
             }
@@ -265,17 +266,19 @@ class MarketapWebBridge @JvmOverloads constructor(
             return
         }
 
-        // 커스텀 클릭 핸들러 등록 여부
+        // 커스텀 클릭 핸들러 등록 여부 및 URL 라우팅 정책 계산
         val hasCustomClickHandler = CustomHandlerStore.isCustomized()
+        val useWebClickRouting = MarketapServerConfig.useWebClickRouting
+        val shouldHandleUrlRouting = !hasCustomClickHandler && useWebClickRouting
 
-        logger.d { "Sending campaign to web: ${campaign.id}, hasCustomClickHandler: $hasCustomClickHandler" }
+        logger.d { "Sending campaign to web: ${campaign.id}, shouldHandleUrlRouting: $shouldHandleUrlRouting" }
 
         evaluateJavaScript("""
             window.postMessage({
                 type: 'marketapShowInAppMessage',
                 campaign: $campaignJson,
                 messageId: '$messageId',
-                hasCustomClickHandler: $hasCustomClickHandler
+                shouldHandleUrlRouting: $shouldHandleUrlRouting
             }, '*');
         """.trimIndent())
     }

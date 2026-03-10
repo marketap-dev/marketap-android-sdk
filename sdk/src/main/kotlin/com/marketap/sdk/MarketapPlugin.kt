@@ -2,10 +2,11 @@ package com.marketap.sdk
 
 import com.marketap.sdk.model.external.MarketapCampaignType
 import com.marketap.sdk.model.external.MarketapClickEvent
+import com.marketap.sdk.model.internal.MarketapServerConfig
 import com.marketap.sdk.model.internal.inapp.HideType
 import com.marketap.sdk.presentation.CustomHandlerStore
-import com.marketap.sdk.presentation.MarketapRegistry
 import com.marketap.sdk.presentation.MarketapRegistry.marketapCore
+import com.marketap.sdk.presentation.MarketapRegistry
 import com.marketap.sdk.utils.logger
 
 /**
@@ -36,10 +37,11 @@ object MarketapPlugin {
     ) {
         logger.d { "trackInAppClick: campaignId=$campaignId, locationId=$locationId, url=$url" }
 
-        // 클릭 핸들러 호출 (커스텀 핸들러가 등록된 경우에만)
-        if (url != null && CustomHandlerStore.isCustomized()) {
+        if (url != null) {
             val clickEvent = MarketapClickEvent(MarketapCampaignType.IN_APP_MESSAGE, campaignId, url)
-            MarketapRegistry.marketapClickHandler?.handleClick(clickEvent)
+            if (CustomHandlerStore.isCustomized() || !MarketapServerConfig.useWebClickRouting) {
+                CustomHandlerStore.handleClick(clickEvent)
+            }
         }
 
         // 클릭 이벤트 트래킹

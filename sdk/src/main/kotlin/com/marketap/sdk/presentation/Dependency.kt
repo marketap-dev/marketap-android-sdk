@@ -74,6 +74,7 @@ object Dependency {
 
         val deviceListener = DeviceListener(deviceManager, userIngestionService, application, core)
         deviceListener.init()
+        marketapBackend.prefetchServerInfo(config.projectId)
         ManifestUtils.logSystemConstants(application)
         logger.i { "Marketap SDK successfully initialized with projectId: ${config.projectId}" }
         return core

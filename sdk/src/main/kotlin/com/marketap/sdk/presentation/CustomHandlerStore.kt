@@ -25,13 +25,46 @@ internal object CustomHandlerStore {
     }
 
     private var pendingClick: MarketapClickEvent? = null
+
+    /**
+     * 클릭 이벤트 처리: customized면 custom handler 호출, 아니면 native에서 URL 오픈
+     */
+    fun handleClick(click: MarketapClickEvent) {
+        if (isCustomized()) {
+            dispatchToCustomHandler(click)
+        } else {
+            val url = click.url ?: return
+            val applicationContext = MarketapRegistry.application?.applicationContext
+            if (applicationContext == null) {
+                logger.w { "Marketap SDK application context is not available for handling in-app click URL" }
+            } else {
+                InAppClickUrlHandler.open(applicationContext, url)
+            }
+        }
+    }
+
+    private fun dispatchToCustomHandler(click: MarketapClickEvent) {
+        logger.d { "Marketap SDK click handled by custom handler" }
+        val handler = marketapClickHandler
+        if (handler == null) {
+            logger.w { "Marketap SDK click handler is not set, pending click" }
+            pendingClick = click
+            return
+        }
+
+        try {
+            handler.handleClick(click)
+            logger.d { "Marketap SDK click handled by custom handler successfully" }
+        } catch (t: Throwable) {
+            logger.e(t) { "Error handling click with custom handler: ${t.message}" }
+        }
+    }
+
     fun maybeHandleClick(
         activity: Activity,
         click: MarketapClickEvent,
     ): Boolean {
-        val handler = marketapClickHandler
         return if (isCustomized(activity.applicationContext)) {
-            logger.d { "Marketap SDK click handled by custom handler" }
             if (activity.isTaskRoot) {
                 activity.packageManager.getLaunchIntentForPackage(activity.packageName)?.apply {
                     addFlags(
@@ -43,17 +76,7 @@ internal object CustomHandlerStore {
                     activity.startActivity(it)
                 }
             }
-            if (handler == null) {
-                logger.w { "Marketap SDK click handler is not set, pending click and launching app if task root" }
-                pendingClick = click
-            } else {
-                try {
-                    handler.handleClick(click)
-                    logger.d { "Marketap SDK click handled by custom handler successfully" }
-                } catch (t: Throwable) {
-                    logger.e(t) { "Error handling click with custom handler: ${t.message}" }
-                }
-            }
+            dispatchToCustomHandler(click)
             true
         } else {
             false
