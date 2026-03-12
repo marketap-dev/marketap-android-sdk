@@ -16,6 +16,7 @@ import com.marketap.sdk.model.internal.bridge.InAppSetUserPropertiesParams
 import com.marketap.sdk.model.internal.bridge.InAppTrackParams
 import com.marketap.sdk.model.internal.MarketapServerConfig
 import com.marketap.sdk.presentation.CustomHandlerStore
+import com.marketap.sdk.presentation.MarketapRegistry
 import com.marketap.sdk.utils.adapter
 import com.marketap.sdk.utils.deserialize
 import com.marketap.sdk.utils.logger
@@ -142,6 +143,8 @@ class MarketapWebBridge @JvmOverloads constructor(
 
     private fun handleBridgeCheck() {
         val device = Device()
+        val projectId = MarketapRegistry.config?.projectId
+            ?: "undefined"
 
         evaluateJavaScript("""
             window.postMessage({
@@ -149,7 +152,8 @@ class MarketapWebBridge @JvmOverloads constructor(
                 metadata: {
                     sdk_type: 'android',
                     sdk_version: '${device.libraryVersion}',
-                    platform: 'android'
+                    platform: 'android',
+                    projectId: $projectId
                 }
             }, '*');
         """.trimIndent())
