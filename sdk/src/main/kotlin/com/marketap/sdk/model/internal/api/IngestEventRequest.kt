@@ -23,13 +23,14 @@ internal data class IngestEventRequest(
             userId: String?,
             device: DeviceReq,
             properties: AppEventProperty,
+            sdkIntegrationState: String,
         ): IngestEventRequest {
             return IngestEventRequest(
                 id = null,
                 name = "mkt_delivery_message",
                 userId = userId,
                 device = device,
-                properties = properties.toMap(),
+                properties = properties.toMap().withSdkIntegrationState(sdkIntegrationState),
             )
         }
 
@@ -37,13 +38,14 @@ internal data class IngestEventRequest(
             userId: String?,
             device: DeviceReq,
             properties: AppEventProperty,
+            sdkIntegrationState: String
         ): IngestEventRequest {
             return IngestEventRequest(
                 id = null,
                 name = "mkt_push_impression",
                 userId = userId,
                 device = device,
-                properties = properties.toMap(),
+                properties = properties.toMap().withSdkIntegrationState(sdkIntegrationState),
             )
         }
 
@@ -51,14 +53,19 @@ internal data class IngestEventRequest(
             userId: String?,
             device: DeviceReq,
             properties: AppEventProperty,
+            sdkIntegrationState: String,
         ): IngestEventRequest {
             return IngestEventRequest(
                 id = null,
                 name = "mkt_click_message",
                 userId = userId,
                 device = device,
-                properties = properties.toMap(),
+                properties = properties.toMap().withSdkIntegrationState(sdkIntegrationState),
             )
         }
+
     }
 }
+
+internal fun Map<String, Any>.withSdkIntegrationState(sdkIntegrationState: String): Map<String, Any> =
+    this + ("sdk_integration_state" to sdkIntegrationState)

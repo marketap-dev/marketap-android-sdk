@@ -36,6 +36,7 @@ class MarketapWebBridge @JvmOverloads constructor(
 
     init {
         logger.d { "MarketapWebBridge initialized (handleInAppInWebView=$handleInAppInWebView)" }
+        MarketapPlugin.onWebBridgeConnected(handleInAppInWebView)
     }
 
     companion object {
@@ -152,6 +153,8 @@ class MarketapWebBridge @JvmOverloads constructor(
                 }
             }, '*');
         """.trimIndent())
+
+        MarketapPlugin.onWebSdkInitialized()
     }
 
     // MARK: - 인앱 메시지 이벤트 핸들러

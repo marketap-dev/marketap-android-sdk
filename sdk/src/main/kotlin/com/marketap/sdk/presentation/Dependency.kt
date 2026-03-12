@@ -20,6 +20,7 @@ import com.marketap.sdk.domain.service.inapp.condition.PropertyConditionCheckerI
 import com.marketap.sdk.domain.service.inapp.condition.comparator.ValueComparatorImpl
 import com.marketap.sdk.domain.service.state.ClientStateManager
 import com.marketap.sdk.model.MarketapConfig
+import com.marketap.sdk.model.internal.SdkIntegrationState
 import com.marketap.sdk.utils.ManifestUtils
 import com.marketap.sdk.utils.logger
 
@@ -31,6 +32,8 @@ object Dependency {
         val storage = SharedPreferenceInternalStorage(application).initialize(application)
         val marketapApi = MarketapApiImpl()
         val deviceManager = AndroidDeviceManager(storage, application)
+        SdkIntegrationState.isClickHandlerCustomized = CustomHandlerStore.isCustomized()
+
         val marketapBackend = RetryMarketapBackend(storage, marketapApi, deviceManager)
         val clientStateManager = ClientStateManager(config, storage)
         val sessionManager = AndroidSessionManager(storage)

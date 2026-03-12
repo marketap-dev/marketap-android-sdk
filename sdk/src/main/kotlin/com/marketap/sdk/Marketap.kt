@@ -6,6 +6,7 @@ import com.marketap.sdk.model.MarketapConfig
 import com.marketap.sdk.model.external.EventProperty
 import com.marketap.sdk.model.external.MarketapClickHandler
 import com.marketap.sdk.model.external.MarketapLogLevel
+import com.marketap.sdk.model.internal.SdkIntegrationState
 import com.marketap.sdk.presentation.CustomHandlerStore
 import com.marketap.sdk.presentation.Dependency.initializeCore
 import com.marketap.sdk.presentation.MarketapRegistry
@@ -229,6 +230,7 @@ object Marketap {
     fun setClickHandler(clickHandler: MarketapClickHandler) {
         logger.i { "setClickHandler: ${clickHandler::class.java.name}" }
         CustomHandlerStore.setClickHandler(clickHandler)
+        SdkIntegrationState.isClickHandlerSet = true
     }
 
     @JvmStatic

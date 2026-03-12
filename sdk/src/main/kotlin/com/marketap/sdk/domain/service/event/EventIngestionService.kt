@@ -6,8 +6,10 @@ import com.marketap.sdk.domain.repository.MarketapBackend
 import com.marketap.sdk.domain.repository.SessionManager
 import com.marketap.sdk.domain.service.inapp.InAppService
 import com.marketap.sdk.domain.service.state.ClientStateManager
+import com.marketap.sdk.model.internal.SdkIntegrationState
 import com.marketap.sdk.model.internal.api.DeviceReq.Companion.toReq
 import com.marketap.sdk.model.internal.api.IngestEventRequest
+import com.marketap.sdk.model.internal.api.withSdkIntegrationState
 import java.util.UUID
 
 internal class EventIngestionService(
@@ -26,6 +28,7 @@ internal class EventIngestionService(
         val userId = clientStateManager.getUserId()
         val projectId = clientStateManager.getProjectId()
         val device = deviceManager.getDevice().toReq()
+        val sdkIntegrationState = SdkIntegrationState.toJsonString()
 
         val sessionId = sessionManager.getSessionId { sessionId ->
             marketapBackend.track(
@@ -34,7 +37,7 @@ internal class EventIngestionService(
                     "mkt_session_start",
                     userId,
                     device,
-                    mapOf("mkt_session_id" to sessionId),
+                    mapOf("mkt_session_id" to sessionId).withSdkIntegrationState(sdkIntegrationState),
                 )
             )
         }
@@ -45,7 +48,7 @@ internal class EventIngestionService(
             eventName,
             userId,
             device,
-            eventProperties + ("mkt_session_id" to sessionId),
+            (eventProperties + ("mkt_session_id" to sessionId)).withSdkIntegrationState(sdkIntegrationState),
         )
 
         marketapBackend.track(projectId, eventRequest)
@@ -67,7 +70,7 @@ internal class EventIngestionService(
                         "mkt_delivery_message",
                         userId,
                         device,
-                        props,
+                        props.withSdkIntegrationState(sdkIntegrationState),
                     )
                 )
             },
@@ -86,7 +89,7 @@ internal class EventIngestionService(
                         "mkt_click_message",
                         userId,
                         device,
-                        props,
+                        props.withSdkIntegrationState(sdkIntegrationState),
                     )
                 )
             },

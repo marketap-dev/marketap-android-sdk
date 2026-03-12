@@ -8,6 +8,7 @@ import com.marketap.sdk.client.api.RetryMarketapBackend
 import com.marketap.sdk.domain.repository.DeviceManager
 import com.marketap.sdk.domain.repository.MarketapBackend
 import com.marketap.sdk.model.internal.AppEventProperty
+import com.marketap.sdk.model.internal.SdkIntegrationState
 import com.marketap.sdk.model.internal.api.DeviceReq
 import com.marketap.sdk.model.internal.api.DeviceReq.Companion.toReq
 import com.marketap.sdk.model.internal.api.IngestEventRequest
@@ -48,6 +49,7 @@ internal object PushTracker {
                             it.userId,
                             deviceManager?.getDevice()?.toReq() ?: DeviceReq(it.deviceId),
                             AppEventProperty.offSite(it),
+                            SdkIntegrationState.toJsonString(),
                         )
                     ) ?: throw IllegalStateException("MarketapBackend is not initialized")
                 } catch (t: Throwable) {
@@ -68,6 +70,7 @@ internal object PushTracker {
                         deviceManager?.getDevice()?.toReq() ?: DeviceReq(data.deviceId),
                         AppEventProperty.offSite(data)
                             .addLocationId("push"),
+                        SdkIntegrationState.toJsonString(),
                     )
                 ) ?: throw IllegalStateException("MarketapBackend is not initialized")
             } catch (t: Throwable) {

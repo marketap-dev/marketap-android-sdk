@@ -3,10 +3,10 @@ package com.marketap.sdk
 import com.marketap.sdk.model.external.MarketapCampaignType
 import com.marketap.sdk.model.external.MarketapClickEvent
 import com.marketap.sdk.model.internal.MarketapServerConfig
+import com.marketap.sdk.model.internal.SdkIntegrationState
 import com.marketap.sdk.model.internal.inapp.HideType
 import com.marketap.sdk.presentation.CustomHandlerStore
 import com.marketap.sdk.presentation.MarketapRegistry.marketapCore
-import com.marketap.sdk.presentation.MarketapRegistry
 import com.marketap.sdk.utils.logger
 
 /**
@@ -73,5 +73,17 @@ object MarketapPlugin {
     @JvmStatic
     fun setUserProperties(properties: Map<String, Any>) {
         marketapCore?.setUserProperties(properties)
+    }
+
+    // MARK: - 웹브릿지 상태 동기화 (플러그인용)
+
+    @JvmStatic
+    fun onWebBridgeConnected(handleInAppInWebView: Boolean) {
+        SdkIntegrationState.handleInAppInWebView = handleInAppInWebView
+    }
+
+    @JvmStatic
+    fun onWebSdkInitialized() {
+        SdkIntegrationState.isWebSdkInitialized = true
     }
 }
