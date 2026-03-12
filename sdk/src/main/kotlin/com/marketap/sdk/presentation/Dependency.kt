@@ -54,6 +54,7 @@ object Dependency {
             clientStateManager,
             deviceManager,
             marketapBackend,
+            storage,
         )
 
         val eventIngestionService = EventIngestionService(
