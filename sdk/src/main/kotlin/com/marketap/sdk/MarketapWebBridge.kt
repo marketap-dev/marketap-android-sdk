@@ -14,7 +14,9 @@ import com.marketap.sdk.model.internal.bridge.InAppImpressionParams
 import com.marketap.sdk.model.internal.bridge.BridgeDeviceOptInReq
 import com.marketap.sdk.model.internal.bridge.InAppSetUserPropertiesParams
 import com.marketap.sdk.model.internal.bridge.InAppTrackParams
+import com.marketap.sdk.model.internal.MarketapServerConfig
 import com.marketap.sdk.presentation.CustomHandlerStore
+import com.marketap.sdk.presentation.MarketapRegistry
 import com.marketap.sdk.utils.adapter
 import com.marketap.sdk.utils.deserialize
 import com.marketap.sdk.utils.logger
@@ -35,6 +37,7 @@ class MarketapWebBridge @JvmOverloads constructor(
 
     init {
         logger.d { "MarketapWebBridge initialized (handleInAppInWebView=$handleInAppInWebView)" }
+        MarketapPlugin.onWebBridgeConnected(handleInAppInWebView)
     }
 
     companion object {
@@ -58,8 +61,8 @@ class MarketapWebBridge @JvmOverloads constructor(
                 externalInAppMessageCallback?.let { callback ->
                     // InAppCampaign을 Map으로 변환
                     val campaignMap = campaign.toMap()
-                    val hasCustomClickHandler = CustomHandlerStore.isCustomized()
-                    callback(campaignMap, messageId, hasCustomClickHandler)
+                    val shouldHandleUrlRouting = !CustomHandlerStore.isCustomized() && MarketapServerConfig.useWebClickRouting
+                    callback(campaignMap, messageId, shouldHandleUrlRouting)
                 }
                 return
             }
@@ -140,6 +143,8 @@ class MarketapWebBridge @JvmOverloads constructor(
 
     private fun handleBridgeCheck() {
         val device = Device()
+        val projectId = MarketapRegistry.config?.projectId
+            ?: "undefined"
 
         evaluateJavaScript("""
             window.postMessage({
@@ -147,10 +152,13 @@ class MarketapWebBridge @JvmOverloads constructor(
                 metadata: {
                     sdk_type: 'android',
                     sdk_version: '${device.libraryVersion}',
-                    platform: 'android'
+                    platform: 'android',
+                    projectId: '${projectId}'
                 }
             }, '*');
         """.trimIndent())
+
+        MarketapPlugin.onWebSdkInitialized()
     }
 
     // MARK: - 인앱 메시지 이벤트 핸들러
@@ -265,17 +273,19 @@ class MarketapWebBridge @JvmOverloads constructor(
             return
         }
 
-        // 커스텀 클릭 핸들러 등록 여부
+        // 커스텀 클릭 핸들러 등록 여부 및 URL 라우팅 정책 계산
         val hasCustomClickHandler = CustomHandlerStore.isCustomized()
+        val useWebClickRouting = MarketapServerConfig.useWebClickRouting
+        val shouldHandleUrlRouting = !hasCustomClickHandler && useWebClickRouting
 
-        logger.d { "Sending campaign to web: ${campaign.id}, hasCustomClickHandler: $hasCustomClickHandler" }
+        logger.d { "Sending campaign to web: ${campaign.id}, shouldHandleUrlRouting: $shouldHandleUrlRouting" }
 
         evaluateJavaScript("""
             window.postMessage({
                 type: 'marketapShowInAppMessage',
                 campaign: $campaignJson,
                 messageId: '$messageId',
-                hasCustomClickHandler: $hasCustomClickHandler
+                shouldHandleUrlRouting: $shouldHandleUrlRouting
             }, '*');
         """.trimIndent())
     }

@@ -6,6 +6,7 @@ import com.marketap.sdk.model.MarketapConfig
 import com.marketap.sdk.model.external.EventProperty
 import com.marketap.sdk.model.external.MarketapClickHandler
 import com.marketap.sdk.model.external.MarketapLogLevel
+import com.marketap.sdk.model.internal.SdkIntegrationState
 import com.marketap.sdk.presentation.CustomHandlerStore
 import com.marketap.sdk.presentation.Dependency.initializeCore
 import com.marketap.sdk.presentation.MarketapRegistry
@@ -25,12 +26,16 @@ object Marketap {
     @JvmStatic
     fun initialize(application: Application, projectId: String) {
         logger.v { "Marketap SDK start initializing with projectId $projectId" }
-        val config = MarketapConfig(projectId)
-        if (!MarketapRegistry.isInitialized || MarketapRegistry.config?.projectId != config.projectId || application !== MarketapRegistry.application) {
+        initialize(application, SdkMetadataProvider.createNativeConfig(projectId))
+    }
+
+    internal fun initialize(application: Application, config: MarketapConfig) {
+        if (!MarketapRegistry.isInitialized || MarketapRegistry.config != config || application !== MarketapRegistry.application) {
             marketapCore = try {
                 MarketapRegistry.config = config
                 MarketapRegistry.application = application
                 initializeCore(config, application).also {
+                    SdkMetadataProvider.saveIntegrationInfo(application, config)
                     MarketapRegistry.isInitialized = true
                 }
             } catch (t: Throwable) {
@@ -229,6 +234,7 @@ object Marketap {
     fun setClickHandler(clickHandler: MarketapClickHandler) {
         logger.i { "setClickHandler: ${clickHandler::class.java.name}" }
         CustomHandlerStore.setClickHandler(clickHandler)
+        SdkIntegrationState.isClickHandlerSet = true
     }
 
     @JvmStatic

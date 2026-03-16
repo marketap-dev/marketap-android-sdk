@@ -15,6 +15,7 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.marketap.sdk.domain.repository.DeviceManager
 import com.marketap.sdk.domain.repository.InternalStorage
+import com.marketap.sdk.model.MarketapConfig
 import com.marketap.sdk.model.internal.Device
 import com.marketap.sdk.model.internal.Screen
 import com.marketap.sdk.utils.booleanAdapter
@@ -26,6 +27,7 @@ import java.util.UUID
 internal class AndroidDeviceManager(
     private val storage: InternalStorage,
     private val context: Context,
+    private val config: MarketapConfig,
 ) : DeviceManager {
 
     private var token: String? = null
@@ -173,6 +175,8 @@ internal class AndroidDeviceManager(
                 gaid = gaid ?: storage.getItem("gaid", stringAdapter),
                 appSetId = appSetId ?: storage.getItem("app_set_id", stringAdapter),
                 appLocalId = getOrCreateLocalId(),
+                sdkType = config.sdkType,
+                sdkVersion = config.sdkVersion,
                 token = token,
                 optIn = optIn ?: storage.getItem("device_opt_in", booleanAdapter),
                 brand = Build.BRAND,
@@ -187,6 +191,8 @@ internal class AndroidDeviceManager(
                 gaid = gaid ?: storage.getItem("gaid", stringAdapter),
                 appSetId = appSetId ?: storage.getItem("app_set_id", stringAdapter),
                 appLocalId = getOrCreateLocalId(),
+                sdkType = config.sdkType,
+                sdkVersion = config.sdkVersion,
                 token = token,
                 optIn = optIn ?: storage.getItem("device_opt_in", booleanAdapter),
                 brand = Build.BRAND,

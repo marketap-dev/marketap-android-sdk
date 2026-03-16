@@ -1,20 +1,33 @@
 package com.marketap.sdk.domain.service.event
 
 import com.marketap.sdk.domain.repository.DeviceManager
+import com.marketap.sdk.domain.repository.InternalStorage
 import com.marketap.sdk.domain.repository.MarketapBackend
 import com.marketap.sdk.domain.service.state.ClientStateManager
 import com.marketap.sdk.model.internal.api.DeviceReq
 import com.marketap.sdk.model.internal.api.DeviceReq.Companion.toReq
 import com.marketap.sdk.model.internal.api.UpdateProfileRequest
+import com.marketap.sdk.utils.adapter
+import com.marketap.sdk.utils.longAdapter
 import com.marketap.sdk.utils.logger
+import com.marketap.sdk.utils.stringAdapter
 
 internal class UserIngestionService(
     private val clientStateManager: ClientStateManager,
     private val deviceManager: DeviceManager,
     private val marketapBackend: MarketapBackend,
+    private val storage: InternalStorage,
 ) {
     @Volatile
-    private var lastSentDeviceReq: DeviceReq? = null
+    private var lastSentDeviceReqJson: String? = null
+
+    private val deviceReqAdapter = adapter<DeviceReq>()
+
+    companion object {
+        private const val KEY_LAST_SENT_DEVICE_REQ = "last_sent_device_req"
+        private const val KEY_LAST_SENT_DEVICE_REQ_AT = "last_sent_device_req_at"
+        private const val TTL_MS = 24 * 60 * 60 * 1000L
+    }
 
     fun identify(userId: String, userProperties: Map<String, Any>?) {
         clientStateManager.setUserId(userId)
@@ -62,15 +75,27 @@ internal class UserIngestionService(
     fun pushDevice() {
         try {
             val deviceReq = deviceManager.getDevice().toReq()
-            if (deviceReq == lastSentDeviceReq) {
-                logger.d { "Device info unchanged, skipping update" }
+            val deviceReqJson = deviceReqAdapter.toJson(deviceReq)
+
+            if (deviceReqJson == lastSentDeviceReqJson) {
+                logger.d { "Device info unchanged (in-memory), skipping update" }
                 return
             }
-            marketapBackend.updateDevice(
-                clientStateManager.getProjectId(),
-                deviceReq
-            )
-            lastSentDeviceReq = deviceReq
+
+            val storedJson = storage.getItem(KEY_LAST_SENT_DEVICE_REQ, stringAdapter)
+            val storedAt = storage.getItem(KEY_LAST_SENT_DEVICE_REQ_AT, longAdapter) ?: 0L
+            val isExpired = System.currentTimeMillis() - storedAt > TTL_MS
+
+            if (!isExpired && deviceReqJson == storedJson) {
+                logger.d { "Device info unchanged and within TTL, skipping update" }
+                lastSentDeviceReqJson = deviceReqJson
+                return
+            }
+
+            marketapBackend.updateDevice(clientStateManager.getProjectId(), deviceReq)
+            lastSentDeviceReqJson = deviceReqJson
+            storage.setItem(KEY_LAST_SENT_DEVICE_REQ, deviceReqJson, stringAdapter)
+            storage.setItem(KEY_LAST_SENT_DEVICE_REQ_AT, System.currentTimeMillis(), longAdapter)
         } catch (t: Throwable) {
             logger.e(t) { "Failed to push device" }
         }

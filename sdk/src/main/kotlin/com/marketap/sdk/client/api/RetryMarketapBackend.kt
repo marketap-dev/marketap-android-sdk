@@ -15,13 +15,15 @@ import com.marketap.sdk.model.internal.api.UpdateProfileRequest
 import com.marketap.sdk.utils.PairEntry
 import com.marketap.sdk.utils.getNowByMillis
 import com.marketap.sdk.utils.logger
-import com.marketap.sdk.utils.longAdapter
+import com.marketap.sdk.model.internal.MarketapServerConfig
 import com.marketap.sdk.utils.pairAdapter
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
 
 internal class RetryMarketapBackend(
@@ -29,7 +31,16 @@ internal class RetryMarketapBackend(
     private val marketapApi: MarketapApi,
     private val deviceManager: DeviceManager,
 ) : MarketapBackend {
+    // 이벤트: 병렬 처리 (순서 무관, 모두 전송 필요)
     private val apiWorkGroup = WorkerGroup().apply { start() }
+    // 프로필/디바이스: 단일 워커로 직렬 처리 (최신 상태만 유효)
+    private val profileWorker = WorkerGroup(workerCount = 1).apply { start() }
+    private val serverInfoMutex = Mutex()
+
+    companion object {
+        private const val KEY_PENDING_USER_PROFILE = "pending_user_profile"
+        private const val KEY_PENDING_DEVICE_PROFILE = "pending_device_profile"
+    }
 
     private fun getSafeDevice(removeUserId: Boolean?): DeviceReq? {
         return try {
@@ -45,28 +56,25 @@ internal class RetryMarketapBackend(
     }
 
     private suspend fun checkUserQueue() {
-        val items =
-            storage.popItems(
-                "users",
-                pairAdapter<String, UpdateProfileRequest>(),
-                10
-            )
-        items.forEach { (projectId, request) ->
-            apiWorkGroup.dispatch {
-                try {
-                    val device = getSafeDevice(request.device.removeUserId)
-                    if (device != null) {
-                        marketapApi.updateProfile(projectId, request.copy(device = device))
-                    } else {
-                        throw IllegalStateException("Device is not ready")
-                    }
-                } catch (e: Exception) {
-                    storage.queueItem(
-                        "users",
-                        PairEntry(projectId, request),
-                        pairAdapter<String, UpdateProfileRequest>()
-                    )
+        while (true) {
+            val item = storage.getItem(KEY_PENDING_USER_PROFILE, pairAdapter<String, UpdateProfileRequest>()) ?: break
+            storage.removeItem(KEY_PENDING_USER_PROFILE)
+
+            val sent = try {
+                val device = getSafeDevice(item.second.device.removeUserId)
+                    ?: throw IllegalStateException("Device is not ready")
+                marketapApi.updateProfile(item.first, item.second.copy(device = device))
+                true
+            } catch (e: Exception) {
+                false
+            }
+
+            if (!sent) {
+                // 더 새로운 요청이 없을 때만 복구 (있으면 새 요청이 최신 상태)
+                if (storage.getItem(KEY_PENDING_USER_PROFILE, pairAdapter<String, UpdateProfileRequest>()) == null) {
+                    storage.setItem(KEY_PENDING_USER_PROFILE, item, pairAdapter())
                 }
+                break
             }
         }
     }
@@ -95,24 +103,24 @@ internal class RetryMarketapBackend(
     }
 
     private suspend fun checkDeviceQueue() {
-        val items =
-            storage.popItems("devices", pairAdapter<String, DeviceReq>(), 10)
-        items.forEach { (projectId, request) ->
-            apiWorkGroup.dispatch {
-                try {
-                    val device = getSafeDevice(request.removeUserId)
-                    if (device != null) {
-                        marketapApi.updateDevice(projectId, device)
-                    } else {
-                        throw IllegalStateException("Device is not ready")
-                    }
-                } catch (e: Exception) {
-                    storage.queueItem(
-                        "devices",
-                        PairEntry(projectId, request),
-                        pairAdapter<String, DeviceReq>()
-                    )
+        while (true) {
+            val item = storage.getItem(KEY_PENDING_DEVICE_PROFILE, pairAdapter<String, DeviceReq>()) ?: break
+            storage.removeItem(KEY_PENDING_DEVICE_PROFILE)
+
+            val sent = try {
+                val device = getSafeDevice(item.second.removeUserId)
+                    ?: throw IllegalStateException("Device is not ready")
+                marketapApi.updateDevice(item.first, device)
+                true
+            } catch (e: Exception) {
+                false
+            }
+
+            if (!sent) {
+                if (storage.getItem(KEY_PENDING_DEVICE_PROFILE, pairAdapter<String, DeviceReq>()) == null) {
+                    storage.setItem(KEY_PENDING_DEVICE_PROFILE, item, pairAdapter())
                 }
+                break
             }
         }
     }
@@ -122,9 +130,9 @@ internal class RetryMarketapBackend(
             "updating device of project $projectId, " +
                     "deviceId: ${request.deviceId}, properties: ${request.properties}"
         }
-        storage.queueItem("devices", PairEntry(projectId, request), pairAdapter())
+        storage.setItem(KEY_PENDING_DEVICE_PROFILE, PairEntry(projectId, request), pairAdapter())
         CoroutineScope(Dispatchers.IO).launch {
-            apiWorkGroup.dispatch(::checkDeviceQueue)
+            profileWorker.dispatch(::checkDeviceQueue)
         }
     }
 
@@ -206,11 +214,11 @@ internal class RetryMarketapBackend(
         }
 
         CoroutineScope(Dispatchers.IO).launch {
-            request.timestamp = getNowAsString()
+            request.timestamp = getNowAsString(projectId)
             storage.queueItem("events", PairEntry(projectId, request), pairAdapter())
             apiWorkGroup.dispatch(::checkEventQueue)
-            apiWorkGroup.dispatch(::checkUserQueue)
-            apiWorkGroup.dispatch(::checkDeviceQueue)
+            profileWorker.dispatch(::checkUserQueue)
+            profileWorker.dispatch(::checkDeviceQueue)
         }
     }
 
@@ -220,37 +228,47 @@ internal class RetryMarketapBackend(
                     "userId: ${request.userId}, properties: ${request.properties}"
         }
         CoroutineScope(Dispatchers.IO).launch {
-            request.timestamp = getNowAsString()
-            storage.queueItem("users", PairEntry(projectId, request), pairAdapter())
-            apiWorkGroup.dispatch(::checkEventQueue)
-            apiWorkGroup.dispatch(::checkUserQueue)
-            apiWorkGroup.dispatch(::checkDeviceQueue)
+            request.timestamp = getNowAsString(projectId)
+            storage.setItem(KEY_PENDING_USER_PROFILE, PairEntry(projectId, request), pairAdapter())
+            profileWorker.dispatch(::checkUserQueue)
         }
     }
 
+    fun prefetchServerInfo(projectId: String) {
+        CoroutineScope(Dispatchers.IO).launch {
+            fetchServerInfoIfNeeded(projectId)
+        }
+    }
 
-    private fun getNowAsString(): String {
-        val now = System.currentTimeMillis()
-        val offset = storage.cacheAndGetItem(
-            "server_time_offset",
-            {
-                runBlocking {
-                    val offset = withTimeoutOrNull(5000) {
-                        marketapApi.getServerTimeOffset()
-                    }
+    private suspend fun fetchServerInfoIfNeeded(projectId: String) {
+        serverInfoMutex.withLock {
+            if (MarketapServerConfig.isCacheValid()) return
 
-                    if (offset != null) {
-                        logger.d { "Server time offset: $offset ms" }
-                        offset
-                    } else {
-                        logger.w { "Failed to get server time offset, using 0" }
-                        0L
-                    }
+            val serverInfo = try {
+                withTimeoutOrNull(5000) {
+                    marketapApi.getServerInfo(projectId)
                 }
-            },
-            longAdapter,
-            60 * 1000L
-        ) ?: 0L
-        return getNowByMillis(now + offset)
+            } catch (t: Throwable) {
+                logger.e(t) { "Failed to fetch server info for projectId: $projectId, using defaults" }
+                null
+            }
+
+            if (serverInfo != null) {
+                logger.d { "Server time offset: ${serverInfo.serverTimeOffset} ms" }
+                MarketapServerConfig.serverTimeOffset = serverInfo.serverTimeOffset
+                MarketapServerConfig.useWebClickRouting = serverInfo.useWebClickRouting
+                MarketapServerConfig.lastFetchedAtMs = System.currentTimeMillis()
+            } else {
+                logger.w { "Failed to get server info, using defaults" }
+            }
+        }
+    }
+
+    private fun getNowAsString(projectId: String): String {
+        val now = System.currentTimeMillis()
+        if (!MarketapServerConfig.isCacheValid()) {
+            runBlocking { fetchServerInfoIfNeeded(projectId) }
+        }
+        return getNowByMillis(now + MarketapServerConfig.serverTimeOffset)
     }
 }

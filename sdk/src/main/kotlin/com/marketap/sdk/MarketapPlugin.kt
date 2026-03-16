@@ -1,10 +1,13 @@
 package com.marketap.sdk
 
+import android.app.Application
 import com.marketap.sdk.model.external.MarketapCampaignType
 import com.marketap.sdk.model.external.MarketapClickEvent
+import com.marketap.sdk.model.external.MarketapIntegrationInfo
+import com.marketap.sdk.model.internal.MarketapServerConfig
+import com.marketap.sdk.model.internal.SdkIntegrationState
 import com.marketap.sdk.model.internal.inapp.HideType
 import com.marketap.sdk.presentation.CustomHandlerStore
-import com.marketap.sdk.presentation.MarketapRegistry
 import com.marketap.sdk.presentation.MarketapRegistry.marketapCore
 import com.marketap.sdk.utils.logger
 
@@ -12,6 +15,15 @@ import com.marketap.sdk.utils.logger
  * MarketapPlugin - 플러그인(Flutter/React Native) 및 웹브릿지에서 사용하는 API
  */
 object MarketapPlugin {
+
+    @JvmStatic
+    fun initialize(application: Application, projectId: String, integrationInfo: MarketapIntegrationInfo) {
+        logger.v {
+            "Marketap Plugin initialize with projectId=$projectId, " +
+                "sdkType=${integrationInfo.sdkType}, sdkVersion=${integrationInfo.sdkVersion}"
+        }
+        Marketap.initialize(application, SdkMetadataProvider.createConfig(projectId, integrationInfo))
+    }
 
     // MARK: - 인앱 이벤트 처리 (플러그인용)
 
@@ -36,10 +48,11 @@ object MarketapPlugin {
     ) {
         logger.d { "trackInAppClick: campaignId=$campaignId, locationId=$locationId, url=$url" }
 
-        // 클릭 핸들러 호출 (커스텀 핸들러가 등록된 경우에만)
-        if (url != null && CustomHandlerStore.isCustomized()) {
+        if (url != null) {
             val clickEvent = MarketapClickEvent(MarketapCampaignType.IN_APP_MESSAGE, campaignId, url)
-            MarketapRegistry.marketapClickHandler?.handleClick(clickEvent)
+            if (CustomHandlerStore.isCustomized() || !MarketapServerConfig.useWebClickRouting) {
+                CustomHandlerStore.handleClick(clickEvent)
+            }
         }
 
         // 클릭 이벤트 트래킹
@@ -71,5 +84,17 @@ object MarketapPlugin {
     @JvmStatic
     fun setUserProperties(properties: Map<String, Any>) {
         marketapCore?.setUserProperties(properties)
+    }
+
+    // MARK: - 웹브릿지 상태 동기화 (플러그인용)
+
+    @JvmStatic
+    fun onWebBridgeConnected(handleInAppInWebView: Boolean) {
+        SdkIntegrationState.handleInAppInWebView = handleInAppInWebView
+    }
+
+    @JvmStatic
+    fun onWebSdkInitialized() {
+        SdkIntegrationState.isWebSdkInitialized = true
     }
 }

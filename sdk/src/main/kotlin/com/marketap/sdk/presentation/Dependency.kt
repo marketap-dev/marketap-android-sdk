@@ -20,6 +20,7 @@ import com.marketap.sdk.domain.service.inapp.condition.PropertyConditionCheckerI
 import com.marketap.sdk.domain.service.inapp.condition.comparator.ValueComparatorImpl
 import com.marketap.sdk.domain.service.state.ClientStateManager
 import com.marketap.sdk.model.MarketapConfig
+import com.marketap.sdk.model.internal.SdkIntegrationState
 import com.marketap.sdk.utils.ManifestUtils
 import com.marketap.sdk.utils.logger
 
@@ -30,7 +31,9 @@ object Dependency {
     ): MarketapCoreService {
         val storage = SharedPreferenceInternalStorage(application).initialize(application)
         val marketapApi = MarketapApiImpl()
-        val deviceManager = AndroidDeviceManager(storage, application)
+        val deviceManager = AndroidDeviceManager(storage, application, config)
+        SdkIntegrationState.isClickHandlerCustomized = CustomHandlerStore.isCustomized()
+
         val marketapBackend = RetryMarketapBackend(storage, marketapApi, deviceManager)
         val clientStateManager = ClientStateManager(config, storage)
         val sessionManager = AndroidSessionManager(storage)
@@ -51,6 +54,7 @@ object Dependency {
             clientStateManager,
             deviceManager,
             marketapBackend,
+            storage,
         )
 
         val eventIngestionService = EventIngestionService(
@@ -74,6 +78,7 @@ object Dependency {
 
         val deviceListener = DeviceListener(deviceManager, userIngestionService, application, core)
         deviceListener.init()
+        marketapBackend.prefetchServerInfo(config.projectId)
         ManifestUtils.logSystemConstants(application)
         logger.i { "Marketap SDK successfully initialized with projectId: ${config.projectId}" }
         return core

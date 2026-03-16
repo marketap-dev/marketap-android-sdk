@@ -32,6 +32,8 @@ internal data class DeviceReq(
             val screen = screen?.let { "${it.width}x${it.height}x${it.colorDepth}" }
 
             val props: Map<String, Any?> = mapOf(
+                "sdk_type" to sdkType,
+                "sdk_version" to sdkVersion,
                 "os_version" to osVersion,
                 "app_version" to appVersion,
                 "app_build_number" to appBuildNumber,

@@ -7,6 +7,7 @@ import com.marketap.sdk.model.internal.api.InAppCampaignRes
 import com.marketap.sdk.model.internal.api.InAppCampaignSingleRes
 import com.marketap.sdk.model.internal.api.IngestEventRequest
 import com.marketap.sdk.model.internal.api.IngestRes
+import com.marketap.sdk.model.internal.api.ServerInfoRes
 import com.marketap.sdk.model.internal.api.ServerResponse
 import com.marketap.sdk.model.internal.api.UpdateProfileRequest
 
@@ -35,5 +36,5 @@ internal interface MarketapApi {
         request: UpdateProfileRequest,
     ): ServerResponse<IngestRes>
 
-    suspend fun getServerTimeOffset(): Long
+    suspend fun getServerInfo(projectId: String): ServerInfoRes
 }
