@@ -12,6 +12,12 @@ android {
         minSdk = 21
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles("consumer-rules.pro")
+        buildConfigField("String", "MARKETAP_SDK_TYPE", "\"android\"")
+        buildConfigField("String", "MARKETAP_SDK_VERSION", "\"${project.findProperty("marketapSdkVersion")}\"")
+    }
+
+    buildFeatures {
+        buildConfig = true
     }
 
     buildTypes {

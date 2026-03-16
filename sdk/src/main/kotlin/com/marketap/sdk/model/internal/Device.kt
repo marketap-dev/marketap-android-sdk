@@ -1,5 +1,6 @@
 package com.marketap.sdk.model.internal
 
+import com.marketap.sdk.SdkMetadataProvider
 import android.os.Build
 import java.util.Locale
 
@@ -7,9 +8,11 @@ internal data class Device(
     val gaid: String? = null,
     val appSetId: String? = null,
     val appLocalId: String? = null,
+    val sdkType: String? = null,
+    val sdkVersion: String? = null,
     val os: String? = "Android ${Build.VERSION.RELEASE}",
     val osVersion: String? = "Android ${Build.VERSION.RELEASE} (SDK ${Build.VERSION.SDK_INT})",
-    val libraryVersion: String? = "1.3.3",
+    val libraryVersion: String? = SdkMetadataProvider.nativeLibraryVersion,
     val model: String? = Build.MODEL,
     val manufacturer: String? = Build.MANUFACTURER,
     val brand: String? = Build.BRAND,

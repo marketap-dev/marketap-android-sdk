@@ -153,7 +153,7 @@ class MarketapWebBridge @JvmOverloads constructor(
                     sdk_type: 'android',
                     sdk_version: '${device.libraryVersion}',
                     platform: 'android',
-                    projectId: $projectId
+                    projectId: '${projectId}'
                 }
             }, '*');
         """.trimIndent())

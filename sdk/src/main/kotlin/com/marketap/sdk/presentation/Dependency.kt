@@ -31,7 +31,7 @@ object Dependency {
     ): MarketapCoreService {
         val storage = SharedPreferenceInternalStorage(application).initialize(application)
         val marketapApi = MarketapApiImpl()
-        val deviceManager = AndroidDeviceManager(storage, application)
+        val deviceManager = AndroidDeviceManager(storage, application, config)
         SdkIntegrationState.isClickHandlerCustomized = CustomHandlerStore.isCustomized()
 
         val marketapBackend = RetryMarketapBackend(storage, marketapApi, deviceManager)

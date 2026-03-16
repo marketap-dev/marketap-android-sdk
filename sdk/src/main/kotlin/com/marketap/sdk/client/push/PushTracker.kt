@@ -2,6 +2,7 @@ package com.marketap.sdk.client.push
 
 import android.content.Context
 import com.marketap.sdk.client.AndroidDeviceManager
+import com.marketap.sdk.SdkMetadataProvider
 import com.marketap.sdk.client.SharedPreferenceInternalStorage
 import com.marketap.sdk.client.api.MarketapApiImpl
 import com.marketap.sdk.client.api.RetryMarketapBackend
@@ -14,6 +15,7 @@ import com.marketap.sdk.model.internal.api.DeviceReq.Companion.toReq
 import com.marketap.sdk.model.internal.api.IngestEventRequest
 import com.marketap.sdk.model.internal.push.DeliveryData
 import com.marketap.sdk.model.internal.push.PushData
+import com.marketap.sdk.presentation.MarketapRegistry
 import com.marketap.sdk.utils.logger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -30,7 +32,12 @@ internal object PushTracker {
             return
         }
         val storage = SharedPreferenceInternalStorage(context)
-        deviceManager = AndroidDeviceManager(storage, context)
+        val config = MarketapRegistry.config
+            ?: SdkMetadataProvider.loadIntegrationInfo(storage)?.let {
+                SdkMetadataProvider.createConfig(projectId = "", integrationInfo = it)
+            }
+            ?: SdkMetadataProvider.createNativeConfig(projectId = "")
+        deviceManager = AndroidDeviceManager(storage, context, config)
         marketapBackend = RetryMarketapBackend(storage, MarketapApiImpl(), deviceManager!!)
     }
 

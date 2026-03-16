@@ -1,7 +1,9 @@
 package com.marketap.sdk
 
+import android.app.Application
 import com.marketap.sdk.model.external.MarketapCampaignType
 import com.marketap.sdk.model.external.MarketapClickEvent
+import com.marketap.sdk.model.external.MarketapIntegrationInfo
 import com.marketap.sdk.model.internal.MarketapServerConfig
 import com.marketap.sdk.model.internal.SdkIntegrationState
 import com.marketap.sdk.model.internal.inapp.HideType
@@ -13,6 +15,15 @@ import com.marketap.sdk.utils.logger
  * MarketapPlugin - 플러그인(Flutter/React Native) 및 웹브릿지에서 사용하는 API
  */
 object MarketapPlugin {
+
+    @JvmStatic
+    fun initialize(application: Application, projectId: String, integrationInfo: MarketapIntegrationInfo) {
+        logger.v {
+            "Marketap Plugin initialize with projectId=$projectId, " +
+                "sdkType=${integrationInfo.sdkType}, sdkVersion=${integrationInfo.sdkVersion}"
+        }
+        Marketap.initialize(application, SdkMetadataProvider.createConfig(projectId, integrationInfo))
+    }
 
     // MARK: - 인앱 이벤트 처리 (플러그인용)
 

@@ -26,12 +26,16 @@ object Marketap {
     @JvmStatic
     fun initialize(application: Application, projectId: String) {
         logger.v { "Marketap SDK start initializing with projectId $projectId" }
-        val config = MarketapConfig(projectId)
-        if (!MarketapRegistry.isInitialized || MarketapRegistry.config?.projectId != config.projectId || application !== MarketapRegistry.application) {
+        initialize(application, SdkMetadataProvider.createNativeConfig(projectId))
+    }
+
+    internal fun initialize(application: Application, config: MarketapConfig) {
+        if (!MarketapRegistry.isInitialized || MarketapRegistry.config != config || application !== MarketapRegistry.application) {
             marketapCore = try {
                 MarketapRegistry.config = config
                 MarketapRegistry.application = application
                 initializeCore(config, application).also {
+                    SdkMetadataProvider.saveIntegrationInfo(application, config)
                     MarketapRegistry.isInitialized = true
                 }
             } catch (t: Throwable) {
