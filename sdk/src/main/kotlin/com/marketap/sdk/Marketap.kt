@@ -30,7 +30,7 @@ object Marketap {
     }
 
     internal fun initialize(application: Application, config: MarketapConfig) {
-        if (!MarketapRegistry.isInitialized || MarketapRegistry.config != config || application !== MarketapRegistry.application) {
+        if (!MarketapRegistry.isInitialized || MarketapRegistry.config?.projectId != config.projectId || application !== MarketapRegistry.application) {
             marketapCore = try {
                 MarketapRegistry.config = config
                 MarketapRegistry.application = application
