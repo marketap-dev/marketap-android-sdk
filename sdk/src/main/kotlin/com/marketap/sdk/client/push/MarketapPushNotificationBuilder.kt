@@ -128,9 +128,10 @@ class MarketapPushNotificationBuilder(
                 .setAutoCancel(true)
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
 
-        data.imageUrl?.let {
-            notificationBuilder.setStyle(getPictureStyle(it))
-        }
+        val style = data.imageUrl?.let {
+            getPictureStyle(it).setSummaryText(data.body)
+        } ?: NotificationCompat.BigTextStyle().bigText(data.body)
+        notificationBuilder.setStyle(style)
 
         data.buttons?.let {
             it.mapIndexed { idx, button ->
