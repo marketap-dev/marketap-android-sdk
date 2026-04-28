@@ -1,0 +1,22 @@
+# Marketap Android SDK
+
+> Native Android SDK for Marketap analytics, identity, push notifications, in-app campaigns, and web-to-native bridge flows.
+
+This file intentionally excludes local build files, sample app credentials, and generated directories. It focuses on the docs and public Android integration surface.
+
+## Documentation
+- [README](https://raw.githubusercontent.com/marketap-dev/marketap-android-sdk/main/README.md): Repository overview, installation snippet, and Android-specific integration notes.
+- [Official Android Guide](https://docs.marketap.io/t3ZS4WXNMj0HK27EtIMV/developer/push-notification/integration/android): Hosted Marketap documentation for Android push and SDK integration.
+
+## Installation
+- [SDK Gradle Module](https://raw.githubusercontent.com/marketap-dev/marketap-android-sdk/main/sdk/build.gradle.kts): Android library module definition, dependency graph, and publication-facing build settings.
+- [JitPack Configuration](https://raw.githubusercontent.com/marketap-dev/marketap-android-sdk/main/jitpack.yml): Build configuration used for JitPack-based artifact verification and publication.
+
+## API
+- [Marketap API](https://raw.githubusercontent.com/marketap-dev/marketap-android-sdk/main/sdk/src/main/kotlin/com/marketap/sdk/Marketap.kt): Primary Android entrypoint for initialization, identity, event tracking, revenue, and push opt-in updates.
+- [Marketap Web Bridge](https://raw.githubusercontent.com/marketap-dev/marketap-android-sdk/main/sdk/src/main/kotlin/com/marketap/sdk/MarketapWebBridge.kt): WebView bridge that forwards web events and in-app interactions into the native SDK.
+- [Marketap Plugin API](https://raw.githubusercontent.com/marketap-dev/marketap-android-sdk/main/sdk/src/main/kotlin/com/marketap/sdk/MarketapPlugin.kt): Plugin-oriented API used by wrapper SDKs for in-app events, web bridge coordination, and integration metadata.
+
+## Push And In-App
+- [Firebase Messaging Service](https://raw.githubusercontent.com/marketap-dev/marketap-android-sdk/main/sdk/src/main/kotlin/com/marketap/sdk/client/push/MarketapFirebaseMessagingService.kt): Firebase messaging integration for receiving and opening Marketap push notifications.
+- [In-App Message Activity](https://raw.githubusercontent.com/marketap-dev/marketap-android-sdk/main/sdk/src/main/kotlin/com/marketap/sdk/client/inapp/InAppMessageActivity.kt): Android activity responsible for presenting in-app message content.
