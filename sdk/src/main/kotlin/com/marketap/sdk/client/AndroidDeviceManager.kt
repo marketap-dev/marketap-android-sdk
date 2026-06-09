@@ -35,6 +35,9 @@ internal class AndroidDeviceManager(
 
     override fun setToken(token: String) {
         this.token = token
+        // FCM 토큰 영속화: 프로세스 재기동 시 device payload를 안정시켜 change-only dedup이 동작하게 함.
+        // (gaid/appSetId는 이미 저장되는데 token만 in-memory였음 — 그래서 재기동마다 null→token 전이로 재전송됐음)
+        storage.setItem("fcm_token", token, stringAdapter)
     }
 
     override fun setDeviceOptIn(optIn: Boolean?) {
@@ -177,7 +180,7 @@ internal class AndroidDeviceManager(
                 appLocalId = getOrCreateLocalId(),
                 sdkType = config.sdkType,
                 sdkVersion = config.sdkVersion,
-                token = token,
+                token = token ?: storage.getItem("fcm_token", stringAdapter),
                 optIn = optIn ?: storage.getItem("device_opt_in", booleanAdapter),
                 brand = Build.BRAND,
                 appVersion = packageInfo.versionName,
@@ -193,7 +196,7 @@ internal class AndroidDeviceManager(
                 appLocalId = getOrCreateLocalId(),
                 sdkType = config.sdkType,
                 sdkVersion = config.sdkVersion,
-                token = token,
+                token = token ?: storage.getItem("fcm_token", stringAdapter),
                 optIn = optIn ?: storage.getItem("device_opt_in", booleanAdapter),
                 brand = Build.BRAND,
                 appVersion = null,

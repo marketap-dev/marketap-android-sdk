@@ -8,6 +8,7 @@ import com.google.firebase.FirebaseApp
 import com.google.firebase.messaging.FirebaseMessaging
 import com.marketap.sdk.domain.repository.DeviceManager
 import com.marketap.sdk.domain.service.MarketapCoreService
+import com.marketap.sdk.domain.service.event.DevicePushPolicy
 import com.marketap.sdk.domain.service.event.UserIngestionService
 import com.marketap.sdk.utils.logger
 import kotlinx.coroutines.CoroutineScope
@@ -35,7 +36,7 @@ internal class DeviceListener(
             FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
                 if (task.isSuccessful) {
                     deviceManager.setToken(task.result)
-                    userIngestionService.pushDevice()
+                    userIngestionService.pushDevice(DevicePushPolicy.CHANGE_ONLY)
                     logger.d { "FCM token fetched successfully" }
                     logger.d { "This device's push token is [${task.result}]. " }
                     logger.d {
@@ -64,7 +65,7 @@ internal class DeviceListener(
                 val id = adInfo.id
                 if (id != null && id != "00000000-0000-0000-0000-000000000000") {
                     deviceManager.setGoogleAdvertisingId(id)
-                    userIngestionService.pushDevice()
+                    userIngestionService.pushDevice(DevicePushPolicy.CHANGE_ONLY)
                     logger.d { "GAID fetched successfully with id: [$id]" }
                     logger.d { "Your Marketap Device ID is [gaid:$id]" }
                 }
@@ -85,7 +86,7 @@ internal class DeviceListener(
             }.addOnFailureListener {
                 logger.e(it) { "Failed to fetch AppSet ID" }
             }.addOnCompleteListener {
-                userIngestionService.pushDevice()
+                userIngestionService.pushDevice(DevicePushPolicy.CHANGE_ONLY)
                 if (deviceManager.setFirstOpen()) {
                     core.track("mkt_first_visit", emptyMap())
                 }

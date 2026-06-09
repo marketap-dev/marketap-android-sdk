@@ -108,6 +108,10 @@ internal class EventIngestionService(
             },
         )
 
+        // 실제 사용자 이벤트 시 device liveness 갱신(변경 OR 24h). 위에서 만든 device 재사용(getDevice 중복 호출 방지).
+        // session_start/in-app delivery·click 은 marketapBackend.track 직접 호출이라 여길 안 거침 → liveness 미발동.
+        userIngestionService.pushDevice(DevicePushPolicy.LIVENESS, device)
+
         sessionManager.updateActivity()
     }
 

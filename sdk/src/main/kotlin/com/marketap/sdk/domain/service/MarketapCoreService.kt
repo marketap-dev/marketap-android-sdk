@@ -4,6 +4,7 @@ import android.app.Activity
 import com.marketap.sdk.domain.repository.DeviceManager
 import com.marketap.sdk.domain.repository.MarketapBackend
 import com.marketap.sdk.domain.repository.SessionManager
+import com.marketap.sdk.domain.service.event.DevicePushPolicy
 import com.marketap.sdk.domain.service.event.EventIngestionService
 import com.marketap.sdk.domain.service.event.UserIngestionService
 import com.marketap.sdk.domain.service.inapp.InAppService
@@ -75,7 +76,7 @@ internal class MarketapCoreService(
     fun setDeviceOptIn(optIn: Boolean?) {
         try {
             deviceManager.setDeviceOptIn(optIn)
-            userIngestionService.pushDevice()
+            userIngestionService.pushDevice(DevicePushPolicy.CHANGE_ONLY)
         } catch (t: Throwable) {
             logger.e(t) { "Failed to set device opt-in" }
         }
