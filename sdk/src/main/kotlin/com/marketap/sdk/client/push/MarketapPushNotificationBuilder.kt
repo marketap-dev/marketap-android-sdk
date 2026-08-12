@@ -11,7 +11,8 @@ import androidx.core.app.NotificationCompat
 import com.marketap.sdk.model.internal.push.AndroidPushButton
 import com.marketap.sdk.model.internal.push.PushData
 import com.marketap.sdk.utils.ManifestUtils
-import java.io.IOException
+import com.marketap.sdk.utils.logger
+import java.io.BufferedInputStream
 import java.net.HttpURLConnection
 import java.net.URL
 
@@ -70,20 +71,39 @@ class MarketapPushNotificationBuilder(
     }
 
     private fun loadBitmapFromUrl(url: String): Bitmap? {
+        var connection: HttpURLConnection? = null
         return try {
-            val connection = URL(url).openConnection() as HttpURLConnection
-            connection.doInput = true
+            connection = (URL(url).openConnection() as HttpURLConnection).apply {
+                connectTimeout = CONNECT_TIMEOUT_MS
+                readTimeout = READ_TIMEOUT_MS
+                instanceFollowRedirects = true
+                doInput = true
+            }
             connection.connect()
-            val input = connection.inputStream
-            BitmapFactory.decodeStream(input)
-        } catch (e: IOException) {
-            null
-        }
-    }
 
-    private fun getPictureStyle(imageUrl: String): NotificationCompat.BigPictureStyle {
-        return NotificationCompat.BigPictureStyle()
-            .bigPicture(loadBitmapFromUrl(imageUrl)) // 비동기 로딩
+            val responseCode = connection.responseCode
+            if (responseCode !in 200..299) {
+                logger.w { "Failed to load push image: HTTP $responseCode for $url" }
+                return null
+            }
+
+            // raw 네트워크 스트림을 BufferedInputStream으로 감싼다.
+            // BitmapFactory.decodeStream이 버퍼링 안 된 스트림에서 부분 read(skip) 시
+            // null을 반환하는 고전 버그를 회피 (일부 OS/기기 네트워크 스택에서만 재현).
+            BufferedInputStream(connection.inputStream).use { input ->
+                BitmapFactory.decodeStream(input).also {
+                    if (it == null) {
+                        logger.w { "Push image decode returned null for $url" }
+                    }
+                }
+            }
+        } catch (t: Throwable) {
+            // IOException뿐 아니라 OutOfMemoryError 등 모든 실패를 로그로 남겨 진단 가능하게 함
+            logger.e(t) { "Failed to load push image for $url" }
+            null
+        } finally {
+            connection?.disconnect()
+        }
     }
 
     private fun getButtonIntent(index: Int, button: AndroidPushButton): PendingIntent {
@@ -128,9 +148,19 @@ class MarketapPushNotificationBuilder(
                 .setAutoCancel(true)
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
 
-        val style = data.imageUrl?.let {
-            getPictureStyle(it).setSummaryText(data.body)
-        } ?: NotificationCompat.BigTextStyle().bigText(data.body)
+        val image = data.imageUrl?.let { loadBitmapFromUrl(it) }
+        val style = if (image != null) {
+            // 접힌 알림에서 썸네일로 이미지 노출 (iOS 첨부 동작과 동일하게 맞춤)
+            notificationBuilder.setLargeIcon(image)
+            NotificationCompat.BigPictureStyle()
+                .bigPicture(image)
+                // 펼쳤을 때는 largeIcon을 숨겨 큰 이미지만 보이게 함
+                .bigLargeIcon(null as Bitmap?)
+                .setSummaryText(data.body)
+        } else {
+            // 이미지가 없거나 로딩 실패 시 본문 전체를 보여주는 BigTextStyle로 폴백
+            NotificationCompat.BigTextStyle().bigText(data.body)
+        }
         notificationBuilder.setStyle(style)
 
         data.buttons?.let {
@@ -142,5 +172,10 @@ class MarketapPushNotificationBuilder(
 
         notificationBuilder.setContentIntent(getContentIntent(data.deepLink))
         return notificationBuilder.build()
+    }
+
+    companion object {
+        private const val CONNECT_TIMEOUT_MS = 5_000
+        private const val READ_TIMEOUT_MS = 10_000
     }
 }
