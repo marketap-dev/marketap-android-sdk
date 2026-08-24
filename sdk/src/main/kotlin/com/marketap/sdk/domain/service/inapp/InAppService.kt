@@ -9,6 +9,23 @@ import com.marketap.sdk.model.internal.inapp.HideType
 import com.marketap.sdk.utils.logger
 import java.util.UUID
 
+/**
+ * 상세 fetch 를 실제로 보내는 후보의 최대 개수. 서버가 노출을 확정하지 못해 빈 응답을
+ * 주면 다음 후보로 넘어가는데, 그때마다 요청이 나가므로 상한을 둔다. html 이 이미 있는
+ * 정적 렌더 캠페인은 서버를 안 타므로 이 예산을 깎지 않는다. (web SDK 와 동일한 정책)
+ */
+private const val MAX_FALLTHROUGH_FETCHES = 5
+
+/**
+ * 폴스루 전체의 시간 예산(ms).
+ *
+ * resolveCampaignHtml 은 runBlocking + withTimeoutOrNull(1000) 이라 **호출 스레드를**
+ * fetch 당 최대 1초 붙잡는다. onEvent 는 track() 을 부른 스레드(메인일 수 있음)에서 그대로
+ * 도므로, 상한 없이 후보를 이어가면 최대 5초를 블록해 ANR 을 낸다. 예산을 넘기면 멈춘다.
+ * (web SDK 는 이 값이 2000ms 다. Android 는 fetch 당 1초 블록이라 2회면 예산이 찬다.)
+ */
+private const val FALLTHROUGH_BUDGET_MS = 2000L
+
 internal class InAppService(
     private val campaignExposureService: CampaignExposureService,
     private val eventConditionChecker: ConditionChecker,
@@ -35,7 +52,10 @@ internal class InAppService(
         onSetUserProperties: (properties: Map<String, Any>) -> Unit,
     ) {
         campaignFetchService.useCampaigns { campaigns ->
-            val targetCampaign = campaigns.find { campaign ->
+            // 우선순위 순 후보 전체를 본다. 예전에는 find() 로 1순위 하나만 잡아서, 그 캠페인의
+            // 상세 fetch 가 빈 응답이면(쿠폰 발급 실패·타겟팅 탈락 등 서버가 노출을 확정 못 한 경우)
+            // 뒤에 뜰 수 있는 캠페인이 있어도 화면에 아무것도 안 떴다. (web SDK 와 동일한 수정)
+            val candidates = campaigns.filter { campaign ->
                 if (!eventConditionChecker.checkCondition(
                         campaign.triggerEventCondition.condition,
                         event.name,
@@ -45,11 +65,11 @@ internal class InAppService(
                     logger.v {
                         "Campaign ${campaign.id} does not match event condition for event ${event.name}"
                     }
-                    return@find false
+                    return@filter false
                 }
                 if (campaignExposureService.isCampaignHidden(campaign.id)) {
                     logger.v { "Campaign ${campaign.id} is hidden" }
-                    return@find false
+                    return@filter false
                 }
 
                 campaign.triggerEventCondition.frequencyCap?.let { frequencyCap ->
@@ -62,16 +82,34 @@ internal class InAppService(
                         logger.v {
                             "Campaign ${campaign.id} has reached frequency cap limit"
                         }
-                        return@find false
+                        return@filter false
                     }
                 }
                 logger.v { "Campaign ${campaign.id} matches event condition for event ${event.name}" }
                 true
             }
 
-            targetCampaign?.let {
-                val resolvedCampaign = campaignFetchService.resolveCampaignHtml(it, event)
-                    ?: return@let
+            val deadline = System.currentTimeMillis() + FALLTHROUGH_BUDGET_MS
+            var fetches = 0
+            for (campaign in candidates) {
+                // html 이 비어 있는 후보만 상세 fetch 를 탄다(resolveCampaignHtml 의 분기와 같은 조건).
+                // 정적 렌더 캠페인은 서버를 안 타므로 요청 예산에서 뺀다.
+                val needsFetch = campaign.html == null
+                if (needsFetch) {
+                    if (fetches >= MAX_FALLTHROUGH_FETCHES) {
+                        logger.v { "Reached fetch budget ($MAX_FALLTHROUGH_FETCHES), stopping fallthrough" }
+                        break
+                    }
+                    // fetch 는 스레드를 최대 1초 블록한다. 남은 예산이 없으면 시작조차 안 한다.
+                    if (System.currentTimeMillis() >= deadline) {
+                        logger.v { "Reached time budget (${FALLTHROUGH_BUDGET_MS}ms), stopping fallthrough" }
+                        break
+                    }
+                    fetches++
+                }
+
+                val resolvedCampaign = campaignFetchService.resolveCampaignHtml(campaign, event)
+                    ?: continue
 
                 // 웹브릿지에서 온 이벤트이고 활성 웹브릿지가 있으면 웹으로 캠페인 전달
                 val shouldDelegateToWeb = fromWebBridge && MarketapWebBridge.hasActiveWebBridge()
@@ -81,6 +119,7 @@ internal class InAppService(
                 } else {
                     handleCampaign(resolvedCampaign, onImpression, onClick, onTrack, onSetUserProperties)
                 }
+                break
             }
         }
     }
