@@ -26,6 +26,18 @@ private const val MAX_FALLTHROUGH_FETCHES = 5
  */
 private const val FALLTHROUGH_BUDGET_MS = 2000L
 
+/**
+ * 경과 시간 측정용 단조 시계(ms).
+ *
+ * 벽시계(System.currentTimeMillis)는 NTP 보정이나 사용자의 시간 변경으로 앞뒤로 튄다.
+ * 뒤로 튀면 예산이 사실상 무한이 되고, 앞으로 튀면 첫 후보에서 바로 끊긴다. 기간을 재는 데는
+ * 절대 시각이 아니라 단조 증가 값을 쓴다. (web SDK 의 performance.now 와 같은 이유)
+ *
+ * SystemClock.elapsedRealtime 이 아니라 System.nanoTime 을 쓴 이유: 이 파일은 도메인 계층이라
+ * 안드로이드 프레임워크에 의존하지 않는다(순수 JVM 단위 테스트에서 그대로 돈다).
+ */
+private fun monotonicNowMs(): Long = System.nanoTime() / 1_000_000
+
 internal class InAppService(
     private val campaignExposureService: CampaignExposureService,
     private val eventConditionChecker: ConditionChecker,
@@ -89,7 +101,7 @@ internal class InAppService(
                 true
             }
 
-            val deadline = System.currentTimeMillis() + FALLTHROUGH_BUDGET_MS
+            val deadline = monotonicNowMs() + FALLTHROUGH_BUDGET_MS
             var fetches = 0
             for (campaign in candidates) {
                 // html 이 비어 있는 후보만 상세 fetch 를 탄다(resolveCampaignHtml 의 분기와 같은 조건).
@@ -101,7 +113,7 @@ internal class InAppService(
                         break
                     }
                     // fetch 는 스레드를 최대 1초 블록한다. 남은 예산이 없으면 시작조차 안 한다.
-                    if (System.currentTimeMillis() >= deadline) {
+                    if (monotonicNowMs() >= deadline) {
                         logger.v { "Reached time budget (${FALLTHROUGH_BUDGET_MS}ms), stopping fallthrough" }
                         break
                     }
