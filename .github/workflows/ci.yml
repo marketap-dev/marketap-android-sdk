@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    # 로컬 전체 스위트가 수 초다. 20분을 넘겼다면 매달린 것이므로 러너를 끊는다.
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # 프로젝트가 JVM 17 타깃이다. 러너 기본 JDK 를 쓰면
+      # "Unknown Kotlin JVM target: 21" 로 죽는다.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      # 러너 이미지에 Android SDK 가 들어있긴 하지만 설치된 플랫폼 버전은 이미지마다 다르다.
+      # 이 프로젝트는 compileSdk 35 를 쓰므로 설치와 라이선스 동의를 명시적으로 맡긴다.
+      # (SDK 경로는 ANDROID_HOME 으로 잡히니 local.properties 는 필요 없다 — 실측 확인)
+      - uses: android-actions/setup-android@v3
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: 단위 테스트
+        run: ./gradlew :sdk:testDebugUnitTest --stacktrace
+
+      - name: 실패 시 테스트 리포트 업로드
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-report
+          path: sdk/build/reports/tests/testDebugUnitTest
+          retention-days: 7
