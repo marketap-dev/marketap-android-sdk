@@ -39,9 +39,9 @@ private const val FALLTHROUGH_BUDGET_MS = 2000L
 private fun monotonicNowMs(): Long = System.nanoTime() / 1_000_000
 
 internal class InAppService(
-    private val campaignExposureService: CampaignExposureService,
+    private val campaignExposureService: CampaignExposing,
     private val eventConditionChecker: ConditionChecker,
-    private val campaignFetchService: CampaignFetchService,
+    private val campaignFetchService: CampaignFetching,
     private val inAppView: InAppView
 ) {
 

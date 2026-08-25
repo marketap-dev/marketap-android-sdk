@@ -21,7 +21,7 @@ internal class CampaignFetchService(
     private val inAppCampaignApi: MarketapBackend,
     private val clientStateManager: ClientStateManager,
     private val deviceManager: DeviceManager
-) {
+) : CampaignFetching {
 
     companion object {
         private const val CAMPAIGN_CACHE_KEY = "last_campaigns"
@@ -30,7 +30,7 @@ internal class CampaignFetchService(
         private const val EXPIRATION_TIME: Long = 5 * 60 * 1000 // 5 minutes
     }
 
-    fun useCampaigns(block: (campaigns: List<InAppCampaign>) -> Unit) {
+    override fun useCampaigns(block: (campaigns: List<InAppCampaign>) -> Unit) {
         val userId = clientStateManager.getUserId()
         fetchLocalCampaign(userId)?.let { localCampaigns ->
             logger.d { "Using cached campaigns for user $userId" }
@@ -62,7 +62,7 @@ internal class CampaignFetchService(
         }
     }
 
-    fun resolveCampaignHtml(
+    override fun resolveCampaignHtml(
         campaign: InAppCampaign,
         event: IngestEventRequest
     ): InAppCampaign? {
