@@ -44,8 +44,11 @@ data class PushData(
             val deepLink = data["deepLink"]
             val serverProperties = data["serverProperties"]
 
+            // deviceId는 의도적으로 조건에서 제외한다. 콘솔 테스트 발송(targetMode=device)은
+            // deviceId를 내려주지 않는데, 예전에는 그 탓에 deliveryData가 null이 되어
+            // 노출/클릭 이벤트가 통째로 유실됐다. deviceId는 SDK가 로컬에서 채울 수 있다.
             val deliveryData =
-                if (projectId != null && deviceId != null && campaignId != null && messageId != null) {
+                if (projectId != null && campaignId != null && messageId != null) {
                     DeliveryData(
                         projectId,
                         userId,

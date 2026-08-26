@@ -15,10 +15,17 @@ internal data class AppEventProperty(
     val resultStatus: Int = 200000,
     val resultMessage: String = "SUCCESS",
     val isSuccess: Boolean = true,
-    val locationId: String? = null
+    val locationId: String? = null,
+    /** 채널 공통 속성 외에 이벤트별로 덧붙이는 값 (예: 푸시 이미지 로딩 진단) */
+    val extraProperties: Map<String, Any> = emptyMap()
 ) {
     fun addLocationId(locationId: String): AppEventProperty {
         return copy(locationId = locationId)
+    }
+
+    fun addProperties(properties: Map<String, Any>): AppEventProperty {
+        if (properties.isEmpty()) return this
+        return copy(extraProperties = extraProperties + properties)
     }
 
     fun toMap(): Map<String, Any> {
@@ -31,7 +38,8 @@ internal data class AppEventProperty(
             "mkt_result_message" to resultMessage,
             "mkt_is_success" to isSuccess,
             "mkt_message_id" to messageId
-        ) + (if (locationId != null) mapOf("mkt_location_id" to locationId) else emptyMap()) + serverProperties
+        ) + (if (locationId != null) mapOf("mkt_location_id" to locationId) else emptyMap()) +
+                serverProperties + extraProperties
     }
 
     companion object {

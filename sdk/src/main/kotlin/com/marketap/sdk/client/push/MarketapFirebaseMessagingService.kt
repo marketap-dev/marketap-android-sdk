@@ -63,13 +63,21 @@ class MarketapFirebaseMessagingService : FirebaseMessagingService() {
                 return
             }
 
-            PushTracker.trackImpression(context, pushData)
+            // 이미지 로딩 결과를 임프레션에 실어야 하므로 build() 를 먼저 돌린다.
+            // 임프레션 전송 자체는 IO 코루틴이라 순서를 바꿔도 알림 표시가 늦어지지 않는다.
+            val builder = MarketapPushNotificationBuilder(context, pushData)
             val marketapPushNotification = try {
-                MarketapPushNotificationBuilder(context, pushData).build()
+                builder.build()
             } catch (t: Throwable) {
                 logger.e(t) { "Failed to build Marketap push notification for ID ${pushData.notificationId}" }
-                return
+                null
             }
+
+            // build() 가 실패해도 임프레션은 남긴다. 예전처럼 build 실패가 곧 이벤트 유실이 되면
+            // 실패율을 관측할 수 없다.
+            PushTracker.trackImpression(context, pushData, builder.imageDiagnostics)
+
+            if (marketapPushNotification == null) return
 
             val notificationManager =
                 context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
