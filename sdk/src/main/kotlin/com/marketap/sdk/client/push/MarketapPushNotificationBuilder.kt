@@ -13,6 +13,8 @@ import com.marketap.sdk.model.internal.push.AndroidPushButton
 import com.marketap.sdk.model.internal.push.PushData
 import com.marketap.sdk.utils.ManifestUtils
 import com.marketap.sdk.utils.logger
+import com.marketap.sdk.utils.mapAdapter
+import com.marketap.sdk.utils.serialize
 import java.io.BufferedInputStream
 import java.net.HttpURLConnection
 import java.net.URL
@@ -234,29 +236,39 @@ internal data class PushImageDiagnostics(
     }
 
     /**
-     * 이벤트 속성으로 평탄화. null 값은 컬럼을 늘리지 않도록 제외한다.
+     * mkt_result_message 에 실을 JSON.
+     *
+     * Android 는 사전 정의된 이벤트 속성 키만 수집된다. mkt_image_* 같은 새 키를 만들면
+     * 파이프라인에서 그대로 버려지므로(테스트로 확인: event_view 에 컬럼 자체가 안 생긴다),
+     * 이미 등록된 mkt_result_message 안에 JSON 으로 접어 넣는다.
      *
      * buildMap 을 쓰지 않는다. 수신 객체가 MutableMap 이 되면 프로퍼티 참조가
      * Map 멤버에 가려질 수 있어(실제로 size 프로퍼티가 Map.size 로 해석돼
-     * mkt_image_size 에 맵 크기가 실린 적이 있다) 명시적 지역 변수를 쓴다.
+     * 맵 크기가 실린 적이 있다) 명시적 지역 변수를 쓴다.
      */
-    fun toEventProperties(): Map<String, Any> {
-        val properties = mutableMapOf<String, Any>(KEY_RESULT to result)
-        httpCode?.let { properties[KEY_HTTP_CODE] = it }
-        errorClass?.let { properties[KEY_ERROR] = it }
-        elapsedMs?.let { properties[KEY_ELAPSED_MS] = it }
-        dimensions?.let { properties[KEY_SIZE] = it }
-        bytes?.let { properties[KEY_BYTES] = it }
-        return properties
+    fun toResultMessage(): String {
+        val fields = mutableMapOf<String, Any>(KEY_RESULT to result)
+        httpCode?.let { fields[KEY_HTTP_CODE] = it }
+        errorClass?.let { fields[KEY_ERROR] = it }
+        elapsedMs?.let { fields[KEY_ELAPSED_MS] = it }
+        dimensions?.let { fields[KEY_SIZE] = it }
+        bytes?.let { fields[KEY_BYTES] = it }
+        return try {
+            fields.serialize(mapAdapter<String, Any>())
+        } catch (t: Throwable) {
+            // 진단값 직렬화 실패가 임프레션 자체를 막으면 안 된다.
+            describe()
+        }
     }
 
     companion object {
-        const val KEY_RESULT = "mkt_image_result"
-        const val KEY_HTTP_CODE = "mkt_image_http_code"
-        const val KEY_ERROR = "mkt_image_error"
-        const val KEY_ELAPSED_MS = "mkt_image_elapsed_ms"
-        const val KEY_SIZE = "mkt_image_size"
-        const val KEY_BYTES = "mkt_image_bytes"
+        // mkt_result_message JSON 안의 필드명. 이벤트 속성 키가 아니다.
+        const val KEY_RESULT = "image_result"
+        const val KEY_HTTP_CODE = "image_http_code"
+        const val KEY_ERROR = "image_error"
+        const val KEY_ELAPSED_MS = "image_elapsed_ms"
+        const val KEY_SIZE = "image_size"
+        const val KEY_BYTES = "image_bytes"
 
         /** build() 가 아직 호출되지 않음 */
         const val RESULT_NOT_ATTEMPTED = "not_attempted"

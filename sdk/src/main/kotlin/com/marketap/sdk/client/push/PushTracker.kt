@@ -72,7 +72,10 @@ internal object PushTracker {
                         deliveryData.userId,
                         device,
                         AppEventProperty.offSite(deliveryData)
-                            .addProperties(imageDiagnostics?.toEventProperties() ?: emptyMap()),
+                            .let { base ->
+                                imageDiagnostics?.let { base.withResultMessage(it.toResultMessage()) }
+                                    ?: base
+                            },
                         SdkIntegrationState.toJsonString(),
                     )
                 ) ?: throw IllegalStateException("MarketapBackend is not initialized")

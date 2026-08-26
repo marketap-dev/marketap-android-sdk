@@ -1,7 +1,10 @@
 package com.marketap.sdk.push
 
 import com.marketap.sdk.client.push.PushImageDiagnostics
+import com.marketap.sdk.utils.deserialize
+import com.marketap.sdk.utils.mapAdapter
 import kotlin.test.Test
+import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -22,47 +25,43 @@ class PushImageDiagnosticsTest {
 
     @Test
     fun `예외는 클래스명만 싣고 메시지는 싣지 않는다`() {
-        val diagnostics = PushImageDiagnostics.exception(
+        val message = PushImageDiagnostics.exception(
             java.net.UnknownHostException("static.marketap.io"),
             elapsedMs = 42,
-        )
+        ).toResultMessage()
 
-        val properties = diagnostics.toEventProperties()
-        assertEquals("UnknownHostException", properties[PushImageDiagnostics.KEY_ERROR])
+        assertContains(message, "UnknownHostException")
         assertFalse(
-            properties.values.any { it.toString().contains("static.marketap.io") },
-            "호스트명이 이벤트 속성으로 새어나가면 안 된다"
+            message.contains("static.marketap.io"),
+            "호스트명이 이벤트 속성으로 새어나가면 안 된다: $message"
         )
     }
 
     @Test
-    fun `null 필드는 이벤트 속성에서 제외된다`() {
-        val properties = PushImageDiagnostics.none().toEventProperties()
+    fun `null 필드는 JSON 에서 제외된다`() {
+        val message = PushImageDiagnostics.none().toResultMessage()
 
-        assertEquals(mapOf<String, Any>(PushImageDiagnostics.KEY_RESULT to "none"), properties)
+        assertEquals("""{"image_result":"none"}""", message)
     }
 
     @Test
-    fun `ok는 크기와 바이트수를 이벤트 속성에 싣는다`() {
-        val diagnostics = PushImageDiagnostics.ok(
-            httpCode = 200, elapsedMs = 128, width = 720, height = 350, byteCount = 1_008_000
-        )
+    fun `mkt_result_message 는 파싱 가능한 JSON 이다`() {
+        // 새 이벤트 속성 키를 만들 수 없어 여기에 접어 넣는다. 깨지면 원격 진단이 통째로 무의미해진다.
+        val message = PushImageDiagnostics.ok(200, 128, 720, 350, 1_008_000).toResultMessage()
 
-        val properties = diagnostics.toEventProperties()
-        assertEquals("ok", properties[PushImageDiagnostics.KEY_RESULT])
-        assertEquals(200, properties[PushImageDiagnostics.KEY_HTTP_CODE])
-        assertEquals("720x350", properties[PushImageDiagnostics.KEY_SIZE])
-        assertEquals(1_008_000, properties[PushImageDiagnostics.KEY_BYTES])
-        assertEquals(128L, properties[PushImageDiagnostics.KEY_ELAPSED_MS])
+        val parsed = message.deserialize(mapAdapter<String, Any>())
+        assertEquals("ok", parsed["image_result"])
+        assertEquals("720x350", parsed["image_size"])
+        assertEquals(200.0, parsed["image_http_code"])
     }
 
     @Test
-    fun `mkt_image_size에는 맵 크기가 아니라 이미지 크기가 실린다`() {
+    fun `image_size 에는 맵 크기가 아니라 이미지 크기가 실린다`() {
         // 회귀 방지: buildMap 수신 객체 때문에 size 프로퍼티가 Map.size 로 해석돼
-        // mkt_image_size 에 1 이 실린 적이 있다.
-        val properties = PushImageDiagnostics.ok(200, 10, 720, 350, 1_008_000).toEventProperties()
+        // 맵 크기 1 이 실린 적이 있다.
+        val message = PushImageDiagnostics.ok(200, 10, 720, 350, 1_008_000).toResultMessage()
 
-        assertEquals("720x350", properties[PushImageDiagnostics.KEY_SIZE])
+        assertContains(message, """"image_size":"720x350"""")
     }
 
     @Test

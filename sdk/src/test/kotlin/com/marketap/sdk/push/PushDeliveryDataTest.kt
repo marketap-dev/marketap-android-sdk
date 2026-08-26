@@ -5,8 +5,8 @@ import com.marketap.sdk.model.internal.AppEventProperty
 import com.marketap.sdk.model.internal.push.PushData
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertContains
 import kotlin.test.assertNotNull
-import kotlin.test.assertSame
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -66,42 +66,31 @@ class PushDeliveryDataTest {
     }
 
     @Test
-    fun `이미지 진단값이 이벤트 속성에 병합된다`() {
+    fun `이미지 진단값이 mkt_result_message 에 실린다`() {
+        // Android 는 사전 정의된 속성 키만 수집되므로 새 키를 못 만든다.
+        // 등록된 mkt_result_message 안에 JSON 으로 넣는 것이 유일한 경로다.
         val delivery = assertNotNull(PushData.fromMap(basePayload())?.deliveryData)
         val diagnostics = PushImageDiagnostics.httpError(httpCode = 403, elapsedMs = 128)
 
         val properties = AppEventProperty.offSite(delivery)
-            .addProperties(diagnostics.toEventProperties())
+            .withResultMessage(diagnostics.toResultMessage())
             .toMap()
 
-        assertEquals("http_error", properties[PushImageDiagnostics.KEY_RESULT])
-        assertEquals(403, properties[PushImageDiagnostics.KEY_HTTP_CODE])
-        assertEquals(128L, properties[PushImageDiagnostics.KEY_ELAPSED_MS])
+        val message = properties["mkt_result_message"].toString()
+        assertContains(message, "http_error")
+        assertContains(message, "403")
         // 기존 채널 속성은 그대로 유지되어야 한다
         assertEquals("test_campaign_id", properties["mkt_campaign_id"])
         assertEquals("PUSH", properties["mkt_channel_type"])
     }
 
     @Test
-    fun `빈 맵을 더하면 같은 인스턴스를 그대로 돌려준다`() {
-        val delivery = assertNotNull(PushData.fromMap(basePayload())?.deliveryData)
-        val base = AppEventProperty.offSite(delivery)
-
-        assertSame(base, base.addProperties(emptyMap()))
-        assertTrue(base.toMap().keys.none { it.startsWith("mkt_image_") })
-    }
-
-    @Test
-    fun `진단 속성이 채널 핵심 속성을 덮어쓰지 못한다`() {
-        // extraProperties 는 호출자가 채우는 값이라, 실수로 mkt_campaign_id 같은
-        // 핵심 키를 넣어도 이벤트가 오염되면 안 된다.
+    fun `진단값이 없으면 mkt_result_message 는 기존 SUCCESS 그대로다`() {
         val delivery = assertNotNull(PushData.fromMap(basePayload())?.deliveryData)
 
-        val properties = AppEventProperty.offSite(delivery)
-            .addProperties(mapOf("mkt_campaign_id" to "HIJACKED", "mkt_is_success" to false))
-            .toMap()
+        val properties = AppEventProperty.offSite(delivery).toMap()
 
-        assertEquals("test_campaign_id", properties["mkt_campaign_id"])
-        assertEquals(true, properties["mkt_is_success"])
+        assertEquals("SUCCESS", properties["mkt_result_message"])
+        assertTrue(properties.keys.none { it.startsWith("mkt_image_") })
     }
 }

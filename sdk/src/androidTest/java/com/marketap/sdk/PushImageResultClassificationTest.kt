@@ -13,7 +13,7 @@ import org.junit.runner.RunWith
 
 /**
  * 이미지 로딩 결과가 실기기에서 실제로 올바르게 분류되는지 확인한다.
- * 이 분류값이 mkt_push_impression 의 mkt_image_result 로 나가므로,
+ * 이 분류값이 mkt_push_impression 의 mkt_result_message JSON 으로 나가므로,
  * 여기서 틀리면 원격 진단 전체가 무의미해진다.
  */
 @RunWith(AndroidJUnit4::class)

@@ -15,22 +15,22 @@ internal data class AppEventProperty(
     val resultStatus: Int = 200000,
     val resultMessage: String = "SUCCESS",
     val isSuccess: Boolean = true,
-    val locationId: String? = null,
-    /** 채널 공통 속성 외에 이벤트별로 덧붙이는 값 (예: 푸시 이미지 로딩 진단) */
-    val extraProperties: Map<String, Any> = emptyMap()
+    val locationId: String? = null
 ) {
     fun addLocationId(locationId: String): AppEventProperty {
         return copy(locationId = locationId)
     }
 
-    fun addProperties(properties: Map<String, Any>): AppEventProperty {
-        if (properties.isEmpty()) return this
-        return copy(extraProperties = extraProperties + properties)
+    /**
+     * Android 는 사전 정의된 속성 키만 수집되므로 새 키를 만들 수 없다.
+     * 진단 정보는 이미 등록된 mkt_result_message 에 JSON 으로 실어 보낸다.
+     */
+    fun withResultMessage(message: String): AppEventProperty {
+        return copy(resultMessage = message)
     }
 
-    /** extraProperties 를 먼저 깐다. 채널 핵심 속성(mkt_campaign_id 등)을 덮어쓰지 못하게. */
     fun toMap(): Map<String, Any> {
-        return extraProperties + mapOf(
+        return mapOf(
             "mkt_campaign_id" to campaignId,
             "mkt_campaign_category" to campaignCategory,
             "mkt_sub_channel_type" to subChannelType,
