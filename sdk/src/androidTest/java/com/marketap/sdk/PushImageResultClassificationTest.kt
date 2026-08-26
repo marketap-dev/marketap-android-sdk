@@ -7,6 +7,7 @@ import com.marketap.sdk.client.push.MarketapPushNotificationBuilder
 import com.marketap.sdk.client.push.PushImageDiagnostics
 import com.marketap.sdk.model.internal.push.PushData
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -41,7 +42,8 @@ class PushImageResultClassificationTest {
         val d = diagnose("https://static.marketap.io/images/dv0ok8v/57d0zik5.jpg")
         assertEquals(PushImageDiagnostics.RESULT_OK, d.result)
         assertEquals(200, d.httpCode)
-        assertEquals("720x350", d.dimensions)
+        // 정확한 픽셀 크기는 단정하지 않는다. CDN 이미지가 교체되면 깨진다.
+        assertNotNull(d.dimensions)
     }
 
     @Test

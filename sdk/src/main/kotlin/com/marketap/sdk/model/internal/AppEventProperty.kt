@@ -28,8 +28,9 @@ internal data class AppEventProperty(
         return copy(extraProperties = extraProperties + properties)
     }
 
+    /** extraProperties 를 먼저 깐다. 채널 핵심 속성(mkt_campaign_id 등)을 덮어쓰지 못하게. */
     fun toMap(): Map<String, Any> {
-        return mapOf(
+        return extraProperties + mapOf(
             "mkt_campaign_id" to campaignId,
             "mkt_campaign_category" to campaignCategory,
             "mkt_sub_channel_type" to subChannelType,
@@ -39,7 +40,7 @@ internal data class AppEventProperty(
             "mkt_is_success" to isSuccess,
             "mkt_message_id" to messageId
         ) + (if (locationId != null) mapOf("mkt_location_id" to locationId) else emptyMap()) +
-                serverProperties + extraProperties
+                serverProperties
     }
 
     companion object {

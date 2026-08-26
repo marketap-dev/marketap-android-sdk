@@ -110,7 +110,9 @@ class MarketapPushNotificationBuilder(
                         logger.w { "Push image decode returned null for $url" }
                         PushImageDiagnostics.decodeNull(responseCode, elapsed())
                     } else {
-                        PushImageDiagnostics.ok(responseCode, elapsed(), bitmap)
+                        PushImageDiagnostics.ok(
+                            responseCode, elapsed(), bitmap.width, bitmap.height, bitmap.byteCount
+                        )
                     }
                 }
             }
@@ -174,9 +176,10 @@ class MarketapPushNotificationBuilder(
         val image = imageUrl?.let { loadBitmapFromUrl(it) }
 
         // 성공/실패 상관없이 항상 남긴다. 테스트 발송이든 실발송이든 logcat 한 줄로 판별 가능해야 한다.
+        // URL 전체는 서명 토큰이 붙어 나올 수 있어 호스트까지만 남긴다(예외 메시지를 버리는 것과 같은 이유).
         logger.i {
             "Push image load result for notificationId=${data.notificationId}: " +
-                    "${imageDiagnostics.describe()} (url=${imageUrl ?: "none"})"
+                    "${imageDiagnostics.describe()} (host=${imageUrl?.toHostOrNull() ?: "none"})"
         }
         val style = if (image != null) {
             // 접힌 알림에서 썸네일로 이미지 노출 (iOS 첨부 동작과 동일하게 맞춤)
@@ -233,8 +236,9 @@ internal data class PushImageDiagnostics(
     /**
      * 이벤트 속성으로 평탄화. null 값은 컬럼을 늘리지 않도록 제외한다.
      *
-     * buildMap 을 쓰지 않는다. 수신 객체가 MutableMap 이 되면 프로퍼티 이름이
-     * Map 멤버(size 등)에 가려져 엉뚱한 값이 실린다.
+     * buildMap 을 쓰지 않는다. 수신 객체가 MutableMap 이 되면 프로퍼티 참조가
+     * Map 멤버에 가려질 수 있어(실제로 size 프로퍼티가 Map.size 로 해석돼
+     * mkt_image_size 에 맵 크기가 실린 적이 있다) 명시적 지역 변수를 쓴다.
      */
     fun toEventProperties(): Map<String, Any> {
         val properties = mutableMapOf<String, Any>(KEY_RESULT to result)
@@ -267,13 +271,15 @@ internal data class PushImageDiagnostics(
         fun notAttempted() = PushImageDiagnostics(RESULT_NOT_ATTEMPTED)
         fun none() = PushImageDiagnostics(RESULT_NONE)
 
-        fun ok(httpCode: Int, elapsedMs: Long, bitmap: Bitmap) = PushImageDiagnostics(
-            result = RESULT_OK,
-            httpCode = httpCode,
-            elapsedMs = elapsedMs,
-            dimensions = "${bitmap.width}x${bitmap.height}",
-            bytes = bitmap.byteCount,
-        )
+        /** JVM 단위 테스트에서 부를 수 있도록 Bitmap 이 아니라 값으로 받는다. */
+        fun ok(httpCode: Int, elapsedMs: Long, width: Int, height: Int, byteCount: Int) =
+            PushImageDiagnostics(
+                result = RESULT_OK,
+                httpCode = httpCode,
+                elapsedMs = elapsedMs,
+                dimensions = "${width}x${height}",
+                bytes = byteCount,
+            )
 
         fun httpError(httpCode: Int, elapsedMs: Long) =
             PushImageDiagnostics(RESULT_HTTP_ERROR, httpCode = httpCode, elapsedMs = elapsedMs)
@@ -292,4 +298,11 @@ internal data class PushImageDiagnostics(
                 elapsedMs = elapsedMs,
             )
     }
+}
+
+/** 로그용. 파싱 실패해도 로깅이 예외를 던지면 안 되므로 null 로 떨어진다. */
+private fun String.toHostOrNull(): String? = try {
+    URL(this).host
+} catch (t: Throwable) {
+    null
 }

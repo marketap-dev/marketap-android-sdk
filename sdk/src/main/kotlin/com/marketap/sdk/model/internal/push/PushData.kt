@@ -44,9 +44,10 @@ data class PushData(
             val deepLink = data["deepLink"]
             val serverProperties = data["serverProperties"]
 
-            // deviceId는 의도적으로 조건에서 제외한다. 콘솔 테스트 발송(targetMode=device)은
-            // deviceId를 내려주지 않는데, 예전에는 그 탓에 deliveryData가 null이 되어
-            // 노출/클릭 이벤트가 통째로 유실됐다. deviceId는 SDK가 로컬에서 채울 수 있다.
+            // deviceId는 의도적으로 조건에서 제외한다. SDK는 자기 기기 정보를 로컬에서
+            // 알고 있으므로(PushTracker.resolveDevice) 이 값이 없어도 이벤트를 보낼 수 있는데,
+            // 예전에는 서버가 안 내려주면 deliveryData가 통째로 null이 되어 노출/클릭이 유실됐다.
+            // 방어적 완화이며, 특정 발송 경로가 이 값을 누락한다고 확인된 것은 아니다.
             val deliveryData =
                 if (projectId != null && campaignId != null && messageId != null) {
                     DeliveryData(

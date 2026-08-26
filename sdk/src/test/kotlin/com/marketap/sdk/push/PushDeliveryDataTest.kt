@@ -6,6 +6,7 @@ import com.marketap.sdk.model.internal.push.PushData
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import kotlin.test.assertSame
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -82,11 +83,25 @@ class PushDeliveryDataTest {
     }
 
     @Test
-    fun `진단값이 없으면 이벤트 속성이 늘어나지 않는다`() {
+    fun `빈 맵을 더하면 같은 인스턴스를 그대로 돌려준다`() {
+        val delivery = assertNotNull(PushData.fromMap(basePayload())?.deliveryData)
+        val base = AppEventProperty.offSite(delivery)
+
+        assertSame(base, base.addProperties(emptyMap()))
+        assertTrue(base.toMap().keys.none { it.startsWith("mkt_image_") })
+    }
+
+    @Test
+    fun `진단 속성이 채널 핵심 속성을 덮어쓰지 못한다`() {
+        // extraProperties 는 호출자가 채우는 값이라, 실수로 mkt_campaign_id 같은
+        // 핵심 키를 넣어도 이벤트가 오염되면 안 된다.
         val delivery = assertNotNull(PushData.fromMap(basePayload())?.deliveryData)
 
-        val withoutDiagnostics = AppEventProperty.offSite(delivery).addProperties(emptyMap()).toMap()
+        val properties = AppEventProperty.offSite(delivery)
+            .addProperties(mapOf("mkt_campaign_id" to "HIJACKED", "mkt_is_success" to false))
+            .toMap()
 
-        assertTrue(withoutDiagnostics.keys.none { it.startsWith("mkt_image_") })
+        assertEquals("test_campaign_id", properties["mkt_campaign_id"])
+        assertEquals(true, properties["mkt_is_success"])
     }
 }

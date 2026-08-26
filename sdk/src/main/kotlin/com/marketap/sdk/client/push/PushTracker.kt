@@ -50,7 +50,6 @@ internal object PushTracker {
             "Tracking Marketap push notification with notificationId, " +
                     data.notificationId.toString()
         }
-        initWithContext(context)
         val deliveryData = data.deliveryData
         if (deliveryData == null) {
             logger.w {
@@ -59,13 +58,14 @@ internal object PushTracker {
             }
             return
         }
-        val device = resolveDevice(deliveryData.deviceId)
-        if (device == null) {
-            logger.w { "Skipping push impression: device info unavailable" }
-            return
-        }
         CoroutineScope(Dispatchers.IO).launch {
             try {
+                initWithContext(context)
+                val device = resolveDevice(deliveryData.deviceId)
+                if (device == null) {
+                    logger.w { "Skipping push impression: device info unavailable" }
+                    return@launch
+                }
                 marketapBackend?.track(
                     deliveryData.projectId,
                     IngestEventRequest.impression(
@@ -85,21 +85,30 @@ internal object PushTracker {
     /**
      * 로컬 기기 정보를 우선 쓰고, 얻지 못하면 서버가 내려준 deviceId로 최소한의 요청을 만든다.
      * 둘 다 없으면 이벤트를 보낼 수 없으므로 null.
+     *
+     * getDevice()/toReq() 는 null 을 돌려주는 게 아니라 던진다. AndroidDeviceManager.getDevice()
+     * 의 catch 블록이 실패한 storage 접근(getOrCreateLocalId)을 다시 호출하고,
+     * DeviceReq.getDeviceId() 는 식별자가 하나도 없으면 IllegalStateException 을 던진다.
+     * 그래서 반드시 여기서 잡아야 한다. 트래킹 실패가 알림 표시나 딥링크를 막으면 안 된다.
      */
     private fun resolveDevice(fallbackDeviceId: String?): DeviceReq? {
-        deviceManager?.getDevice()?.toReq()?.let { return it }
-        return fallbackDeviceId?.let { DeviceReq(it) }
+        return try {
+            deviceManager?.getDevice()?.toReq() ?: fallbackDeviceId?.let { DeviceReq(it) }
+        } catch (t: Throwable) {
+            logger.e(t) { "Failed to build device payload for push tracking" }
+            fallbackDeviceId?.let { DeviceReq(it) }
+        }
     }
 
     fun trackClick(context: Context, data: DeliveryData) {
-        initWithContext(context)
-        val device = resolveDevice(data.deviceId)
-        if (device == null) {
-            logger.w { "Skipping push click: device info unavailable" }
-            return
-        }
         CoroutineScope(Dispatchers.IO).launch {
             try {
+                initWithContext(context)
+                val device = resolveDevice(data.deviceId)
+                if (device == null) {
+                    logger.w { "Skipping push click: device info unavailable" }
+                    return@launch
+                }
                 marketapBackend?.track(
                     data.projectId,
                     IngestEventRequest.click(
