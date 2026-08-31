@@ -5,18 +5,18 @@ import com.marketap.sdk.utils.longAdapter
 
 internal class CampaignExposureService(
     private val internalStorage: InternalStorage,
-) {
-    fun hideCampaign(campaignId: String, until: Long) {
+) : CampaignExposing {
+    override fun hideCampaign(campaignId: String, until: Long) {
         internalStorage.setItem("hide_campaign_${campaignId}", until, longAdapter)
     }
 
-    fun isCampaignHidden(campaignId: String): Boolean {
+    override fun isCampaignHidden(campaignId: String): Boolean {
         val hiddenUntil =
             internalStorage.getItem("hide_campaign_${campaignId}", longAdapter)
         return hiddenUntil != null && hiddenUntil > System.currentTimeMillis()
     }
 
-    fun recordImpression(campaignId: String) {
+    override fun recordImpression(campaignId: String) {
         internalStorage.queueItem(
             "impressions_${campaignId}",
             System.currentTimeMillis(),
@@ -24,7 +24,7 @@ internal class CampaignExposureService(
         )
     }
 
-    fun hasReachedImpressionLimit(
+    override fun hasReachedImpressionLimit(
         campaignId: String,
         windowMinutes: Int,
         maxCount: Int
