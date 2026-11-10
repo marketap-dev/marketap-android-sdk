@@ -209,6 +209,16 @@ object Marketap {
         marketapCore?.track("mkt_page_view", properties)
     }
 
+    /**
+     * 앱 화면이 바뀔 때마다(탭 전환, 전체 화면·모달을 닫고 돌아올 때 포함) 호출합니다.
+     * "이 페이지에서만" 플로팅과 팝업을 닫습니다. 서버로 이벤트를 보내지 않습니다.
+     */
+    @JvmStatic
+    fun screenChanged() {
+        logger.d { "Marketap SDK screen changed" }
+        marketapCore?.screenChanged()
+    }
+
 
     /**
      * 사용자 정보를 업데이트합니다.

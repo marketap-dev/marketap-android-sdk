@@ -13,7 +13,9 @@ import com.marketap.sdk.utils.postToMainThread
 
 internal class WebAppInterface(
     private val callBack: InAppCallback?,
-    private val inAppMessageActivity: InAppMessageActivity
+    private val inAppMessageActivity: InAppMessageActivity,
+    /** 이 브리지를 건 페이지가 그리는 메시지. */
+    private val sessionId: Long,
 ) {
 
     @JavascriptInterface
@@ -55,12 +57,14 @@ internal class WebAppInterface(
     @JavascriptInterface
     fun trackEvent(eventName: String, eventPropertiesJson: String) {
         logger.d { "trackEvent called with eventName: $eventName, properties: $eventPropertiesJson" }
-        callBack?.onTrack(eventName, eventPropertiesJson)
+        AndroidInAppView.getInstance().popupSession(sessionId)
+            ?.onTrack(eventName, eventPropertiesJson)
     }
 
     @JavascriptInterface
     fun setUserProperties(userPropertiesJson: String) {
         logger.d { "setUserProperties called with properties: $userPropertiesJson" }
-        callBack?.onSetUserProperties(userPropertiesJson)
+        AndroidInAppView.getInstance().popupSession(sessionId)
+            ?.onSetUserProperties(userPropertiesJson)
     }
 }

@@ -9,6 +9,7 @@ import android.webkit.JavascriptInterface
 import android.webkit.WebView
 import com.marketap.sdk.client.CurrentActivityHolder
 import com.marketap.sdk.client.inapp.AndroidInAppView
+import com.marketap.sdk.client.inapp.ExternalWebViewOrigins
 import com.marketap.sdk.domain.service.inapp.InAppPageScope
 import com.marketap.sdk.model.internal.Device
 import com.marketap.sdk.model.internal.bridge.BridgeEventReq
@@ -29,16 +30,13 @@ import java.lang.ref.WeakReference
  * MarketapWebBridge
  * @param webView 웹뷰 인스턴스
  * @param handleInAppInWebView true 면 이 웹뷰 이벤트로 뜬 인앱 메시지의 링크를 웹 클릭 처리 설정에 따라 이 웹뷰에서 열고,
- * "이 페이지에서만" 플로팅을 웹뷰가 페이지를 벗어나거나 화면에서 떨어질 때 닫는다. 인앱 메시지는 값과 상관없이 앱이 그린다.
+ * 이 웹뷰 이벤트로 뜬 "이 페이지에서만" 플로팅과 팝업을 웹뷰가 페이지를 벗어나거나 화면에서 떨어질 때 닫는다. 인앱 메시지는 값과 상관없이 앱이 그린다.
  */
 class MarketapWebBridge @JvmOverloads constructor(
     private val webView: WebView,
     private val handleInAppInWebView: Boolean = true
 ) {
-    private val origin: InAppOrigin? = if (handleInAppInWebView) NativeOrigin(this) else null
-
-    @Volatile
-    private var addressChangeReceived = false
+    private val origin: NativeOrigin? = if (handleInAppInWebView) NativeOrigin(this) else null
 
     init {
         logger.d { "MarketapWebBridge initialized (handleInAppInWebView=$handleInAppInWebView)" }
@@ -46,9 +44,12 @@ class MarketapWebBridge @JvmOverloads constructor(
         if (origin != null) {
             latestBridgeRef = WeakReference(this)
             webView.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
-                override fun onViewAttachedToWindow(v: View) {}
+                override fun onViewAttachedToWindow(v: View) {
+                    origin.detached = false
+                }
                 override fun onViewDetachedFromWindow(v: View) {
-                    AndroidInAppView.getInstance().closePageFloating(origin)
+                    origin.detached = true
+                    AndroidInAppView.getInstance().closeForOriginGone(origin)
                 }
             })
         }
@@ -57,69 +58,55 @@ class MarketapWebBridge @JvmOverloads constructor(
     companion object {
         const val NAME = "marketap"
 
-        private const val COMMAND_OPEN_URL = "openUrl"
-
         @Volatile
         private var isExternalWebBridgeActive: Boolean = false
 
         @Volatile
+        private var activeExternalWebViewId: String = ExternalWebViewOrigins.DEFAULT_ID
+
+        @Volatile
         private var latestBridgeRef: WeakReference<MarketapWebBridge>? = null
 
-        @Volatile
-        private var externalWebViewCommandCallback: ((String, Map<String, Any?>) -> Unit)? = null
+        private val externalOrigins = ExternalWebViewOrigins()
 
-        @Volatile
-        private var externalWebViewAttached: Boolean = false
-
-        @Volatile
-        private var externalAddressChangeReceived: Boolean = false
-
-        /** 앱→래퍼 명령 콜백. type 은 `openUrl`(payload url), 메인 스레드에서 부른다. */
+        /** 앱→래퍼 명령 콜백. type 은 `openUrl`(payload url, 웹뷰를 구분하는 래퍼면 webViewId), 메인 스레드에서 부른다. */
         @JvmStatic
         fun setExternalWebViewCommandCallback(callback: ((type: String, payload: Map<String, Any?>) -> Unit)?) {
-            externalWebViewCommandCallback = callback
+            externalOrigins.commandCallback = callback
         }
 
-        /** 래퍼 브릿지 생성 시 true, 해제(dispose) 시 false. */
+        /** 래퍼 브릿지 생성 시 true, 해제(dispose) 시 false. [webViewId] 는 래퍼가 웹뷰마다 붙인 id. */
         @JvmStatic
-        fun setExternalWebViewAttached(attached: Boolean) {
-            externalWebViewAttached = attached
+        @JvmOverloads
+        fun setExternalWebViewAttached(attached: Boolean, webViewId: String = ExternalWebViewOrigins.DEFAULT_ID) {
             if (attached) {
-                externalAddressChangeReceived = false
-            } else {
-                AndroidInAppView.getInstance().closePageFloating(externalOrigin)
+                externalOrigins.attach(webViewId)
+                return
             }
+            val origin = externalOrigins.detach(webViewId) ?: return
+            AndroidInAppView.getInstance().closeForOriginGone(origin)
         }
 
         /** 래퍼 웹뷰가 보낸 `addressChanged` 를 전달한다. */
         @JvmStatic
-        fun handleExternalAddressChanged() {
+        @JvmOverloads
+        fun handleExternalAddressChanged(webViewId: String = ExternalWebViewOrigins.DEFAULT_ID) {
             logger.d { "External web view address changed" }
-            externalAddressChangeReceived = true
-            AndroidInAppView.getInstance().closePageFloating(externalOrigin)
-        }
-
-        private val externalOrigin = object : InAppOrigin {
-            override fun canOpenUrl(): Boolean = externalWebViewCommandCallback != null && externalWebViewAttached
-
-            override fun openUrl(url: String) {
-                logger.d { "Opening in-app click url in external web view" }
-                externalWebViewCommandCallback?.invoke(COMMAND_OPEN_URL, mapOf("url" to url))
-            }
-
-            override fun isShownIn(screen: Any): Boolean = false
+            val origin = externalOrigins.existing(webViewId) ?: return
+            AndroidInAppView.getInstance().closeForPageLeave(origin)
         }
 
         /** 래퍼 웹뷰 이벤트의 출처. 인앱 처리를 맡은 래퍼가 아니면 null. 이벤트를 판정하기 전에 부른다. */
         internal fun externalOriginForEvent(eventName: String): InAppOrigin? {
             if (!isExternalWebBridgeActive) return null
-            closePageFloatingOnPageView(externalOrigin, eventName, externalAddressChangeReceived)
-            return externalOrigin
+            val origin = externalOrigins.originFor(activeExternalWebViewId)
+            closeOnPageView(origin, eventName)
+            return origin
         }
 
-        private fun closePageFloatingOnPageView(origin: InAppOrigin, eventName: String, addressChangeReceived: Boolean) {
-            if (InAppPageScope.pageViewLeavesPage(eventName, addressChangeReceived)) {
-                AndroidInAppView.getInstance().closePageFloating(origin)
+        private fun closeOnPageView(origin: InAppOrigin, eventName: String) {
+            if (InAppPageScope.pageViewLeavesPage(eventName)) {
+                AndroidInAppView.getInstance().closeForPageLeave(origin)
             }
         }
 
@@ -142,9 +129,11 @@ class MarketapWebBridge @JvmOverloads constructor(
             logger.d { "setExternalInAppMessageCallback: campaigns are not delivered to web (registered=${callback != null})" }
         }
 
-        /** 래퍼가 웹뷰 이벤트를 [MarketapPlugin.trackEvent] 로 넘기기 전에 그 브릿지의 인앱 처리 여부를 알린다. */
+        /** 래퍼가 웹뷰 이벤트를 [MarketapPlugin.trackEvent] 로 넘기기 전에 그 브릿지의 인앱 처리 여부와 웹뷰 id 를 알린다. */
         @JvmStatic
-        fun setExternalWebBridgeActive(active: Boolean) {
+        @JvmOverloads
+        fun setExternalWebBridgeActive(active: Boolean, webViewId: String = ExternalWebViewOrigins.DEFAULT_ID) {
+            activeExternalWebViewId = webViewId
             isExternalWebBridgeActive = active
         }
     }
@@ -175,7 +164,7 @@ class MarketapWebBridge @JvmOverloads constructor(
         try {
             if (handleInAppInWebView) latestBridgeRef = WeakReference(this)
             val data = params.deserialize(adapter<BridgeEventReq>())
-            if (origin != null) closePageFloatingOnPageView(origin, data.eventName, addressChangeReceived)
+            if (origin != null) closeOnPageView(origin, data.eventName)
             MarketapPlugin.trackEventFromWebView(data.eventName, data.eventProperties, origin)
         } catch (t: Throwable) {
             logger.e(t) { "Failed to handle track event: $params" }
@@ -184,8 +173,7 @@ class MarketapWebBridge @JvmOverloads constructor(
 
     private fun handleAddressChanged(params: String) {
         logger.d { "Web view address changed: $params" }
-        addressChangeReceived = true
-        origin?.let { AndroidInAppView.getInstance().closePageFloating(it) }
+        origin?.let { AndroidInAppView.getInstance().closeForPageLeave(it) }
     }
 
     private fun handleIdentifyEvent(params: String) {
@@ -289,6 +277,11 @@ class MarketapWebBridge @JvmOverloads constructor(
     private class NativeOrigin(bridge: MarketapWebBridge) : InAppOrigin {
         private val bridgeRef = WeakReference(bridge)
 
+        @Volatile
+        var detached = false
+
+        override val isGone: Boolean get() = detached || bridgeRef.get() == null
+
         override fun canOpenUrl(): Boolean {
             val webView = bridgeRef.get()?.webView ?: return false
             val activity = webView.hostActivity() ?: return false
@@ -299,7 +292,5 @@ class MarketapWebBridge @JvmOverloads constructor(
             logger.d { "Opening in-app click url in web view" }
             bridgeRef.get()?.webView?.evaluateJavascript("window.location.href = ${url.toJsStringLiteral()};", null)
         }
-
-        override fun isShownIn(screen: Any): Boolean = bridgeRef.get()?.webView?.hostActivity() === screen
     }
 }

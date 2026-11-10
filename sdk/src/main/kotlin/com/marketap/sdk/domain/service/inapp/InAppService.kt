@@ -38,14 +38,25 @@ private const val FALLTHROUGH_BUDGET_MS = 2000L
  * 안드로이드 프레임워크에 의존하지 않는다(순수 JVM 단위 테스트에서 그대로 돈다).
  */
 
-private fun monotonicNowMs(): Long = System.nanoTime() / 1_000_000
+internal fun monotonicNowMs(): Long = System.nanoTime() / 1_000_000
+
+/** 화면 전환 보호 시간(ms). [InAppService.screenChanged] 호출 전 이 시간 안에 화면에 나타난 메시지는 그 호출로 닫지 않는다. */
+internal const val SCREEN_CHANGE_GRACE_MS = 100L
 
 internal class InAppService(
     private val campaignExposureService: CampaignExposing,
     private val eventConditionChecker: ConditionChecker,
     private val campaignFetchService: CampaignFetching,
     private val inAppView: InAppView,
+    private val clock: () -> Long = ::monotonicNowMs,
 ) {
+    fun screenChanged() {
+        if (inAppView.consumeReturnFromPopup()) {
+            logger.v { "Screen change ignored: returned to the screen under the closed popup" }
+            return
+        }
+        inAppView.closeForAppScreenChange(clock() - SCREEN_CHANGE_GRACE_MS)
+    }
 
     fun onEvent(
         event: IngestEventRequest,
@@ -151,12 +162,30 @@ internal class InAppService(
     ): Boolean {
         logger.d { "Showing in-app campaign: ${targetCampaign.id} with layout type: ${targetCampaign.layout.layoutType}" }
         val campaignHtml = targetCampaign.html ?: return false
+        val closeOnPageLeave = InAppPageScope.closesOnPageLeave(slot, targetCampaign.floatingScope)
+        return showCampaign(targetCampaign, campaignHtml, slot, origin, closeOnPageLeave, onImpression, onClick, onTrack, onSetUserProperties)
+    }
 
+    private fun showCampaign(
+        targetCampaign: InAppCampaign,
+        campaignHtml: String,
+        slot: InAppDisplaySlot,
+        origin: InAppOrigin?,
+        closeOnPageLeave: Boolean,
+        onImpression: (campaign: InAppCampaign) -> Unit,
+        onClick: (campaign: InAppCampaign, locationId: String) -> Unit,
+        onTrack: (campaign: InAppCampaign, eventName: String, properties: Map<String, Any>?) -> Unit,
+        onSetUserProperties: (properties: Map<String, Any>) -> Unit,
+    ): Boolean {
+        val liveOrigin = origin?.takeUnless { it.isGone }
+        if (origin != null && liveOrigin == null) {
+            logger.d { "Origin web view of campaign ${targetCampaign.id} is gone; showing it as an app message" }
+        }
         return inAppView.show(
             campaignHtml,
             slot,
-            origin,
-            InAppPageScope.closesOnPageLeave(slot, targetCampaign.floatingScope, origin != null),
+            liveOrigin,
+            closeOnPageLeave,
             {
                 campaignExposureService.recordImpression(targetCampaign.id)
                 onImpression(targetCampaign)

@@ -58,6 +58,14 @@ internal class MarketapCoreService(
         }
     }
 
+    fun screenChanged() {
+        try {
+            inAppService.screenChanged()
+        } catch (t: Throwable) {
+            logger.e(t) { "Failed to handle screen change" }
+        }
+    }
+
     fun hideCampaign(campaignId: String, hideType: HideType) {
         try {
             inAppService.hideCampaign(campaignId, hideType)

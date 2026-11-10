@@ -8,6 +8,6 @@ interface InAppOrigin {
     /** 메인 스레드에서 부른다. */
     fun openUrl(url: String)
 
-    /** 웹뷰가 [screen] 화면에 붙어 있으면 true. 메인 스레드에서 부른다. */
-    fun isShownIn(screen: Any): Boolean
+    /** 웹뷰가 화면에서 떨어졌거나 래퍼 브릿지가 해제됐으면 true. 그 뒤에 뜨는 메시지는 출처 없이 앱 화면 메시지처럼 띄운다. */
+    val isGone: Boolean get() = false
 }

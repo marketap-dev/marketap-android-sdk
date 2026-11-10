@@ -8,11 +8,10 @@ internal object InAppPageScope {
 
     const val PAGE_VIEW_EVENT = "mkt_page_view"
 
-    /** 출처 웹뷰가 페이지를 벗어나면 닫는 메시지. 출처 없는 "이 페이지에서만"은 닫을 때까지 유지한다. */
-    fun closesOnPageLeave(slot: InAppDisplaySlot, floatingScope: String?, hasOrigin: Boolean): Boolean =
-        hasOrigin && slot == InAppDisplaySlot.FLOATING && floatingScope.equals(FLOATING_SCOPE_PAGE, ignoreCase = true)
+    /** 페이지를 벗어나면 닫는 메시지("이 페이지에서만" 플로팅). 앱의 화면 전환 신호에 닫고, 웹뷰에서 시작됐으면 그 웹뷰가 페이지를 벗어날 때도 닫는다. */
+    fun closesOnPageLeave(slot: InAppDisplaySlot, floatingScope: String?): Boolean =
+        slot == InAppDisplaySlot.FLOATING && floatingScope.equals(FLOATING_SCOPE_PAGE, ignoreCase = true)
 
-    /** `addressChanged` 를 한 번도 보내지 않은 웹(구버전 웹 SDK)은 페이지뷰 이벤트를 주소 변경으로 본다. */
-    fun pageViewLeavesPage(eventName: String, addressChangeReceived: Boolean): Boolean =
-        !addressChangeReceived && eventName == PAGE_VIEW_EVENT
+    /** 웹뷰에서 온 페이지뷰 이벤트는 페이지 이동이다. 쿼리만 바뀐 페이지도 페이지뷰를 보내면 이동으로 본다. */
+    fun pageViewLeavesPage(eventName: String): Boolean = eventName == PAGE_VIEW_EVENT
 }

@@ -59,6 +59,9 @@ internal object FloatingInAppView : CurrentActivityHolder.ScreenListener {
 
     val isShown: Boolean get() = container != null
 
+    /** 메인 스레드에서 부른다. */
+    fun isHostedBy(activity: Activity): Boolean = host?.get() === activity
+
     /**
      * @param stayOnHost 다른 화면이 앞에 와도 옮기지 않고, 붙은 화면이 사라지면 닫는다.
      * @param timerStartAtMillis 노출 시작 시각(epoch ms).

@@ -2,6 +2,7 @@ package com.marketap.sdk.inapp
 
 import com.marketap.sdk.client.inapp.InAppSession
 import com.marketap.sdk.client.inapp.InAppSlots
+import com.marketap.sdk.client.inapp.popupSessionFor
 import com.marketap.sdk.domain.repository.InAppView
 import com.marketap.sdk.domain.service.inapp.CampaignExposing
 import com.marketap.sdk.domain.service.inapp.CampaignFetching
@@ -205,6 +206,28 @@ class InAppSlotTest {
 
         assertNull(session.onClick("loc"))
         assertEquals(listOf("hide:CLOSE"), events)
+    }
+
+    @Test
+    fun `숨긴 팝업도 화면이 남아 있는 동안 이벤트와 유저 속성을 받고 다른 화면 것은 받지 않는다`() {
+        val tracked = mutableListOf<String>()
+        fun session(name: String) = InAppSession(
+            onShow = {},
+            onClick = { "id" },
+            onHide = {},
+            onTrack = { event, _ -> tracked.add("$name:$event") },
+            onSetUserProperties = { tracked.add("$name:props") },
+        )
+        val hidden = session("old")
+        val next = session("new")
+        hidden.onHide(HideType.CLOSE)
+
+        popupSessionFor(hidden.id, current = next, hidden = hidden)?.onTrack("mkt_after_hide", "{}")
+        popupSessionFor(hidden.id, current = next, hidden = hidden)?.onSetUserProperties("{}")
+        popupSessionFor(next.id, current = next, hidden = hidden)?.onTrack("mkt_new", "{}")
+
+        assertEquals(listOf("old:mkt_after_hide", "old:props", "new:mkt_new"), tracked)
+        assertNull(popupSessionFor(hidden.id, current = next, hidden = null))
     }
 
     @Test
