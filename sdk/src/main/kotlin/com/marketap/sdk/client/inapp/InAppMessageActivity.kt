@@ -77,9 +77,17 @@ class InAppMessageActivity : FragmentActivity() {
         }
     }
 
-    fun hideQuietly() {
-        messageView?.removeView {
+    /** @param then 화면을 닫은 뒤 메인 스레드에서 부른다. */
+    fun hideQuietly(then: () -> Unit = {}) {
+        val view = messageView
+        if (view == null) {
             finish()
+            then()
+            return
+        }
+        view.removeView {
+            finish()
+            then()
         }
     }
 

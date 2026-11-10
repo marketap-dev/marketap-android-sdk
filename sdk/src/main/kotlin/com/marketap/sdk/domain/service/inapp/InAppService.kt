@@ -1,15 +1,14 @@
 package com.marketap.sdk.domain.service.inapp
 
-import com.marketap.sdk.MarketapWebBridge
 import com.marketap.sdk.domain.repository.InAppView
 import com.marketap.sdk.domain.service.inapp.condition.ConditionChecker
 import com.marketap.sdk.model.internal.InAppCampaign
 import com.marketap.sdk.model.internal.api.IngestEventRequest
 import com.marketap.sdk.model.internal.inapp.HideType
 import com.marketap.sdk.model.internal.inapp.InAppDisplaySlot
+import com.marketap.sdk.model.internal.inapp.InAppOrigin
 import com.marketap.sdk.model.internal.slot
 import com.marketap.sdk.utils.logger
-import java.util.UUID
 
 /**
  * 상세 fetch 를 실제로 보내는 후보의 최대 개수. 서버가 노출을 확정하지 못해 빈 응답을
@@ -45,7 +44,7 @@ internal class InAppService(
     private val campaignExposureService: CampaignExposing,
     private val eventConditionChecker: ConditionChecker,
     private val campaignFetchService: CampaignFetching,
-    private val inAppView: InAppView
+    private val inAppView: InAppView,
 ) {
 
     fun onEvent(
@@ -55,12 +54,12 @@ internal class InAppService(
         onTrack: (campaign: InAppCampaign, eventName: String, properties: Map<String, Any>?) -> Unit,
         onSetUserProperties: (properties: Map<String, Any>) -> Unit,
     ) {
-        onEvent(event, fromWebBridge = false, onImpression, onClick, onTrack, onSetUserProperties)
+        onEvent(event, origin = null, onImpression, onClick, onTrack, onSetUserProperties)
     }
 
     fun onEvent(
         event: IngestEventRequest,
-        fromWebBridge: Boolean,
+        origin: InAppOrigin?,
         onImpression: (campaign: InAppCampaign) -> Unit,
         onClick: (campaign: InAppCampaign, locationId: String) -> Unit,
         onTrack: (campaign: InAppCampaign, eventName: String, properties: Map<String, Any>?) -> Unit,
@@ -107,17 +106,12 @@ internal class InAppService(
             val deadline = monotonicNowMs() + FALLTHROUGH_BUDGET_MS
             var fetches = 0
             val handledSlots = mutableSetOf<InAppDisplaySlot>()
-            // 웹브릿지 전달은 이벤트당 한 번만 된다(브릿지 참조를 전달 직후 비운다). 그래서 위임 경로는
-            // 자리와 무관하게 처음 확정된 후보 하나를 넘기고 끝낸다. 표시 자리 판단은 웹 SDK 가 한다.
-            val shouldDelegateToWeb = fromWebBridge && MarketapWebBridge.hasActiveWebBridge()
             for (campaign in candidates) {
                 val slot = campaign.slot
-                if (!shouldDelegateToWeb) {
-                    if (slot in handledSlots) continue
-                    if (inAppView.isShowing(slot)) {
-                        handledSlots.add(slot)
-                        continue
-                    }
+                if (slot in handledSlots) continue
+                if (inAppView.isShowing(slot)) {
+                    handledSlots.add(slot)
+                    continue
                 }
 
                 // html 이 비어 있는 후보만 상세 fetch 를 탄다(resolveCampaignHtml 의 분기와 같은 조건).
@@ -139,33 +133,17 @@ internal class InAppService(
                 val resolvedCampaign = campaignFetchService.resolveCampaignHtml(campaign, event)
                     ?: continue
 
-                if (shouldDelegateToWeb) {
-                    handleCampaignForWeb(resolvedCampaign)
-                    break
-                }
-                if (handleCampaign(resolvedCampaign, slot, onImpression, onClick, onTrack, onSetUserProperties)) {
+                if (handleCampaign(resolvedCampaign, slot, origin, onImpression, onClick, onTrack, onSetUserProperties)) {
                     handledSlots.add(slot)
                 }
             }
         }
     }
 
-    private fun handleCampaignForWeb(
-        targetCampaign: InAppCampaign
-    ) {
-        logger.d { "Delegating in-app campaign to web: ${targetCampaign.id} with layout type: ${targetCampaign.layout.layoutType}" }
-
-        // 빈도 제한을 위한 노출 기록 (이벤트 전송은 웹에서 impression이 올 때 수행)
-        campaignExposureService.recordImpression(targetCampaign.id)
-
-        // 웹으로 캠페인 전달
-        val messageId = UUID.randomUUID().toString()
-        MarketapWebBridge.sendCampaignToActiveWeb(targetCampaign, messageId)
-    }
-
     private fun handleCampaign(
         targetCampaign: InAppCampaign,
         slot: InAppDisplaySlot,
+        origin: InAppOrigin?,
         onImpression: (campaign: InAppCampaign) -> Unit,
         onClick: (campaign: InAppCampaign, locationId: String) -> Unit,
         onTrack: (campaign: InAppCampaign, eventName: String, properties: Map<String, Any>?) -> Unit,
@@ -177,6 +155,8 @@ internal class InAppService(
         return inAppView.show(
             campaignHtml,
             slot,
+            origin,
+            InAppPageScope.closesOnPageLeave(slot, targetCampaign.floatingScope, origin != null),
             {
                 campaignExposureService.recordImpression(targetCampaign.id)
                 onImpression(targetCampaign)

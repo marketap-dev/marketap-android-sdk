@@ -18,25 +18,33 @@ internal enum class DestroyAction {
 
     /** 떼어 두고 다음에 앞에 오는 화면에 붙인다. */
     DETACH_AND_WAIT,
+
+    CLOSE,
 }
 
 internal object FloatingAttachPolicy {
 
-    /** 앱 플로팅은 닫을 때까지 유지한다. 새로 앞에 온 화면으로 옮겨 붙는다. */
+    /**
+     * "닫을 때까지 유지"는 새로 앞에 온 화면으로 옮겨 붙는다.
+     * @param stayOnHost 웹뷰에서 시작된 "이 페이지에서만". 옮기지 않고, 붙은 화면이 가려지면 따로 닫힌다.
+     */
     fun onResumed(
         isHost: Boolean,
         isPopup: Boolean,
         recreatingClass: String?,
         activityClass: String,
+        stayOnHost: Boolean = false,
     ): ResumeAction {
         if (isPopup || isHost) return ResumeAction.IGNORE
         if (recreatingClass == activityClass) return ResumeAction.RESTORE
+        if (stayOnHost) return ResumeAction.IGNORE
         return ResumeAction.MOVE
     }
 
-    fun onDestroyed(isHost: Boolean, isChangingConfigurations: Boolean): DestroyAction {
+    fun onDestroyed(isHost: Boolean, isChangingConfigurations: Boolean, stayOnHost: Boolean = false): DestroyAction {
         if (!isHost) return DestroyAction.IGNORE
         if (isChangingConfigurations) return DestroyAction.DETACH_FOR_RECREATE
+        if (stayOnHost) return DestroyAction.CLOSE
         return DestroyAction.DETACH_AND_WAIT
     }
 

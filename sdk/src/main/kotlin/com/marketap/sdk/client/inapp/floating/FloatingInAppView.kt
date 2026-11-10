@@ -25,8 +25,9 @@ import com.marketap.sdk.client.inapp.InAppMessageActivity
 import com.marketap.sdk.model.external.MarketapCampaignType
 import com.marketap.sdk.model.external.MarketapClickEvent
 import com.marketap.sdk.model.internal.inapp.HideType
+import com.marketap.sdk.model.internal.inapp.InAppOrigin
+import com.marketap.sdk.presentation.AppClickRouting
 import com.marketap.sdk.presentation.CustomHandlerStore
-import com.marketap.sdk.presentation.InAppClickUrlHandler
 import com.marketap.sdk.utils.logger
 import com.marketap.sdk.utils.postToMainThread
 import java.lang.ref.WeakReference
@@ -46,6 +47,8 @@ internal object FloatingInAppView : CurrentActivityHolder.ScreenListener {
 
     @Volatile
     private var callback: InAppCallback? = null
+    private var origin: InAppOrigin? = null
+    private var stayOnHost = false
     private var onShown: (() -> Unit)? = null
     private var onClosed: (() -> Unit)? = null
     private var recreatingClass: String? = null
@@ -57,12 +60,15 @@ internal object FloatingInAppView : CurrentActivityHolder.ScreenListener {
     val isShown: Boolean get() = container != null
 
     /**
+     * @param stayOnHost 다른 화면이 앞에 와도 옮기지 않고, 붙은 화면이 사라지면 닫는다.
      * @param timerStartAtMillis 노출 시작 시각(epoch ms).
      * @param onShown 웹뷰가 문서를 다 불러왔을 때 한 번.
      * @param onClosed 어떤 이유로든(사용자 닫기, [dismiss], 붙을 화면 없음, 이미 표시 중) 이 요청이 끝날 때 한 번.
      */
     fun show(
         html: String,
+        origin: InAppOrigin?,
+        stayOnHost: Boolean,
         timerStartAtMillis: Long,
         callback: InAppCallback,
         onShown: () -> Unit,
@@ -83,6 +89,8 @@ internal object FloatingInAppView : CurrentActivityHolder.ScreenListener {
             }
             session += 1
             this.callback = callback
+            this.origin = origin
+            this.stayOnHost = stayOnHost
             this.onShown = onShown
             this.onClosed = onClosed
             val wrapper = MutableContextWrapper(activity)
@@ -110,9 +118,9 @@ internal object FloatingInAppView : CurrentActivityHolder.ScreenListener {
         }
     }
 
-    /** 사용자 닫기 기록 없이 닫는다. */
-    fun dismiss() {
-        postToMainThread { dispose() }
+    /** [expected] 요청이 아직 떠 있으면 사용자 닫기 기록 없이 닫는다. */
+    fun dismiss(expected: InAppCallback) {
+        postToMainThread { if (callback === expected) dispose() }
     }
 
     override fun onScreenResumed(activity: Activity) {
@@ -124,6 +132,7 @@ internal object FloatingInAppView : CurrentActivityHolder.ScreenListener {
             isPopup = activity is InAppMessageActivity,
             recreatingClass = recreatingClass,
             activityClass = activity.javaClass.name,
+            stayOnHost = stayOnHost,
         )
         when (action) {
             ResumeAction.IGNORE -> Unit
@@ -144,6 +153,7 @@ internal object FloatingInAppView : CurrentActivityHolder.ScreenListener {
         val action = FloatingAttachPolicy.onDestroyed(
             isHost = host?.get() === activity,
             isChangingConfigurations = activity.isChangingConfigurations,
+            stayOnHost = stayOnHost,
         )
         when (action) {
             DestroyAction.IGNORE -> Unit
@@ -152,6 +162,7 @@ internal object FloatingInAppView : CurrentActivityHolder.ScreenListener {
                 recreatingClass = activity.javaClass.name
             }
             DestroyAction.DETACH_AND_WAIT -> detach()
+            DestroyAction.CLOSE -> dispose()
         }
     }
 
@@ -213,6 +224,8 @@ internal object FloatingInAppView : CurrentActivityHolder.ScreenListener {
         container = null
         contextWrapper = null
         callback = null
+        origin = null
+        stayOnHost = false
         onShown = null
         onClosed = null
         recreatingClass = null
@@ -372,7 +385,7 @@ internal object FloatingInAppView : CurrentActivityHolder.ScreenListener {
                 val activity = host?.get() ?: return@onMain
                 val event = MarketapClickEvent(MarketapCampaignType.IN_APP_MESSAGE, campaignId ?: "", url)
                 if (CustomHandlerStore.maybeHandleClick(activity, event)) return@onMain
-                InAppClickUrlHandler.open(activity, url)
+                AppClickRouting.open(activity, url, origin)
             }
         }
 

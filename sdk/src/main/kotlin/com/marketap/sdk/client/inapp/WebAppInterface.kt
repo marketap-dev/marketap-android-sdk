@@ -4,9 +4,12 @@ import android.webkit.JavascriptInterface
 import com.marketap.sdk.model.external.MarketapCampaignType
 import com.marketap.sdk.model.external.MarketapClickEvent
 import com.marketap.sdk.model.internal.inapp.HideType
+import com.marketap.sdk.presentation.AppClickRoute
+import com.marketap.sdk.presentation.AppClickRouting
 import com.marketap.sdk.presentation.CustomHandlerStore
 import com.marketap.sdk.presentation.InAppClickUrlHandler
 import com.marketap.sdk.utils.logger
+import com.marketap.sdk.utils.postToMainThread
 
 internal class WebAppInterface(
     private val callBack: InAppCallback?,
@@ -35,7 +38,18 @@ internal class WebAppInterface(
             return
         }
 
-        InAppClickUrlHandler.open(inAppMessageActivity, url)
+        val origin = AndroidInAppView.getInstance().popupOrigin
+        if (origin == null) {
+            InAppClickUrlHandler.open(inAppMessageActivity, url)
+            return
+        }
+        postToMainThread {
+            if (AppClickRouting.route(origin) == AppClickRoute.WEB_VIEW) {
+                inAppMessageActivity.hideQuietly { origin.openUrl(url) }
+            } else {
+                InAppClickUrlHandler.open(inAppMessageActivity, url)
+            }
+        }
     }
 
     @JavascriptInterface

@@ -15,6 +15,7 @@ import com.marketap.sdk.model.internal.inapp.EventFilter
 import com.marketap.sdk.model.internal.inapp.EventTriggerCondition
 import com.marketap.sdk.model.internal.inapp.HideType
 import com.marketap.sdk.model.internal.inapp.InAppDisplaySlot
+import com.marketap.sdk.model.internal.inapp.InAppOrigin
 import com.marketap.sdk.model.internal.inapp.Layout
 import com.marketap.sdk.model.internal.slot
 import com.marketap.sdk.utils.adapter
@@ -44,6 +45,8 @@ class InAppSlotTest {
         override fun show(
             html: String,
             slot: InAppDisplaySlot,
+            origin: InAppOrigin?,
+            closeOnPageLeave: Boolean,
             onShow: () -> Unit,
             onClick: (String) -> String,
             onHide: (HideType) -> Unit,

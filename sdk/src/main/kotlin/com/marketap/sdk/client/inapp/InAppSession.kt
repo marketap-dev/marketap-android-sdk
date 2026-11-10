@@ -1,6 +1,7 @@
 package com.marketap.sdk.client.inapp
 
 import com.marketap.sdk.model.internal.inapp.HideType
+import com.marketap.sdk.model.internal.inapp.InAppOrigin
 import com.marketap.sdk.utils.deserialize
 import com.marketap.sdk.utils.logger
 import com.marketap.sdk.utils.mapAdapter
@@ -12,6 +13,8 @@ internal class InAppSession(
     private val onHide: (HideType) -> Unit,
     private val onTrack: (eventName: String, properties: Map<String, Any>?) -> Unit,
     private val onSetUserProperties: (properties: Map<String, Any>) -> Unit,
+    val origin: InAppOrigin? = null,
+    val closeOnPageLeave: Boolean = false,
 ) : InAppCallback {
     @Volatile
     private var shown = false

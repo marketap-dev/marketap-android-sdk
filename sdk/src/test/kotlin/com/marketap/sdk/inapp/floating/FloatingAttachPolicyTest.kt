@@ -63,4 +63,17 @@ class FloatingAttachPolicyTest {
         assertFalse(FloatingAttachPolicy.shouldSnapshot(ResumeAction.MOVE, hadHost = true, expanded = false, layout = hidden))
         assertFalse(FloatingAttachPolicy.shouldSnapshot(ResumeAction.RESTORE, hadHost = true, expanded = false, layout = collapsed))
     }
+
+    @Test
+    fun `웹뷰에서 시작된 이 페이지에서만 바는 다른 화면이 앞에 와도 옮기지 않는다`() {
+        assertEquals(ResumeAction.IGNORE, FloatingAttachPolicy.onResumed(false, false, null, "B", stayOnHost = true))
+        assertEquals(ResumeAction.RESTORE, FloatingAttachPolicy.onResumed(false, false, "B", "B", stayOnHost = true))
+    }
+
+    @Test
+    fun `웹뷰에서 시작된 이 페이지에서만 바는 붙은 화면이 회전 아닌 이유로 파괴되면 닫는다`() {
+        assertEquals(DestroyAction.CLOSE, FloatingAttachPolicy.onDestroyed(isHost = true, isChangingConfigurations = false, stayOnHost = true))
+        assertEquals(DestroyAction.DETACH_FOR_RECREATE, FloatingAttachPolicy.onDestroyed(isHost = true, isChangingConfigurations = true, stayOnHost = true))
+        assertEquals(DestroyAction.IGNORE, FloatingAttachPolicy.onDestroyed(isHost = false, isChangingConfigurations = false, stayOnHost = true))
+    }
 }

@@ -24,6 +24,18 @@ object CurrentActivityHolder : Application.ActivityLifecycleCallbacks {
 
     private val screenListeners = CopyOnWriteArrayList<ScreenListener>()
 
+    internal fun interface ObscuredListener {
+        fun onScreenObscured(activity: Activity)
+    }
+
+    private val obscuredListeners = CopyOnWriteArrayList<ObscuredListener>()
+
+    internal val visibility = ActivityVisibility<Activity>()
+
+    internal fun addObscuredListener(listener: ObscuredListener) {
+        obscuredListeners.addIfAbsent(listener)
+    }
+
     internal fun addScreenListener(listener: ScreenListener) {
         screenListeners.addIfAbsent(listener)
     }
@@ -57,6 +69,7 @@ object CurrentActivityHolder : Application.ActivityLifecycleCallbacks {
         screenActivityRef?.get()?.takeIf { !it.isFinishing && !it.isDestroyed }
 
     override fun onActivityResumed(activity: Activity) {
+        visibility.onResumed(activity)
         currentActivityRef = WeakReference(activity)
         reservedAction?.let {
             reservedAction = null
@@ -66,12 +79,25 @@ object CurrentActivityHolder : Application.ActivityLifecycleCallbacks {
         screenListeners.forEach { it.onScreenResumed(activity) }
     }
 
-    override fun onActivityPaused(activity: Activity) {}
+    override fun onActivityPaused(activity: Activity) {
+        visibility.onPaused(activity)
+    }
+
     override fun onActivityCreated(a: Activity, b: Bundle?) {}
-    override fun onActivityStarted(a: Activity) {}
-    override fun onActivityStopped(a: Activity) {}
+
+    override fun onActivityStarted(a: Activity) {
+        visibility.onStarted(a)
+    }
+
+    override fun onActivityStopped(a: Activity) {
+        if (visibility.onStopped(a, a.isChangingConfigurations)) {
+            obscuredListeners.forEach { it.onScreenObscured(a) }
+        }
+    }
+
     override fun onActivitySaveInstanceState(a: Activity, b: Bundle) {}
     override fun onActivityDestroyed(a: Activity) {
+        visibility.onDestroyed(a)
         screenListeners.forEach { it.onScreenDestroyed(a) }
     }
 

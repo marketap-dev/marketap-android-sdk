@@ -6,6 +6,7 @@ import com.marketap.sdk.client.inapp.floating.FloatingInAppView
 import com.marketap.sdk.domain.repository.InAppView
 import com.marketap.sdk.model.internal.inapp.HideType
 import com.marketap.sdk.model.internal.inapp.InAppDisplaySlot
+import com.marketap.sdk.model.internal.inapp.InAppOrigin
 
 class AndroidInAppView : InAppView, InAppCallback {
     companion object {
@@ -18,25 +19,33 @@ class AndroidInAppView : InAppView, InAppCallback {
         }
     }
 
-    private val slots = InAppSlots<InAppSession>()
+    private val slots = InAppSlots<Any>()
+
+    init {
+        CurrentActivityHolder.addObscuredListener { activity -> closePageFloating { it.isShownIn(activity) } }
+    }
 
     override fun isShowing(slot: InAppDisplaySlot): Boolean = slots.isOccupied(slot)
 
     override fun show(
         html: String,
         slot: InAppDisplaySlot,
+        origin: InAppOrigin?,
+        closeOnPageLeave: Boolean,
         onShow: () -> Unit,
         onClick: (String) -> String,
         onHide: (HideType) -> Unit,
         onTrack: (eventName: String, properties: Map<String, Any>?) -> Unit,
         onSetUserProperties: (properties: Map<String, Any>) -> Unit,
     ): Boolean {
-        val session = InAppSession(onShow, onClick, onHide, onTrack, onSetUserProperties)
+        val session = InAppSession(onShow, onClick, onHide, onTrack, onSetUserProperties, origin, closeOnPageLeave)
         if (!slots.claim(slot, session)) return false
         when (slot) {
             InAppDisplaySlot.POPUP -> showPopup(html)
             InAppDisplaySlot.FLOATING -> FloatingInAppView.show(
                 html = html,
+                origin = origin,
+                stayOnHost = closeOnPageLeave,
                 timerStartAtMillis = System.currentTimeMillis(),
                 callback = session,
                 onShown = { session.shown() },
@@ -58,7 +67,20 @@ class AndroidInAppView : InAppView, InAppCallback {
         }
     }
 
-    private val popup: InAppSession? get() = slots.current(InAppDisplaySlot.POPUP)
+    private val popup: InAppSession? get() = slots.current(InAppDisplaySlot.POPUP) as? InAppSession
+
+    internal val popupOrigin: InAppOrigin? get() = popup?.origin
+
+    /** [origin] 웹뷰가 페이지를 벗어났다. 그 웹뷰에서 시작된 "이 페이지에서만" 플로팅을 닫는다. */
+    internal fun closePageFloating(origin: InAppOrigin) = closePageFloating { it === origin }
+
+    private fun closePageFloating(match: (InAppOrigin) -> Boolean) {
+        val session = synchronized(slots) {
+            pageFloatingToClose(slots.current(InAppDisplaySlot.FLOATING), match)
+                ?.takeIf { slots.release(InAppDisplaySlot.FLOATING, it) }
+        } ?: return
+        FloatingInAppView.dismiss(session)
+    }
 
     fun onWebViewLoaded() {
         popup?.shown()
@@ -83,4 +105,11 @@ class AndroidInAppView : InAppView, InAppCallback {
     override fun onSetUserProperties(userPropertiesJson: String) {
         popup?.onSetUserProperties(userPropertiesJson)
     }
+}
+
+internal fun pageFloatingToClose(holder: Any?, match: (InAppOrigin) -> Boolean): InAppSession? {
+    val session = holder as? InAppSession ?: return null
+    if (!session.closeOnPageLeave) return null
+    val origin = session.origin ?: return null
+    return session.takeIf { match(origin) }
 }

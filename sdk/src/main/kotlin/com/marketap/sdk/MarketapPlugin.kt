@@ -7,6 +7,7 @@ import com.marketap.sdk.model.external.MarketapIntegrationInfo
 import com.marketap.sdk.model.internal.MarketapServerConfig
 import com.marketap.sdk.model.internal.SdkIntegrationState
 import com.marketap.sdk.model.internal.inapp.HideType
+import com.marketap.sdk.model.internal.inapp.InAppOrigin
 import com.marketap.sdk.presentation.CustomHandlerStore
 import com.marketap.sdk.presentation.MarketapRegistry.marketapCore
 import com.marketap.sdk.utils.logger
@@ -85,10 +86,15 @@ object MarketapPlugin {
 
     // MARK: - 이벤트 처리 (플러그인용)
 
+    /** 래퍼 웹뷰가 보낸 이벤트. 직전 [MarketapWebBridge.setExternalWebBridgeActive] 값이 true 면 래퍼 웹뷰를 출처로 기록한다. */
     @JvmOverloads
     @JvmStatic
     fun trackEvent(name: String, properties: Map<String, Any>? = null) {
-        marketapCore?.trackFromWebBridge(name, properties)
+        trackEventFromWebView(name, properties, MarketapWebBridge.externalOriginForEvent(name))
+    }
+
+    internal fun trackEventFromWebView(name: String, properties: Map<String, Any>?, origin: InAppOrigin?) {
+        marketapCore?.trackFromWebBridge(name, properties, origin)
     }
 
     @JvmStatic

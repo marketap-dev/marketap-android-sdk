@@ -10,6 +10,7 @@ import com.marketap.sdk.domain.service.event.UserIngestionService
 import com.marketap.sdk.domain.service.inapp.InAppService
 import com.marketap.sdk.domain.service.state.ClientStateManager
 import com.marketap.sdk.model.internal.inapp.HideType
+import com.marketap.sdk.model.internal.inapp.InAppOrigin
 import com.marketap.sdk.utils.logger
 
 internal class MarketapCoreService(
@@ -49,9 +50,9 @@ internal class MarketapCoreService(
         }
     }
 
-    fun trackFromWebBridge(name: String, properties: Map<String, Any>?) {
+    fun trackFromWebBridge(name: String, properties: Map<String, Any>?, origin: InAppOrigin?) {
         try {
-            eventIngestionService.trackEvent(name, properties ?: emptyMap(), fromWebBridge = true)
+            eventIngestionService.trackEvent(name, properties ?: emptyMap(), origin)
         } catch (t: Throwable) {
             logger.e(t) { "Failed to track event from web bridge: $name" }
         }
