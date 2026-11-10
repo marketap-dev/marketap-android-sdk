@@ -20,7 +20,8 @@ internal class CampaignFetchService(
     private val internalStorage: InternalStorage,
     private val inAppCampaignApi: MarketapBackend,
     private val clientStateManager: ClientStateManager,
-    private val deviceManager: DeviceManager
+    private val deviceManager: DeviceManager,
+    private val policyAllows: () -> Boolean = { true },
 ) : CampaignFetching {
 
     companion object {
@@ -31,6 +32,10 @@ internal class CampaignFetchService(
     }
 
     override fun useCampaigns(block: (campaigns: List<InAppCampaign>) -> Unit) {
+        if (!policyAllows()) {
+            block(emptyList())
+            return
+        }
         val userId = clientStateManager.getUserId()
         fetchLocalCampaign(userId)?.let { localCampaigns ->
             logger.d { "Using cached campaigns for user $userId" }
@@ -43,12 +48,17 @@ internal class CampaignFetchService(
 
         inAppCampaignApi.fetchCampaigns(FetchCampaignsReq(projectId, userId, device.toReq(), cachedChecksum), {
             logger.d { "Fetching campaigns from API for user $userId" }
+            if (!policyAllows()) {
+                block(emptyList())
+                return@fetchCampaigns
+            }
             val campaigns = it.campaigns
                 ?: internalStorage.getItem<InAppCampaignRes>("$CAMPAIGN_CACHE_KEY:$userId", adapter())?.campaigns
                 ?: emptyList()
             block(campaigns)
         })
         { res ->
+            if (!policyAllows()) return@fetchCampaigns
             logger.d { "Storing fetched campaigns for user $userId" }
             if (res.campaigns != null) {
                 internalStorage.setItem("$CAMPAIGN_CACHE_KEY:$userId", res, adapter())
@@ -66,6 +76,7 @@ internal class CampaignFetchService(
         campaign: InAppCampaign,
         event: IngestEventRequest
     ): InAppCampaign? {
+        if (!policyAllows()) return null
         if (campaign.html != null) {
             return campaign
         }
@@ -83,6 +94,7 @@ internal class CampaignFetchService(
 
         var resolved: InAppCampaign? = null
         inAppCampaignApi.fetchCampaign(campaign.id, request, {
+            if (!policyAllows()) return@fetchCampaign
             val fetched = it.campaign
             if (fetched?.html != null) {
                 resolved = fetched

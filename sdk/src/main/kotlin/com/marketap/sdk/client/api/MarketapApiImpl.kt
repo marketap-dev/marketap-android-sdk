@@ -1,5 +1,6 @@
 package com.marketap.sdk.client.api
 
+import com.marketap.sdk.client.policy.readSdkPolicy
 import com.marketap.sdk.model.internal.api.DEVICE_ENDPOINT
 import com.marketap.sdk.model.internal.api.DeviceReq
 import com.marketap.sdk.model.internal.api.FetchCampaignReq
@@ -20,7 +21,6 @@ import com.marketap.sdk.utils.adapter
 import com.marketap.sdk.utils.moshi
 import com.squareup.moshi.JsonAdapter
 import com.squareup.moshi.Types
-import io.ktor.http.headers
 
 internal class MarketapApiImpl(
     private val deviceEndpoint: String = DEVICE_ENDPOINT,
@@ -28,12 +28,11 @@ internal class MarketapApiImpl(
     private val inAppMessagingEndpoint: String = IN_APP_MESSAGING_ENDPOINT,
     private val profileEndpoint: String = PROFILE_ENDPOINT,
     private val metaServerInfoEndpoint: String = META_SERVER_INFO_ENDPOINT,
+    clientKeyProvider: (String?) -> String? = { null },
+    source: String = "app",
+    config: com.marketap.sdk.model.MarketapConfig? = null,
 ) : MarketapApi {
-    private val client = CustomClient {
-        headers {
-            append("Content-Type", "application/json")
-        }
-    }
+    private val client = CustomClient(clientKeyProvider, source, config)
 
     private inline fun <reified T> serverAdapter(): JsonAdapter<ServerResponse<T>> {
         val type = Types.newParameterizedType(ServerResponse::class.java, T::class.java)
@@ -48,7 +47,8 @@ internal class MarketapApiImpl(
             "$deviceEndpoint?project_id=$projectId",
             request,
             adapter<DeviceReq>(),
-            serverAdapter<IngestRes>()
+            serverAdapter<IngestRes>(),
+            projectId
         )
     }
 
@@ -59,7 +59,8 @@ internal class MarketapApiImpl(
             inAppMessagingEndpoint,
             request,
             adapter<FetchCampaignsReq>(),
-            serverAdapter<InAppCampaignRes>()
+            serverAdapter<InAppCampaignRes>(),
+            request.projectId
         )
         return res
     }
@@ -72,7 +73,8 @@ internal class MarketapApiImpl(
             "$inAppMessagingEndpoint/$campaignId",
             request,
             adapter<FetchCampaignReq>(),
-            serverAdapter<InAppCampaignSingleRes>()
+            serverAdapter<InAppCampaignSingleRes>(),
+            request.projectId
         )
         return res
     }
@@ -85,7 +87,8 @@ internal class MarketapApiImpl(
             "$ingestionEndpoint?project_id=$projectId",
             request,
             adapter<IngestEventRequest>(),
-            serverAdapter<IngestRes>()
+            serverAdapter<IngestRes>(),
+            projectId
         )
     }
 
@@ -97,15 +100,19 @@ internal class MarketapApiImpl(
             "$profileEndpoint?project_id=$projectId",
             request,
             adapter<UpdateProfileRequest>(),
-            serverAdapter<IngestRes>()
+            serverAdapter<IngestRes>(),
+            projectId
         )
     }
 
     override suspend fun getServerInfo(projectId: String): ServerInfoRes {
+        var policy: Any? = null
         val res = client.get(
             "$metaServerInfoEndpoint?project_id=$projectId&client_time=${System.currentTimeMillis()}",
-            serverAdapter<ServerInfoRes>()
+            serverAdapter<ServerInfoRes>(),
+            projectId,
+            bodyObserver = { policy = readSdkPolicy(it) }
         )
-        return res.data ?: ServerInfoRes(serverTimeOffset = 0L, useWebClickRouting = false)
+        return (res.data ?: ServerInfoRes(serverTimeOffset = 0L, useWebClickRouting = false)).also { it.sdkPolicy = policy }
     }
 }

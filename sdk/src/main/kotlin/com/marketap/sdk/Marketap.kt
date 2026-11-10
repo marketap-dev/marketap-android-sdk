@@ -2,6 +2,7 @@ package com.marketap.sdk
 
 import android.app.Activity
 import android.app.Application
+import com.marketap.sdk.client.SharedPreferenceInternalStorage
 import com.marketap.sdk.model.MarketapConfig
 import com.marketap.sdk.model.external.EventProperty
 import com.marketap.sdk.model.external.MarketapClickHandler
@@ -25,23 +26,33 @@ object Marketap {
      */
     @JvmStatic
     fun initialize(application: Application, projectId: String) {
-        logger.v { "Marketap SDK start initializing with projectId $projectId" }
-        initialize(application, SdkMetadataProvider.createNativeConfig(projectId))
+        initialize(application, projectId, null)
     }
 
-    internal fun initialize(application: Application, config: MarketapConfig) {
+    @JvmStatic
+    fun initialize(application: Application, projectId: String, clientKey: String?) {
+        logger.v { "Marketap SDK start initializing with projectId $projectId" }
+        initialize(application, SdkMetadataProvider.createNativeConfig(projectId), clientKey)
+    }
+
+    internal fun initialize(application: Application, config: MarketapConfig, rawClientKey: String? = null) {
+        val clientKey = SdkMetadataProvider.normalizeClientKey(rawClientKey)
         if (!MarketapRegistry.isInitialized || MarketapRegistry.config?.projectId != config.projectId || application !== MarketapRegistry.application) {
             marketapCore = try {
                 MarketapRegistry.config = config
+                MarketapRegistry.clientKey = clientKey
                 MarketapRegistry.application = application
                 initializeCore(config, application).also {
-                    SdkMetadataProvider.saveIntegrationInfo(application, config)
+                    SdkMetadataProvider.saveIntegrationInfo(application, config, clientKey)
                     MarketapRegistry.isInitialized = true
                 }
             } catch (t: Throwable) {
                 logger.e(t) { "Marketap SDK initialization failed with projectId  ${config.projectId}" }
                 null
             }
+        } else {
+            MarketapRegistry.clientKey = clientKey
+            SdkMetadataProvider.saveClientKey(SharedPreferenceInternalStorage(application), config.projectId, clientKey)
         }
     }
 

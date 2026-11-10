@@ -6,4 +6,7 @@ import com.squareup.moshi.JsonClass
 data class ServerInfoRes(
     val serverTimeOffset: Long,
     val useWebClickRouting: Boolean
-)
+) {
+    @Transient
+    internal var sdkPolicy: Any? = null
+}
