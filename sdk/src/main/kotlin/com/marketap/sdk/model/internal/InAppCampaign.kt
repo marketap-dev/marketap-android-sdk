@@ -18,7 +18,7 @@ internal data class InAppCampaign(
     val html: String?,
     val updatedAt: String,
     val displaySlot: String? = null,
-    /** 앱은 쓰지 않는다. 웹 화면에 위임할 때 웹 SDK 로 그대로 넘긴다. */
+    /** 플로팅의 화면 이동 값. `PAGE` 면 "이 페이지에서만", 그 밖의 값과 값 없음은 "닫을 때까지 유지". */
     val floatingScope: String? = null,
 ) {
     @Suppress("UNCHECKED_CAST")

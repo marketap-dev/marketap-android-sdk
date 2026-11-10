@@ -57,8 +57,6 @@ internal object FloatingInAppView : CurrentActivityHolder.ScreenListener {
         (ghost.parent as? ViewGroup)?.removeView(ghost)
     }
 
-    val isShown: Boolean get() = container != null
-
     /** 메인 스레드에서 부른다. */
     fun isHostedBy(activity: Activity): Boolean = host?.get() === activity
 
