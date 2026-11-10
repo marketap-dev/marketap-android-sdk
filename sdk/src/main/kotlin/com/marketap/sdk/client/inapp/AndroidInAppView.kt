@@ -2,11 +2,10 @@ package com.marketap.sdk.client.inapp
 
 import android.content.Intent
 import com.marketap.sdk.client.CurrentActivityHolder
+import com.marketap.sdk.client.inapp.floating.FloatingInAppView
 import com.marketap.sdk.domain.repository.InAppView
 import com.marketap.sdk.model.internal.inapp.HideType
-import com.marketap.sdk.utils.deserialize
-import com.marketap.sdk.utils.logger
-import com.marketap.sdk.utils.mapAdapter
+import com.marketap.sdk.model.internal.inapp.InAppDisplaySlot
 
 class AndroidInAppView : InAppView, InAppCallback {
     companion object {
@@ -19,31 +18,35 @@ class AndroidInAppView : InAppView, InAppCallback {
         }
     }
 
-    private var onShow: (() -> Unit)? = null
-    private var onClick: ((String) -> String)? = null
-    private var onHide: ((HideType) -> Unit)? = null
-    private var onTrack: ((eventName: String, properties: Map<String, Any>?) -> Unit)? = null
-    private var onSetUserProperties: ((properties: Map<String, Any>) -> Unit)? = null
-    private var isShown = false
+    private val slots = InAppSlots<InAppSession>()
+
+    override fun isShowing(slot: InAppDisplaySlot): Boolean = slots.isOccupied(slot)
 
     override fun show(
         html: String,
+        slot: InAppDisplaySlot,
         onShow: () -> Unit,
         onClick: (String) -> String,
         onHide: (HideType) -> Unit,
         onTrack: (eventName: String, properties: Map<String, Any>?) -> Unit,
         onSetUserProperties: (properties: Map<String, Any>) -> Unit,
-    ) {
-        if (isShown) {
-            return
+    ): Boolean {
+        val session = InAppSession(onShow, onClick, onHide, onTrack, onSetUserProperties)
+        if (!slots.claim(slot, session)) return false
+        when (slot) {
+            InAppDisplaySlot.POPUP -> showPopup(html)
+            InAppDisplaySlot.FLOATING -> FloatingInAppView.show(
+                html = html,
+                timerStartAtMillis = System.currentTimeMillis(),
+                callback = session,
+                onShown = { session.shown() },
+                onClosed = { slots.release(InAppDisplaySlot.FLOATING, session) },
+            )
         }
-        isShown = true
-        this.onShow = onShow
-        this.onClick = onClick
-        this.onHide = onHide
-        this.onTrack = onTrack
-        this.onSetUserProperties = onSetUserProperties
+        return true
+    }
 
+    private fun showPopup(html: String) {
         CurrentActivityHolder.useActivity { activity ->
             val intent = Intent(activity, InAppMessageActivity::class.java).apply {
                 putExtra("htmlData", html)
@@ -55,49 +58,29 @@ class AndroidInAppView : InAppView, InAppCallback {
         }
     }
 
+    private val popup: InAppSession? get() = slots.current(InAppDisplaySlot.POPUP)
+
     fun onWebViewLoaded() {
-        onShow?.invoke()
-        onShow = null
+        popup?.shown()
     }
 
     fun resetIfNeeded() {
-        if (isShown) {
-            onShow = null
-            onClick = null
-            onHide = null
-            onTrack = null
-            onSetUserProperties = null
-            isShown = false
-        }
+        popup?.let { slots.release(InAppDisplaySlot.POPUP, it) }
     }
 
     override fun onHide(hideType: HideType) {
-        onHide?.invoke(hideType)
-        onHide = null
-        onShow = null
-        isShown = false
-        onClick = null
+        val session = popup ?: return
+        session.onHide(hideType)
+        slots.release(InAppDisplaySlot.POPUP, session)
     }
 
-    override fun onClick(locationId: String): String? {
-        return onClick?.invoke(locationId)
-    }
+    override fun onClick(locationId: String): String? = popup?.onClick(locationId)
 
     override fun onTrack(eventName: String, eventPropertiesJson: String) {
-        try {
-            val eventProperties = eventPropertiesJson.deserialize(mapAdapter<String, Any>())
-            onTrack?.invoke(eventName, eventProperties)
-        } catch (error: Exception) {
-            logger.e(error) { "Error parsing event properties JSON: $eventPropertiesJson" }
-        }
+        popup?.onTrack(eventName, eventPropertiesJson)
     }
 
     override fun onSetUserProperties(userPropertiesJson: String) {
-        try {
-            val userProperties = userPropertiesJson.deserialize(mapAdapter<String, Any>())
-            onSetUserProperties?.invoke(userProperties)
-        } catch (error: Exception) {
-            logger.e(error) { "Error parsing user properties JSON: $userPropertiesJson" }
-        }
+        popup?.onSetUserProperties(userPropertiesJson)
     }
 }

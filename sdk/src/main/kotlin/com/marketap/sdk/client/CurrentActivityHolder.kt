@@ -3,14 +3,34 @@ package com.marketap.sdk.client
 import android.app.Activity
 import android.app.Application
 import android.os.Bundle
+import com.marketap.sdk.client.inapp.InAppMessageActivity
 import com.marketap.sdk.utils.logger
 import java.lang.ref.WeakReference
+import java.util.concurrent.CopyOnWriteArrayList
 
 object CurrentActivityHolder : Application.ActivityLifecycleCallbacks {
     @Volatile
     private var currentActivityRef: WeakReference<Activity>? = null
 
+    @Volatile
+    private var screenActivityRef: WeakReference<Activity>? = null
+
     private var reservedAction: ((Activity) -> Unit)? = null
+
+    internal interface ScreenListener {
+        fun onScreenResumed(activity: Activity)
+        fun onScreenDestroyed(activity: Activity)
+    }
+
+    private val screenListeners = CopyOnWriteArrayList<ScreenListener>()
+
+    internal fun addScreenListener(listener: ScreenListener) {
+        screenListeners.addIfAbsent(listener)
+    }
+
+    internal fun removeScreenListener(listener: ScreenListener) {
+        screenListeners.remove(listener)
+    }
 
     fun useActivity(block: (Activity) -> Unit) {
         val activity = currentActivityRef?.get()
@@ -23,6 +43,7 @@ object CurrentActivityHolder : Application.ActivityLifecycleCallbacks {
 
     fun set(activity: Activity) {
         currentActivityRef = WeakReference(activity)
+        if (activity !is InAppMessageActivity) screenActivityRef = WeakReference(activity)
         reservedAction?.let {
             reservedAction = null
             it(activity)
@@ -31,12 +52,18 @@ object CurrentActivityHolder : Application.ActivityLifecycleCallbacks {
 
     fun get(): Activity? = currentActivityRef?.get()
 
+    /** 가장 최근에 앞에 온 앱 화면. 인앱 팝업 Activity 는 제외한다. */
+    internal fun getScreen(): Activity? =
+        screenActivityRef?.get()?.takeIf { !it.isFinishing && !it.isDestroyed }
+
     override fun onActivityResumed(activity: Activity) {
         currentActivityRef = WeakReference(activity)
         reservedAction?.let {
             reservedAction = null
             it(activity)
         }
+        if (activity !is InAppMessageActivity) screenActivityRef = WeakReference(activity)
+        screenListeners.forEach { it.onScreenResumed(activity) }
     }
 
     override fun onActivityPaused(activity: Activity) {}
@@ -44,7 +71,9 @@ object CurrentActivityHolder : Application.ActivityLifecycleCallbacks {
     override fun onActivityStarted(a: Activity) {}
     override fun onActivityStopped(a: Activity) {}
     override fun onActivitySaveInstanceState(a: Activity, b: Bundle) {}
-    override fun onActivityDestroyed(a: Activity) {}
+    override fun onActivityDestroyed(a: Activity) {
+        screenListeners.forEach { it.onScreenDestroyed(a) }
+    }
 
 
     private var isRegistered = false

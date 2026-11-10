@@ -3,6 +3,7 @@ package com.marketap.sdk
 import android.app.Activity
 import android.app.Application
 import com.marketap.sdk.client.SharedPreferenceInternalStorage
+import com.marketap.sdk.client.inapp.floating.FloatingInAppView
 import com.marketap.sdk.model.MarketapConfig
 import com.marketap.sdk.model.external.EventProperty
 import com.marketap.sdk.model.external.MarketapClickHandler

@@ -6,6 +6,8 @@ import com.marketap.sdk.domain.service.inapp.condition.ConditionChecker
 import com.marketap.sdk.model.internal.InAppCampaign
 import com.marketap.sdk.model.internal.api.IngestEventRequest
 import com.marketap.sdk.model.internal.inapp.HideType
+import com.marketap.sdk.model.internal.inapp.InAppDisplaySlot
+import com.marketap.sdk.model.internal.slot
 import com.marketap.sdk.utils.logger
 import java.util.UUID
 
@@ -36,6 +38,7 @@ private const val FALLTHROUGH_BUDGET_MS = 2000L
  * SystemClock.elapsedRealtime 이 아니라 System.nanoTime 을 쓴 이유: 이 파일은 도메인 계층이라
  * 안드로이드 프레임워크에 의존하지 않는다(순수 JVM 단위 테스트에서 그대로 돈다).
  */
+
 private fun monotonicNowMs(): Long = System.nanoTime() / 1_000_000
 
 internal class InAppService(
@@ -103,7 +106,20 @@ internal class InAppService(
 
             val deadline = monotonicNowMs() + FALLTHROUGH_BUDGET_MS
             var fetches = 0
+            val handledSlots = mutableSetOf<InAppDisplaySlot>()
+            // 웹브릿지 전달은 이벤트당 한 번만 된다(브릿지 참조를 전달 직후 비운다). 그래서 위임 경로는
+            // 자리와 무관하게 처음 확정된 후보 하나를 넘기고 끝낸다. 표시 자리 판단은 웹 SDK 가 한다.
+            val shouldDelegateToWeb = fromWebBridge && MarketapWebBridge.hasActiveWebBridge()
             for (campaign in candidates) {
+                val slot = campaign.slot
+                if (!shouldDelegateToWeb) {
+                    if (slot in handledSlots) continue
+                    if (inAppView.isShowing(slot)) {
+                        handledSlots.add(slot)
+                        continue
+                    }
+                }
+
                 // html 이 비어 있는 후보만 상세 fetch 를 탄다(resolveCampaignHtml 의 분기와 같은 조건).
                 // 정적 렌더 캠페인은 서버를 안 타므로 요청 예산에서 뺀다.
                 val needsFetch = campaign.html == null
@@ -123,15 +139,13 @@ internal class InAppService(
                 val resolvedCampaign = campaignFetchService.resolveCampaignHtml(campaign, event)
                     ?: continue
 
-                // 웹브릿지에서 온 이벤트이고 활성 웹브릿지가 있으면 웹으로 캠페인 전달
-                val shouldDelegateToWeb = fromWebBridge && MarketapWebBridge.hasActiveWebBridge()
-
                 if (shouldDelegateToWeb) {
                     handleCampaignForWeb(resolvedCampaign)
-                } else {
-                    handleCampaign(resolvedCampaign, onImpression, onClick, onTrack, onSetUserProperties)
+                    break
                 }
-                break
+                if (handleCampaign(resolvedCampaign, slot, onImpression, onClick, onTrack, onSetUserProperties)) {
+                    handledSlots.add(slot)
+                }
             }
         }
     }
@@ -151,16 +165,18 @@ internal class InAppService(
 
     private fun handleCampaign(
         targetCampaign: InAppCampaign,
+        slot: InAppDisplaySlot,
         onImpression: (campaign: InAppCampaign) -> Unit,
         onClick: (campaign: InAppCampaign, locationId: String) -> Unit,
         onTrack: (campaign: InAppCampaign, eventName: String, properties: Map<String, Any>?) -> Unit,
         onSetUserProperties: (properties: Map<String, Any>) -> Unit,
-    ) {
+    ): Boolean {
         logger.d { "Showing in-app campaign: ${targetCampaign.id} with layout type: ${targetCampaign.layout.layoutType}" }
-        val campaignHtml = targetCampaign.html ?: return
+        val campaignHtml = targetCampaign.html ?: return false
 
-        inAppView.show(
+        return inAppView.show(
             campaignHtml,
+            slot,
             {
                 campaignExposureService.recordImpression(targetCampaign.id)
                 onImpression(targetCampaign)
