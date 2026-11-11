@@ -3,7 +3,6 @@ package com.marketap.sdk.utils
 import com.squareup.moshi.JsonAdapter
 import io.ktor.client.HttpClient
 import io.ktor.client.HttpClientConfig
-import io.ktor.client.engine.HttpClientEngineConfig
 import io.ktor.client.engine.android.Android
 import io.ktor.client.request.HttpRequestBuilder
 import io.ktor.client.request.get
@@ -12,9 +11,15 @@ import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
 
+internal const val CLIENT_KEY_HEADER = "X-Marketap-Client-Key"
+
 internal class CustomClient(
-    block: HttpClientConfig<HttpClientEngineConfig>.() -> Unit = {}
+    private val clientKeyProvider: (String?) -> String? = { null },
+    source: String = "app",
+    config: com.marketap.sdk.model.MarketapConfig? = null,
+    block: HttpClientConfig<*>.() -> Unit = {}
 ) {
+    private val sdkHeaders = sdkHeaders(source, config)
     internal val client = HttpClient(Android, block)
 
     suspend inline fun <S, T> post(
@@ -22,12 +27,15 @@ internal class CustomClient(
         request: S,
         requestAdapter: JsonAdapter<S>,
         responseAdapter: JsonAdapter<T>,
+        projectId: String?,
         builder: HttpRequestBuilder.() -> Unit = {},
     ): T {
         val body = request.serialize(requestAdapter)
         logger.v { "Request: $body, endpoint: $endpoint" }
         val getResponse = client.post(endpoint) {
             builder()
+            sdkHeaders.forEach { (name, value) -> headers[name] = value }
+            clientKeyProvider(projectId)?.let { headers[CLIENT_KEY_HEADER] = it }
             header("Content-Type", "application/json")
             setBody(body)
         }
@@ -39,11 +47,18 @@ internal class CustomClient(
     suspend inline fun <T> get(
         endpoint: String,
         responseAdapter: JsonAdapter<T>,
+        projectId: String?,
+        bodyObserver: (String) -> Unit = {},
         builder: HttpRequestBuilder.() -> Unit = {},
     ): T {
         logger.v { "GET Request: $endpoint" }
-        val getResponse = client.get(endpoint, builder)
+        val getResponse = client.get(endpoint) {
+            builder()
+            sdkHeaders.forEach { (name, value) -> headers[name] = value }
+            clientKeyProvider(projectId)?.let { headers[CLIENT_KEY_HEADER] = it }
+        }
         val res = getResponse.bodyAsText()
+        bodyObserver(res)
         logger.v { "GET Response: $getResponse, body: $res" }
         return res.deserialize(responseAdapter)
     }

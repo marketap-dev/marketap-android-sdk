@@ -16,6 +16,10 @@ android {
         buildConfigField("String", "MARKETAP_SDK_VERSION", "\"${project.findProperty("marketapSdkVersion")}\"")
     }
 
+    testOptions {
+        unitTests.isReturnDefaultValues = true
+    }
+
     buildFeatures {
         buildConfig = true
     }

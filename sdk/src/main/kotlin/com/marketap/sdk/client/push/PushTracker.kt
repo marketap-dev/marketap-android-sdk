@@ -38,7 +38,18 @@ internal object PushTracker {
             }
             ?: SdkMetadataProvider.createNativeConfig(projectId = "")
         deviceManager = AndroidDeviceManager(storage, context, config)
-        marketapBackend = RetryMarketapBackend(storage, MarketapApiImpl(), deviceManager!!)
+        marketapBackend = RetryMarketapBackend(
+            storage,
+            MarketapApiImpl(
+                clientKeyProvider = { projectId -> SdkMetadataProvider.currentClientKey(storage, projectId) },
+                source = "android-push",
+                config = config
+            ),
+            deviceManager!!,
+            pushOnly = true,
+            sdkType = config.sdkType,
+            sdkVersion = config.sdkVersion
+        )
     }
 
     fun trackImpression(context: Context, data: PushData) {

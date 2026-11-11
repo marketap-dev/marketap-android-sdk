@@ -18,11 +18,21 @@ object MarketapPlugin {
 
     @JvmStatic
     fun initialize(application: Application, projectId: String, integrationInfo: MarketapIntegrationInfo) {
+        initialize(application, projectId, integrationInfo, null)
+    }
+
+    @JvmStatic
+    fun initialize(
+        application: Application,
+        projectId: String,
+        integrationInfo: MarketapIntegrationInfo,
+        clientKey: String?
+    ) {
         logger.v {
             "Marketap Plugin initialize with projectId=$projectId, " +
                 "sdkType=${integrationInfo.sdkType}, sdkVersion=${integrationInfo.sdkVersion}"
         }
-        Marketap.initialize(application, SdkMetadataProvider.createConfig(projectId, integrationInfo))
+        Marketap.initialize(application, SdkMetadataProvider.createConfig(projectId, integrationInfo), clientKey)
     }
 
     // MARK: - 인앱 이벤트 처리 (플러그인용)

@@ -19,6 +19,7 @@ import com.marketap.sdk.domain.service.inapp.condition.ConditionCheckerImpl
 import com.marketap.sdk.domain.service.inapp.condition.PropertyConditionCheckerImpl
 import com.marketap.sdk.domain.service.inapp.condition.comparator.ValueComparatorImpl
 import com.marketap.sdk.domain.service.state.ClientStateManager
+import com.marketap.sdk.SdkMetadataProvider
 import com.marketap.sdk.model.MarketapConfig
 import com.marketap.sdk.model.internal.SdkIntegrationState
 import com.marketap.sdk.utils.ManifestUtils
@@ -30,11 +31,13 @@ object Dependency {
         application: Application
     ): MarketapCoreService {
         val storage = SharedPreferenceInternalStorage(application).initialize(application)
-        val marketapApi = MarketapApiImpl()
+        val marketapApi = MarketapApiImpl(clientKeyProvider = { projectId -> SdkMetadataProvider.currentClientKey(storage, projectId) }, config = config)
         val deviceManager = AndroidDeviceManager(storage, application, config)
         SdkIntegrationState.isClickHandlerCustomized = CustomHandlerStore.isCustomized()
 
-        val marketapBackend = RetryMarketapBackend(storage, marketapApi, deviceManager)
+        val pushApi = MarketapApiImpl(clientKeyProvider = { projectId -> SdkMetadataProvider.currentClientKey(storage, projectId) }, source = "android-push", config = config)
+        val marketapBackend = RetryMarketapBackend(storage, marketapApi, deviceManager, sdkType = config.sdkType, sdkVersion = config.sdkVersion, pushApi = pushApi)
+        listOf("collection", "inApp", "pushTracking").forEach { marketapBackend.remotePolicy.allowed(config.projectId, it) }
         val clientStateManager = ClientStateManager(config, storage)
         val sessionManager = AndroidSessionManager(storage)
 
@@ -46,7 +49,7 @@ object Dependency {
         val inAppService = InAppService(
             CampaignExposureService(storage),
             ConditionCheckerImpl(PropertyConditionCheckerImpl(ValueComparatorImpl())),
-            CampaignFetchService(storage, marketapBackend, clientStateManager, deviceManager),
+            CampaignFetchService(storage, marketapBackend, clientStateManager, deviceManager) { marketapBackend.remotePolicy.currentlyAllowed(config.projectId, "inApp") },
             AndroidInAppView.getInstance()
         )
 

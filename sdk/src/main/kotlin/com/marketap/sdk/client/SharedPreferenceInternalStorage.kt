@@ -130,6 +130,24 @@ internal class SharedPreferenceInternalStorage(
         }
     }
 
+    internal fun clearCampaignCache() {
+        sharedPreference.edit {
+            sharedPreference.all.keys.filter {
+                it.startsWith("last_campaigns:") || it.startsWith("campaign_cached_at:") || it.startsWith("campaign_checksum:")
+            }.forEach { remove(it) }
+        }
+    }
+
+    internal fun clearCollectionEvents(projectId: String) {
+        synchronized(getLockForKey("events")) {
+            val adapter = com.marketap.sdk.utils.pairAdapter<String, com.marketap.sdk.model.internal.api.IngestEventRequest>()
+            val remaining = sharedPreference.getStringSet("events", emptySet()).orEmpty().filter {
+                runCatching { it.deserialize(adapter).first != projectId }.getOrDefault(false)
+            }.toSet()
+            sharedPreference.edit { putStringSet("events", remaining) }
+        }
+    }
+
     override fun removeItem(key: String) {
         synchronized(getLockForKey(key)) {
             sharedPreference.edit { remove(key) }
