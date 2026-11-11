@@ -1,0 +1,30 @@
+name: Create release PR
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 버전 (예 1.6.0, 1.6.0-beta.1)
+        required: true
+      ref:
+        description: 기준 브랜치 또는 커밋 SHA
+        default: main
+      summary:
+        description: 릴리즈 요약 (선택, PR 본문에서 고쳐도 됨)
+
+permissions:
+  contents: read
+
+concurrency:
+  group: create-release-pr
+
+jobs:
+  release-pr:
+    uses: marketap-dev/sdk-shared/.github/workflows/release-pr.yml@main
+    with:
+      version: ${{ inputs.version }}
+      ref: ${{ inputs.ref }}
+      summary: ${{ inputs.summary }}
+    secrets:
+      SDK_RELEASE_APP_ID: ${{ secrets.SDK_RELEASE_APP_ID }}
+      SDK_RELEASE_APP_PRIVATE_KEY: ${{ secrets.SDK_RELEASE_APP_PRIVATE_KEY }}

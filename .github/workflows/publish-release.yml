@@ -1,0 +1,63 @@
+name: Publish release
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 다시 돌릴 버전 (머지된 release PR 의 버전)
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-release-${{ github.event.pull_request.head.ref || format('release/{0}', inputs.version) }}
+
+jobs:
+  gate:
+    if: github.event_name == 'workflow_dispatch' || (startsWith(github.event.pull_request.head.ref, 'release/') && github.event.pull_request.head.repo.full_name == github.repository)
+    uses: marketap-dev/sdk-shared/.github/workflows/release-gate.yml@main
+    with:
+      version: ${{ inputs.version }}
+    secrets:
+      SDK_RELEASE_APP_ID: ${{ secrets.SDK_RELEASE_APP_ID }}
+      SDK_RELEASE_APP_PRIVATE_KEY: ${{ secrets.SDK_RELEASE_APP_PRIVATE_KEY }}
+
+  finalize:
+    needs: gate
+    if: needs.gate.outputs.proceed == 'true'
+    uses: marketap-dev/sdk-shared/.github/workflows/release-finalize.yml@main
+    with:
+      tag: ${{ needs.gate.outputs.tag }}
+      sha: ${{ needs.gate.outputs.sha }}
+      pr: ${{ needs.gate.outputs.pr }}
+      prerelease: ${{ needs.gate.outputs.prerelease }}
+      latest: ${{ needs.gate.outputs.latest }}
+    secrets:
+      SDK_RELEASE_APP_ID: ${{ secrets.SDK_RELEASE_APP_ID }}
+      SDK_RELEASE_APP_PRIVATE_KEY: ${{ secrets.SDK_RELEASE_APP_PRIVATE_KEY }}
+
+  jitpack:
+    needs: [gate, finalize]
+    if: needs.gate.outputs.proceed == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - env:
+          TAG: ${{ needs.gate.outputs.tag }}
+        run: |
+          API=https://jitpack.io/api/builds/com.github.marketap-dev/marketap-android-sdk/$TAG
+          REPO=https://jitpack.io/com/github/marketap-dev/marketap-android-sdk/$TAG
+          for _ in $(seq 60); do
+            case "$(curl -fsS "$API" | jq -r .status)" in
+              ok) exit 0 ;;
+              Error|error) break ;;
+              *) curl -fsS -o /dev/null "$REPO/marketap-android-sdk-$TAG.pom" || true ;;
+            esac
+            sleep 20
+          done
+          echo "::error::JitPack 빌드 실패 또는 20분 초과: $REPO/build.log"
+          exit 1
