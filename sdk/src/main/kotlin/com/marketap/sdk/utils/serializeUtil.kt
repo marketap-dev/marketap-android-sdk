@@ -57,3 +57,6 @@ internal inline fun <reified T> adapter(): JsonAdapter<T> {
 internal val stringAdapter: JsonAdapter<String> = moshi.adapter(String::class.java)
 internal val longAdapter: JsonAdapter<Long> = moshi.adapter(Long::class.java)
 internal val booleanAdapter: JsonAdapter<Boolean> = moshi.adapter(Boolean::class.java)
+
+/** 자바스크립트 코드에 넣을 문자열 리터럴(JSON 문자열). */
+internal fun String.toJsStringLiteral(): String = stringAdapter.toJson(this)

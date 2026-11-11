@@ -3,6 +3,7 @@ package com.marketap.sdk
 import android.app.Activity
 import android.app.Application
 import com.marketap.sdk.client.SharedPreferenceInternalStorage
+import com.marketap.sdk.client.inapp.floating.FloatingInAppView
 import com.marketap.sdk.model.MarketapConfig
 import com.marketap.sdk.model.external.EventProperty
 import com.marketap.sdk.model.external.MarketapClickHandler
@@ -206,6 +207,16 @@ object Marketap {
             "Marketap SDK track page view with properties: ${properties?.serialize(mapAdapter<String, Any>())}"
         }
         marketapCore?.track("mkt_page_view", properties)
+    }
+
+    /**
+     * 앱 화면이 바뀔 때마다(탭 전환, 전체 화면·모달을 닫고 돌아올 때 포함) 호출합니다.
+     * "이 페이지에서만" 플로팅과 팝업을 닫습니다. 서버로 이벤트를 보내지 않습니다.
+     */
+    @JvmStatic
+    fun screenChanged() {
+        logger.d { "Marketap SDK screen changed" }
+        marketapCore?.screenChanged()
     }
 
 

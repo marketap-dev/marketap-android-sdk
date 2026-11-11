@@ -10,6 +10,7 @@ import com.marketap.sdk.model.internal.SdkIntegrationState
 import com.marketap.sdk.model.internal.api.DeviceReq.Companion.toReq
 import com.marketap.sdk.model.internal.api.IngestEventRequest
 import com.marketap.sdk.model.internal.api.withSdkIntegrationState
+import com.marketap.sdk.model.internal.inapp.InAppOrigin
 import java.util.UUID
 
 internal class EventIngestionService(
@@ -21,10 +22,10 @@ internal class EventIngestionService(
     private val userIngestionService: UserIngestionService,
 ) {
     fun trackEvent(eventName: String, eventProperties: Map<String, Any>) {
-        trackEvent(eventName, eventProperties, fromWebBridge = false)
+        trackEvent(eventName, eventProperties, origin = null)
     }
 
-    fun trackEvent(eventName: String, eventProperties: Map<String, Any>, fromWebBridge: Boolean) {
+    fun trackEvent(eventName: String, eventProperties: Map<String, Any>, origin: InAppOrigin?) {
         val userId = clientStateManager.getUserId()
         val projectId = clientStateManager.getProjectId()
         val device = deviceManager.getDevice().toReq()
@@ -56,7 +57,7 @@ internal class EventIngestionService(
         val messageId = generateRandomUUID()
         inAppService.onEvent(
             eventRequest,
-            fromWebBridge,
+            origin,
             { campaign ->
                 val props = InAppEventBuilder.impressionEventProperties(
                     campaignId = campaign.id,

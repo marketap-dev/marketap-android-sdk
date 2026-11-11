@@ -4,13 +4,18 @@ import android.webkit.JavascriptInterface
 import com.marketap.sdk.model.external.MarketapCampaignType
 import com.marketap.sdk.model.external.MarketapClickEvent
 import com.marketap.sdk.model.internal.inapp.HideType
+import com.marketap.sdk.presentation.AppClickRoute
+import com.marketap.sdk.presentation.AppClickRouting
 import com.marketap.sdk.presentation.CustomHandlerStore
 import com.marketap.sdk.presentation.InAppClickUrlHandler
 import com.marketap.sdk.utils.logger
+import com.marketap.sdk.utils.postToMainThread
 
 internal class WebAppInterface(
     private val callBack: InAppCallback?,
-    private val inAppMessageActivity: InAppMessageActivity
+    private val inAppMessageActivity: InAppMessageActivity,
+    /** 이 브리지를 건 페이지가 그리는 메시지. */
+    private val sessionId: Long,
 ) {
 
     @JavascriptInterface
@@ -35,18 +40,31 @@ internal class WebAppInterface(
             return
         }
 
-        InAppClickUrlHandler.open(inAppMessageActivity, url)
+        val origin = AndroidInAppView.getInstance().popupOrigin
+        if (origin == null) {
+            InAppClickUrlHandler.open(inAppMessageActivity, url)
+            return
+        }
+        postToMainThread {
+            if (AppClickRouting.route(origin) == AppClickRoute.WEB_VIEW) {
+                inAppMessageActivity.hideQuietly { origin.openUrl(url) }
+            } else {
+                InAppClickUrlHandler.open(inAppMessageActivity, url)
+            }
+        }
     }
 
     @JavascriptInterface
     fun trackEvent(eventName: String, eventPropertiesJson: String) {
         logger.d { "trackEvent called with eventName: $eventName, properties: $eventPropertiesJson" }
-        callBack?.onTrack(eventName, eventPropertiesJson)
+        AndroidInAppView.getInstance().popupSession(sessionId)
+            ?.onTrack(eventName, eventPropertiesJson)
     }
 
     @JavascriptInterface
     fun setUserProperties(userPropertiesJson: String) {
         logger.d { "setUserProperties called with properties: $userPropertiesJson" }
-        callBack?.onSetUserProperties(userPropertiesJson)
+        AndroidInAppView.getInstance().popupSession(sessionId)
+            ?.onSetUserProperties(userPropertiesJson)
     }
 }

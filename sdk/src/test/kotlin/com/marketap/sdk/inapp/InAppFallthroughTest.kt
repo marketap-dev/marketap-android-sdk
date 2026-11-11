@@ -12,6 +12,8 @@ import com.marketap.sdk.model.internal.inapp.Condition
 import com.marketap.sdk.model.internal.inapp.EventFilter
 import com.marketap.sdk.model.internal.inapp.EventTriggerCondition
 import com.marketap.sdk.model.internal.inapp.HideType
+import com.marketap.sdk.model.internal.inapp.InAppDisplaySlot
+import com.marketap.sdk.model.internal.inapp.InAppOrigin
 import com.marketap.sdk.model.internal.inapp.Layout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -57,14 +59,21 @@ class InAppFallthroughTest {
 
     private class FakeView : InAppView {
         val shownHtml = mutableListOf<String>()
+        override fun isShowing(slot: InAppDisplaySlot) = false
         override fun show(
             html: String,
+            slot: InAppDisplaySlot,
+            origin: InAppOrigin?,
+            closeOnPageLeave: Boolean,
             onShow: () -> Unit,
             onClick: (String) -> String,
             onHide: (HideType) -> Unit,
             onTrack: (eventName: String, properties: Map<String, Any>?) -> Unit,
             onSetUserProperties: (properties: Map<String, Any>) -> Unit,
-        ) { shownHtml.add(html) }
+        ): Boolean {
+            shownHtml.add(html)
+            return true
+        }
     }
 
     private class AlwaysMatch : ConditionChecker {

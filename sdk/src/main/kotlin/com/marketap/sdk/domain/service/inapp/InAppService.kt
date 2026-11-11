@@ -1,13 +1,14 @@
 package com.marketap.sdk.domain.service.inapp
 
-import com.marketap.sdk.MarketapWebBridge
 import com.marketap.sdk.domain.repository.InAppView
 import com.marketap.sdk.domain.service.inapp.condition.ConditionChecker
 import com.marketap.sdk.model.internal.InAppCampaign
 import com.marketap.sdk.model.internal.api.IngestEventRequest
 import com.marketap.sdk.model.internal.inapp.HideType
+import com.marketap.sdk.model.internal.inapp.InAppDisplaySlot
+import com.marketap.sdk.model.internal.inapp.InAppOrigin
+import com.marketap.sdk.model.internal.slot
 import com.marketap.sdk.utils.logger
-import java.util.UUID
 
 /**
  * 상세 fetch 를 실제로 보내는 후보의 최대 개수. 서버가 노출을 확정하지 못해 빈 응답을
@@ -36,14 +37,26 @@ private const val FALLTHROUGH_BUDGET_MS = 2000L
  * SystemClock.elapsedRealtime 이 아니라 System.nanoTime 을 쓴 이유: 이 파일은 도메인 계층이라
  * 안드로이드 프레임워크에 의존하지 않는다(순수 JVM 단위 테스트에서 그대로 돈다).
  */
-private fun monotonicNowMs(): Long = System.nanoTime() / 1_000_000
+
+internal fun monotonicNowMs(): Long = System.nanoTime() / 1_000_000
+
+/** 화면 전환 보호 시간(ms). [InAppService.screenChanged] 호출 전 이 시간 안에 화면에 나타난 메시지는 그 호출로 닫지 않는다. */
+internal const val SCREEN_CHANGE_GRACE_MS = 100L
 
 internal class InAppService(
     private val campaignExposureService: CampaignExposing,
     private val eventConditionChecker: ConditionChecker,
     private val campaignFetchService: CampaignFetching,
-    private val inAppView: InAppView
+    private val inAppView: InAppView,
+    private val clock: () -> Long = ::monotonicNowMs,
 ) {
+    fun screenChanged() {
+        if (inAppView.consumeReturnFromPopup()) {
+            logger.v { "Screen change ignored: returned to the screen under the closed popup" }
+            return
+        }
+        inAppView.closeForAppScreenChange(clock() - SCREEN_CHANGE_GRACE_MS)
+    }
 
     fun onEvent(
         event: IngestEventRequest,
@@ -52,12 +65,12 @@ internal class InAppService(
         onTrack: (campaign: InAppCampaign, eventName: String, properties: Map<String, Any>?) -> Unit,
         onSetUserProperties: (properties: Map<String, Any>) -> Unit,
     ) {
-        onEvent(event, fromWebBridge = false, onImpression, onClick, onTrack, onSetUserProperties)
+        onEvent(event, origin = null, onImpression, onClick, onTrack, onSetUserProperties)
     }
 
     fun onEvent(
         event: IngestEventRequest,
-        fromWebBridge: Boolean,
+        origin: InAppOrigin?,
         onImpression: (campaign: InAppCampaign) -> Unit,
         onClick: (campaign: InAppCampaign, locationId: String) -> Unit,
         onTrack: (campaign: InAppCampaign, eventName: String, properties: Map<String, Any>?) -> Unit,
@@ -103,7 +116,15 @@ internal class InAppService(
 
             val deadline = monotonicNowMs() + FALLTHROUGH_BUDGET_MS
             var fetches = 0
+            val handledSlots = mutableSetOf<InAppDisplaySlot>()
             for (campaign in candidates) {
+                val slot = campaign.slot
+                if (slot in handledSlots) continue
+                if (inAppView.isShowing(slot)) {
+                    handledSlots.add(slot)
+                    continue
+                }
+
                 // html 이 비어 있는 후보만 상세 fetch 를 탄다(resolveCampaignHtml 의 분기와 같은 조건).
                 // 정적 렌더 캠페인은 서버를 안 타므로 요청 예산에서 뺀다.
                 val needsFetch = campaign.html == null
@@ -123,44 +144,48 @@ internal class InAppService(
                 val resolvedCampaign = campaignFetchService.resolveCampaignHtml(campaign, event)
                     ?: continue
 
-                // 웹브릿지에서 온 이벤트이고 활성 웹브릿지가 있으면 웹으로 캠페인 전달
-                val shouldDelegateToWeb = fromWebBridge && MarketapWebBridge.hasActiveWebBridge()
-
-                if (shouldDelegateToWeb) {
-                    handleCampaignForWeb(resolvedCampaign)
-                } else {
-                    handleCampaign(resolvedCampaign, onImpression, onClick, onTrack, onSetUserProperties)
+                if (handleCampaign(resolvedCampaign, slot, origin, onImpression, onClick, onTrack, onSetUserProperties)) {
+                    handledSlots.add(slot)
                 }
-                break
             }
         }
     }
 
-    private fun handleCampaignForWeb(
-        targetCampaign: InAppCampaign
-    ) {
-        logger.d { "Delegating in-app campaign to web: ${targetCampaign.id} with layout type: ${targetCampaign.layout.layoutType}" }
-
-        // 빈도 제한을 위한 노출 기록 (이벤트 전송은 웹에서 impression이 올 때 수행)
-        campaignExposureService.recordImpression(targetCampaign.id)
-
-        // 웹으로 캠페인 전달
-        val messageId = UUID.randomUUID().toString()
-        MarketapWebBridge.sendCampaignToActiveWeb(targetCampaign, messageId)
-    }
-
     private fun handleCampaign(
         targetCampaign: InAppCampaign,
+        slot: InAppDisplaySlot,
+        origin: InAppOrigin?,
         onImpression: (campaign: InAppCampaign) -> Unit,
         onClick: (campaign: InAppCampaign, locationId: String) -> Unit,
         onTrack: (campaign: InAppCampaign, eventName: String, properties: Map<String, Any>?) -> Unit,
         onSetUserProperties: (properties: Map<String, Any>) -> Unit,
-    ) {
+    ): Boolean {
         logger.d { "Showing in-app campaign: ${targetCampaign.id} with layout type: ${targetCampaign.layout.layoutType}" }
-        val campaignHtml = targetCampaign.html ?: return
+        val campaignHtml = targetCampaign.html ?: return false
+        val closeOnPageLeave = InAppPageScope.closesOnPageLeave(slot, targetCampaign.floatingScope)
+        return showCampaign(targetCampaign, campaignHtml, slot, origin, closeOnPageLeave, onImpression, onClick, onTrack, onSetUserProperties)
+    }
 
-        inAppView.show(
+    private fun showCampaign(
+        targetCampaign: InAppCampaign,
+        campaignHtml: String,
+        slot: InAppDisplaySlot,
+        origin: InAppOrigin?,
+        closeOnPageLeave: Boolean,
+        onImpression: (campaign: InAppCampaign) -> Unit,
+        onClick: (campaign: InAppCampaign, locationId: String) -> Unit,
+        onTrack: (campaign: InAppCampaign, eventName: String, properties: Map<String, Any>?) -> Unit,
+        onSetUserProperties: (properties: Map<String, Any>) -> Unit,
+    ): Boolean {
+        val liveOrigin = origin?.takeUnless { it.isGone }
+        if (origin != null && liveOrigin == null) {
+            logger.d { "Origin web view of campaign ${targetCampaign.id} is gone; showing it as an app message" }
+        }
+        return inAppView.show(
             campaignHtml,
+            slot,
+            liveOrigin,
+            closeOnPageLeave,
             {
                 campaignExposureService.recordImpression(targetCampaign.id)
                 onImpression(targetCampaign)
