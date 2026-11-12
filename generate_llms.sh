@@ -224,9 +224,9 @@ const repoConfigs = {
             description: "Firebase messaging integration for receiving and opening Marketap push notifications.",
           },
           {
-            title: "In-App Message Activity",
-            path: "sdk/src/main/kotlin/com/marketap/sdk/client/inapp/InAppMessageActivity.kt",
-            description: "Android activity responsible for presenting in-app message content.",
+            title: "In-App Popup View",
+            path: "sdk/src/main/kotlin/com/marketap/sdk/client/inapp/popup/PopupInAppView.kt",
+            description: "View that presents in-app popup content on top of the current activity.",
           },
         ],
       },

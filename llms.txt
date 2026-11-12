@@ -19,4 +19,4 @@ This file intentionally excludes local build files, sample app credentials, and 
 
 ## Push And In-App
 - [Firebase Messaging Service](https://raw.githubusercontent.com/marketap-dev/marketap-android-sdk/main/sdk/src/main/kotlin/com/marketap/sdk/client/push/MarketapFirebaseMessagingService.kt): Firebase messaging integration for receiving and opening Marketap push notifications.
-- [In-App Message Activity](https://raw.githubusercontent.com/marketap-dev/marketap-android-sdk/main/sdk/src/main/kotlin/com/marketap/sdk/client/inapp/InAppMessageActivity.kt): Android activity responsible for presenting in-app message content.
+- [In-App Popup View](https://raw.githubusercontent.com/marketap-dev/marketap-android-sdk/main/sdk/src/main/kotlin/com/marketap/sdk/client/inapp/popup/PopupInAppView.kt): View that presents in-app popup content on top of the current activity.
