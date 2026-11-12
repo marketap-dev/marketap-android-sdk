@@ -13,16 +13,14 @@ class FloatingAttachPolicyTest {
 
     private fun resumed(
         isHost: Boolean = false,
-        isPopup: Boolean = false,
         recreatingClass: String? = null,
         activityClass: String = "B",
-    ) = FloatingAttachPolicy.onResumed(isHost, isPopup, recreatingClass, activityClass)
+    ) = FloatingAttachPolicy.onResumed(isHost, recreatingClass, activityClass)
 
     @Test
-    fun `팝업 Activity 나 붙은 화면이 앞에 오면 그대로 둔다`() {
-        assertEquals(ResumeAction.IGNORE, resumed(isPopup = true))
-        assertEquals(ResumeAction.IGNORE, resumed(isPopup = true, recreatingClass = "B"))
+    fun `붙은 화면이 앞에 오면 그대로 둔다`() {
         assertEquals(ResumeAction.IGNORE, resumed(isHost = true))
+        assertEquals(ResumeAction.IGNORE, resumed(isHost = true, recreatingClass = "B"))
     }
 
     @Test
@@ -66,8 +64,8 @@ class FloatingAttachPolicyTest {
 
     @Test
     fun `웹뷰에서 시작된 이 페이지에서만 바는 다른 화면이 앞에 와도 옮기지 않는다`() {
-        assertEquals(ResumeAction.IGNORE, FloatingAttachPolicy.onResumed(false, false, null, "B", stayOnHost = true))
-        assertEquals(ResumeAction.RESTORE, FloatingAttachPolicy.onResumed(false, false, "B", "B", stayOnHost = true))
+        assertEquals(ResumeAction.IGNORE, FloatingAttachPolicy.onResumed(false, null, "B", stayOnHost = true))
+        assertEquals(ResumeAction.RESTORE, FloatingAttachPolicy.onResumed(false, "B", "B", stayOnHost = true))
     }
 
     @Test

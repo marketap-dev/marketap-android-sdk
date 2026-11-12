@@ -5,6 +5,7 @@ import android.content.MutableContextWrapper
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
+import androidx.core.view.WindowInsetsCompat
 import java.lang.ref.WeakReference
 
 /**
@@ -20,6 +21,8 @@ internal class DecorAttachment<V : View>(
     var view: V? = null
         private set
     private var contextWrapper: MutableContextWrapper? = null
+
+    @Volatile
     private var hostRef: WeakReference<Activity>? = null
 
     /** 붙은 화면이 회전 등으로 파괴돼 다시 만들어지길 기다리는 화면의 클래스 이름. */
@@ -61,4 +64,11 @@ internal class DecorAttachment<V : View>(
         contextWrapper = null
         recreatingClass = null
     }
+}
+
+/** decor 에 화면 크기로 붙인 View 가 웹 문서에 넘길 위·아래 안전 영역(px). 아래는 키보드가 더 높으면 키보드 높이. */
+internal fun decorSafeArea(insets: WindowInsetsCompat): Pair<Int, Int> {
+    val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout())
+    val ime = insets.getInsets(WindowInsetsCompat.Type.ime())
+    return bars.top to maxOf(bars.bottom, ime.bottom)
 }

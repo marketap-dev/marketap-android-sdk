@@ -30,12 +30,11 @@ internal object FloatingAttachPolicy {
      */
     fun onResumed(
         isHost: Boolean,
-        isPopup: Boolean,
         recreatingClass: String?,
         activityClass: String,
         stayOnHost: Boolean = false,
     ): ResumeAction {
-        if (isPopup || isHost) return ResumeAction.IGNORE
+        if (isHost) return ResumeAction.IGNORE
         if (recreatingClass == activityClass) return ResumeAction.RESTORE
         if (stayOnHost) return ResumeAction.IGNORE
         return ResumeAction.MOVE

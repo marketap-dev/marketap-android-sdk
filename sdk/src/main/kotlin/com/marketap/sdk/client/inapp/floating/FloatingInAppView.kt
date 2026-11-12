@@ -22,7 +22,7 @@ import androidx.core.view.WindowInsetsCompat
 import com.marketap.sdk.client.CurrentActivityHolder
 import com.marketap.sdk.client.inapp.DecorAttachment
 import com.marketap.sdk.client.inapp.InAppCallback
-import com.marketap.sdk.client.inapp.InAppMessageActivity
+import com.marketap.sdk.client.inapp.decorSafeArea
 import com.marketap.sdk.model.external.MarketapCampaignType
 import com.marketap.sdk.model.external.MarketapClickEvent
 import com.marketap.sdk.model.internal.inapp.HideType
@@ -108,7 +108,7 @@ internal object FloatingInAppView : CurrentActivityHolder.ScreenListener {
             attachment.start(box, wrapper)
             CurrentActivityHolder.addScreenListener(this)
             attachTo(activity)
-            val (top, bottom) = ViewCompat.getRootWindowInsets(decor)?.let(::safeArea) ?: (0 to 0)
+            val (top, bottom) = ViewCompat.getRootWindowInsets(decor)?.let(::decorSafeArea) ?: (0 to 0)
             view.loadDataWithBaseURL(
                 null,
                 FloatingScripts.buildDocument(html, top, bottom, timerStartAtMillis),
@@ -130,7 +130,6 @@ internal object FloatingInAppView : CurrentActivityHolder.ScreenListener {
         val current = attachment.host
         val action = FloatingAttachPolicy.onResumed(
             isHost = current === activity,
-            isPopup = activity is InAppMessageActivity,
             recreatingClass = attachment.recreatingClass,
             activityClass = activity.javaClass.name,
             stayOnHost = stayOnHost,
@@ -242,15 +241,9 @@ internal object FloatingInAppView : CurrentActivityHolder.ScreenListener {
         backCallback = null
     }
 
-    private fun safeArea(insets: WindowInsetsCompat): Pair<Int, Int> {
-        val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout())
-        val ime = insets.getInsets(WindowInsetsCompat.Type.ime())
-        return bars.top to maxOf(bars.bottom, ime.bottom)
-    }
-
     private fun pushSafeArea(insets: WindowInsetsCompat) {
         val view = webView ?: return
-        val (top, bottom) = safeArea(insets)
+        val (top, bottom) = decorSafeArea(insets)
         view.post { view.evaluateJavascript(FloatingScripts.applySafeArea(top, bottom), null) }
     }
 
