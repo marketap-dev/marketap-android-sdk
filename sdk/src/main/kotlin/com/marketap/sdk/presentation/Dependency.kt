@@ -11,6 +11,7 @@ import com.marketap.sdk.client.inapp.AndroidInAppView
 import com.marketap.sdk.client.push.MarketapNotificationOpenHandler
 import com.marketap.sdk.domain.service.MarketapCoreService
 import com.marketap.sdk.domain.service.event.EventIngestionService
+import com.marketap.sdk.domain.service.event.SessionUtmStore
 import com.marketap.sdk.domain.service.event.UserIngestionService
 import com.marketap.sdk.domain.service.inapp.CampaignExposureService
 import com.marketap.sdk.domain.service.inapp.CampaignFetchService
@@ -67,6 +68,7 @@ object Dependency {
             sessionManager,
             deviceManager,
             userIngestionService,
+            SessionUtmStore(storage),
         )
 
         val core = MarketapCoreService(

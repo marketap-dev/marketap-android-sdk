@@ -20,6 +20,7 @@ internal class EventIngestionService(
     private val sessionManager: SessionManager,
     private val deviceManager: DeviceManager,
     private val userIngestionService: UserIngestionService,
+    private val sessionUtmStore: SessionUtmStore? = null,
 ) {
     fun trackEvent(eventName: String, eventProperties: Map<String, Any>) {
         trackEvent(eventName, eventProperties, origin = null)
@@ -31,6 +32,8 @@ internal class EventIngestionService(
         val device = deviceManager.getDevice().toReq()
         val sdkIntegrationState = SdkIntegrationState.toJsonString()
 
+        // 세션을 여는 이벤트의 UTM은 세션 시작 이벤트에도 실어야 세션 유입 집계에 잡힌다.
+        val incomingUtm = SessionUtmStore.pickUtm(eventProperties)
         val sessionId = sessionManager.getSessionId { sessionId ->
             marketapBackend.track(
                 projectId, IngestEventRequest(
@@ -38,7 +41,8 @@ internal class EventIngestionService(
                     "mkt_session_start",
                     userId,
                     device,
-                    mapOf("mkt_session_id" to sessionId).withSdkIntegrationState(sdkIntegrationState),
+                    withSessionUtm(incomingUtm + ("mkt_session_id" to sessionId), sessionId)
+                        .withSdkIntegrationState(sdkIntegrationState),
                 )
             )
         }
@@ -49,7 +53,8 @@ internal class EventIngestionService(
             eventName,
             userId,
             device,
-            (eventProperties + ("mkt_session_id" to sessionId)).withSdkIntegrationState(sdkIntegrationState),
+            withSessionUtm(eventProperties + ("mkt_session_id" to sessionId), sessionId)
+                .withSdkIntegrationState(sdkIntegrationState),
         )
 
         marketapBackend.track(projectId, eventRequest)
@@ -71,7 +76,7 @@ internal class EventIngestionService(
                         "mkt_delivery_message",
                         userId,
                         device,
-                        props.withSdkIntegrationState(sdkIntegrationState),
+                        withSessionUtm(props, sessionId).withSdkIntegrationState(sdkIntegrationState),
                     )
                 )
             },
@@ -90,7 +95,7 @@ internal class EventIngestionService(
                         "mkt_click_message",
                         userId,
                         device,
-                        props.withSdkIntegrationState(sdkIntegrationState),
+                        withSessionUtm(props, sessionId).withSdkIntegrationState(sdkIntegrationState),
                     )
                 )
             },
@@ -115,6 +120,9 @@ internal class EventIngestionService(
 
         sessionManager.updateActivity()
     }
+
+    private fun withSessionUtm(properties: Map<String, Any>, sessionId: String): Map<String, Any> =
+        sessionUtmStore?.apply(properties, sessionId) ?: properties
 
     private fun generateRandomUUID(): String {
         return UUID.randomUUID().toString()
