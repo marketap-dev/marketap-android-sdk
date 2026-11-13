@@ -2,6 +2,7 @@ package com.marketap.sdk.domain.service.inapp
 
 import com.marketap.sdk.domain.repository.InAppView
 import com.marketap.sdk.domain.service.inapp.condition.ConditionChecker
+import com.marketap.sdk.domain.service.inapp.condition.matchesTrigger
 import com.marketap.sdk.model.internal.InAppCampaign
 import com.marketap.sdk.model.internal.api.IngestEventRequest
 import com.marketap.sdk.model.internal.inapp.HideType
@@ -77,8 +78,8 @@ internal class InAppService(
             // 상세 fetch 가 빈 응답이면(쿠폰 발급 실패·타겟팅 탈락 등 서버가 노출을 확정 못 한 경우)
             // 뒤에 뜰 수 있는 캠페인이 있어도 화면에 아무것도 안 떴다. (web SDK 와 동일한 수정)
             val candidates = campaigns.filter { campaign ->
-                if (!eventConditionChecker.checkCondition(
-                        campaign.triggerEventCondition.condition,
+                if (!eventConditionChecker.matchesTrigger(
+                        campaign.triggerEventCondition,
                         event.name,
                         event.properties
                     )

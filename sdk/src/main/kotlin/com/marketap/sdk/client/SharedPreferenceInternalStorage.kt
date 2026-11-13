@@ -133,7 +133,7 @@ internal class SharedPreferenceInternalStorage(
     internal fun clearCampaignCache() {
         sharedPreference.edit {
             sharedPreference.all.keys.filter {
-                it.startsWith("last_campaigns:") || it.startsWith("campaign_cached_at:") || it.startsWith("campaign_checksum:")
+                it.startsWith("last_campaigns") || it.startsWith("campaign_cached_at") || it.startsWith("campaign_checksum")
             }.forEach { remove(it) }
         }
     }

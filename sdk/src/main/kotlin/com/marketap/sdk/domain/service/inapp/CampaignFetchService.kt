@@ -25,9 +25,9 @@ internal class CampaignFetchService(
 ) : CampaignFetching {
 
     companion object {
-        private const val CAMPAIGN_CACHE_KEY = "last_campaigns"
-        private const val CAMPAIGN_CACHED_AT = "campaign_cached_at"
-        private const val CAMPAIGN_CHECKSUM = "campaign_checksum"
+        private const val CAMPAIGN_CACHE_KEY = "last_campaigns_v3"
+        private const val CAMPAIGN_CACHED_AT = "campaign_cached_at_v3"
+        private const val CAMPAIGN_CHECKSUM = "campaign_checksum_v3"
         private const val EXPIRATION_TIME: Long = 5 * 60 * 1000 // 5 minutes
     }
 
