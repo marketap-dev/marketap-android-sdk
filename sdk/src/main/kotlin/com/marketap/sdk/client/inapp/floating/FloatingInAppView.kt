@@ -20,8 +20,9 @@ import androidx.activity.OnBackPressedCallback
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.marketap.sdk.client.CurrentActivityHolder
+import com.marketap.sdk.client.inapp.DecorAttachment
 import com.marketap.sdk.client.inapp.InAppCallback
-import com.marketap.sdk.client.inapp.InAppMessageActivity
+import com.marketap.sdk.client.inapp.decorSafeArea
 import com.marketap.sdk.model.external.MarketapCampaignType
 import com.marketap.sdk.model.external.MarketapClickEvent
 import com.marketap.sdk.model.internal.inapp.HideType
@@ -30,7 +31,8 @@ import com.marketap.sdk.presentation.AppClickRouting
 import com.marketap.sdk.presentation.CustomHandlerStore
 import com.marketap.sdk.utils.logger
 import com.marketap.sdk.utils.postToMainThread
-import java.lang.ref.WeakReference
+
+private const val CONTAINER_Z = 1000f
 
 /**
  * 플로팅 자리 인앱 메시지. 지금 화면(Activity)의 decor view 에 화면 크기 웹뷰를 붙이고,
@@ -38,10 +40,9 @@ import java.lang.ref.WeakReference
  */
 internal object FloatingInAppView : CurrentActivityHolder.ScreenListener {
 
-    private var container: FloatingContainer? = null
+    private val attachment = DecorAttachment<FloatingContainer>(CONTAINER_Z) { removeBackCallback() }
+    private val container: FloatingContainer? get() = attachment.view
     private var webView: WebView? = null
-    private var contextWrapper: MutableContextWrapper? = null
-    private var host: WeakReference<Activity>? = null
     @Volatile
     private var session = 0
 
@@ -51,14 +52,13 @@ internal object FloatingInAppView : CurrentActivityHolder.ScreenListener {
     private var stayOnHost = false
     private var onShown: (() -> Unit)? = null
     private var onClosed: (() -> Unit)? = null
-    private var recreatingClass: String? = null
     private var backCallback: OnBackPressedCallback? = null
     private val ghosts = FloatingGhostLedger<Activity, View> { ghost ->
         (ghost.parent as? ViewGroup)?.removeView(ghost)
     }
 
     /** 메인 스레드에서 부른다. */
-    fun isHostedBy(activity: Activity): Boolean = host?.get() === activity
+    fun isHostedBy(activity: Activity): Boolean = attachment.host === activity
 
     /**
      * @param stayOnHost 다른 화면이 앞에 와도 옮기지 않고, 붙은 화면이 사라지면 닫는다.
@@ -95,10 +95,9 @@ internal object FloatingInAppView : CurrentActivityHolder.ScreenListener {
             this.onShown = onShown
             this.onClosed = onClosed
             val wrapper = MutableContextWrapper(activity)
-            contextWrapper = wrapper
             val view = createWebView(wrapper, session)
             webView = view
-            container = FloatingContainer(wrapper).also { box ->
+            val box = FloatingContainer(wrapper).also { box ->
                 box.addView(view)
                 box.visibility = View.INVISIBLE
                 ViewCompat.setOnApplyWindowInsetsListener(box) { _, insets ->
@@ -106,9 +105,10 @@ internal object FloatingInAppView : CurrentActivityHolder.ScreenListener {
                     insets
                 }
             }
+            attachment.start(box, wrapper)
             CurrentActivityHolder.addScreenListener(this)
             attachTo(activity)
-            val (top, bottom) = ViewCompat.getRootWindowInsets(decor)?.let(::safeArea) ?: (0 to 0)
+            val (top, bottom) = ViewCompat.getRootWindowInsets(decor)?.let(::decorSafeArea) ?: (0 to 0)
             view.loadDataWithBaseURL(
                 null,
                 FloatingScripts.buildDocument(html, top, bottom, timerStartAtMillis),
@@ -127,22 +127,21 @@ internal object FloatingInAppView : CurrentActivityHolder.ScreenListener {
     override fun onScreenResumed(activity: Activity) {
         val box = container ?: return
         ghosts.onScreenFront(activity)
-        val current = host?.get()
+        val current = attachment.host
         val action = FloatingAttachPolicy.onResumed(
             isHost = current === activity,
-            isPopup = activity is InAppMessageActivity,
-            recreatingClass = recreatingClass,
+            recreatingClass = attachment.recreatingClass,
             activityClass = activity.javaClass.name,
             stayOnHost = stayOnHost,
         )
         when (action) {
             ResumeAction.IGNORE -> Unit
             ResumeAction.RESTORE -> {
-                recreatingClass = null
+                attachment.recreatingClass = null
                 attachTo(activity)
             }
             ResumeAction.MOVE -> {
-                recreatingClass = null
+                attachment.recreatingClass = null
                 move(box, current, activity)
             }
         }
@@ -152,7 +151,7 @@ internal object FloatingInAppView : CurrentActivityHolder.ScreenListener {
         if (container == null) return
         ghosts.onScreenGone(activity)
         val action = FloatingAttachPolicy.onDestroyed(
-            isHost = host?.get() === activity,
+            isHost = attachment.host === activity,
             isChangingConfigurations = activity.isChangingConfigurations,
             stayOnHost = stayOnHost,
         )
@@ -160,7 +159,7 @@ internal object FloatingInAppView : CurrentActivityHolder.ScreenListener {
             DestroyAction.IGNORE -> Unit
             DestroyAction.DETACH_FOR_RECREATE -> {
                 detach()
-                recreatingClass = activity.javaClass.name
+                attachment.recreatingClass = activity.javaClass.name
             }
             DestroyAction.DETACH_AND_WAIT -> detach()
             DestroyAction.CLOSE -> dispose()
@@ -186,28 +185,12 @@ internal object FloatingInAppView : CurrentActivityHolder.ScreenListener {
     }
 
     private fun attachTo(activity: Activity): Boolean {
-        val box = container ?: return false
-        val decor = activity.window?.decorView as? ViewGroup ?: return false
-        detach()
-        contextWrapper?.baseContext = activity
-        decor.addView(
-            box,
-            FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
-        )
-        box.bringToFront()
-        box.translationZ = CONTAINER_Z
-        host = WeakReference(activity)
+        if (!attachment.attachTo(activity)) return false
         updateBackCallback()
         return true
     }
 
-    private fun detach() {
-        val box = container ?: return
-        (box.parent as? ViewGroup)?.removeView(box)
-        removeBackCallback()
-        host?.get()?.let { contextWrapper?.baseContext = it.applicationContext }
-        host = null
-    }
+    private fun detach() = attachment.detach()
 
     private fun dispose() {
         if (container == null) return
@@ -222,14 +205,12 @@ internal object FloatingInAppView : CurrentActivityHolder.ScreenListener {
         }
         val closed = onClosed
         webView = null
-        container = null
-        contextWrapper = null
+        attachment.clear()
         callback = null
         origin = null
         stayOnHost = false
         onShown = null
         onClosed = null
-        recreatingClass = null
         closed?.invoke()
     }
 
@@ -242,7 +223,7 @@ internal object FloatingInAppView : CurrentActivityHolder.ScreenListener {
     }
 
     private fun updateBackCallback() {
-        val owner = host?.get() as? ComponentActivity
+        val owner = attachment.host as? ComponentActivity
         if (container?.layout?.expanded != true || owner == null) {
             removeBackCallback()
             return
@@ -260,15 +241,9 @@ internal object FloatingInAppView : CurrentActivityHolder.ScreenListener {
         backCallback = null
     }
 
-    private fun safeArea(insets: WindowInsetsCompat): Pair<Int, Int> {
-        val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout())
-        val ime = insets.getInsets(WindowInsetsCompat.Type.ime())
-        return bars.top to maxOf(bars.bottom, ime.bottom)
-    }
-
     private fun pushSafeArea(insets: WindowInsetsCompat) {
         val view = webView ?: return
-        val (top, bottom) = safeArea(insets)
+        val (top, bottom) = decorSafeArea(insets)
         view.post { view.evaluateJavascript(FloatingScripts.applySafeArea(top, bottom), null) }
     }
 
@@ -383,7 +358,7 @@ internal object FloatingInAppView : CurrentActivityHolder.ScreenListener {
             val campaignId = callback?.onClick(locationId)
             if (url.isBlank()) return
             onMain {
-                val activity = host?.get() ?: return@onMain
+                val activity = attachment.host ?: return@onMain
                 val event = MarketapClickEvent(MarketapCampaignType.IN_APP_MESSAGE, campaignId ?: "", url)
                 if (CustomHandlerStore.maybeHandleClick(activity, event)) return@onMain
                 AppClickRouting.open(activity, url, origin)
@@ -408,7 +383,6 @@ internal object FloatingInAppView : CurrentActivityHolder.ScreenListener {
         }
     }
 
-    private const val CONTAINER_Z = 1000f
     private const val GHOST_Z = 999f
     private const val LEGACY_GHOST_MS = 100L
     private const val GHOST_TIMEOUT_MS = 1000L

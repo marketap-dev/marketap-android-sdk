@@ -2,7 +2,6 @@ package com.marketap.sdk.inapp
 
 import com.marketap.sdk.client.inapp.InAppSession
 import com.marketap.sdk.client.inapp.InAppSlots
-import com.marketap.sdk.client.inapp.popupSessionFor
 import com.marketap.sdk.domain.repository.InAppView
 import com.marketap.sdk.domain.service.inapp.CampaignExposing
 import com.marketap.sdk.domain.service.inapp.CampaignFetching
@@ -209,25 +208,35 @@ class InAppSlotTest {
     }
 
     @Test
-    fun `숨긴 팝업도 화면이 남아 있는 동안 이벤트와 유저 속성을 받고 다른 화면 것은 받지 않는다`() {
+    fun `숨긴 팝업 세션도 정리가 끝날 때까지 이벤트와 유저 속성을 전달하고 클릭은 받지 않는다`() {
         val tracked = mutableListOf<String>()
-        fun session(name: String) = InAppSession(
+        val session = InAppSession(
             onShow = {},
-            onClick = { "id" },
+            onClick = { tracked.add("click"); "id" },
             onHide = {},
-            onTrack = { event, _ -> tracked.add("$name:$event") },
-            onSetUserProperties = { tracked.add("$name:props") },
+            onTrack = { event, _ -> tracked.add(event) },
+            onSetUserProperties = { tracked.add("props") },
         )
-        val hidden = session("old")
-        val next = session("new")
-        hidden.onHide(HideType.CLOSE)
+        session.onHide(HideType.CLOSE)
 
-        popupSessionFor(hidden.id, current = next, hidden = hidden)?.onTrack("mkt_after_hide", "{}")
-        popupSessionFor(hidden.id, current = next, hidden = hidden)?.onSetUserProperties("{}")
-        popupSessionFor(next.id, current = next, hidden = hidden)?.onTrack("mkt_new", "{}")
+        session.onTrack("mkt_after_hide", "{}")
+        session.onSetUserProperties("{}")
 
-        assertEquals(listOf("old:mkt_after_hide", "old:props", "new:mkt_new"), tracked)
-        assertNull(popupSessionFor(hidden.id, current = next, hidden = null))
+        assertNull(session.onClick("loc"))
+        assertEquals(listOf("mkt_after_hide", "props"), tracked)
+    }
+
+    @Test
+    fun `팝업은 숨겨져도 정리가 끝나 자리를 반납하기 전에는 다음 팝업이 뜨지 않는다`() {
+        fire(listOf(popup("a")))
+        view.shown.single().onHide(HideType.CLOSE)
+        fire(listOf(popup("b")))
+        assertEquals(listOf("a"), view.shown.map { it.id })
+
+        view.close(view.shown.single())
+        fire(listOf(popup("c")))
+
+        assertEquals(listOf("a", "c"), view.shown.map { it.id })
     }
 
     @Test

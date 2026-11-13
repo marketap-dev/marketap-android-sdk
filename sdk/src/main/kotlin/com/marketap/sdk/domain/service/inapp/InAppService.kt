@@ -51,10 +51,6 @@ internal class InAppService(
     private val clock: () -> Long = ::monotonicNowMs,
 ) {
     fun screenChanged() {
-        if (inAppView.consumeReturnFromPopup()) {
-            logger.v { "Screen change ignored: returned to the screen under the closed popup" }
-            return
-        }
         inAppView.closeForAppScreenChange(clock() - SCREEN_CHANGE_GRACE_MS)
     }
 

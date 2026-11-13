@@ -26,7 +26,4 @@ interface InAppView {
 
     /** 앱이 화면 전환 신호를 보냈다. [shownBeforeMs] 보다 먼저 화면에 나타난 "이 페이지에서만" 플로팅과 팝업을 닫는다. 아직 나타나지 않은 메시지는 닫지 않는다. */
     fun closeForAppScreenChange(shownBeforeMs: Long) {}
-
-    /** 인앱 팝업이 닫히며 그 아래 있던 같은 화면이 다시 나타난 직후인지. 이때의 화면 전환 신호는 화면이 바뀐 것이 아니다. 한 번 true 를 돌려주면 지운다. */
-    fun consumeReturnFromPopup(): Boolean = false
 }

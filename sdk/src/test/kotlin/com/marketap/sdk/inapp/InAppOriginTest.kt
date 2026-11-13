@@ -52,9 +52,6 @@ class InAppOriginTest {
         val slots = InAppSlots<Any>()
         val shown = mutableListOf<Shown>()
         val closed = mutableListOf<String>()
-        var returnFromPopup = false
-
-        override fun consumeReturnFromPopup(): Boolean = returnFromPopup.also { returnFromPopup = false }
 
         override fun closeForAppScreenChange(shownBeforeMs: Long) {
             for (slot in InAppDisplaySlot.values()) {
@@ -209,16 +206,14 @@ class InAppOriginTest {
     }
 
     @Test
-    fun `팝업이 닫히며 같은 화면으로 돌아온 직후의 screenChanged 는 무시하고 다음 호출은 처리한다`() {
-        fire(floating("f", "PAGE"), from = null)
+    fun `팝업이 닫힌 직후의 screenChanged 도 무시하지 않는다`() {
+        fire(popup("p"), floating("f", "PAGE"), from = null)
         now += 5_000
-        view.returnFromPopup = true
-
+        view.release("p")
         service.screenChanged()
-        assertTrue(view.isOpen("f"))
 
-        service.screenChanged()
         assertEquals(listOf("f"), view.closed)
+        assertFalse(view.isOpen("f"))
     }
 
     @Test
