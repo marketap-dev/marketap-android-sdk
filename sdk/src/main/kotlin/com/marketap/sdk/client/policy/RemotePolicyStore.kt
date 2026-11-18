@@ -27,7 +27,7 @@ internal class RemotePolicyStore(
         val lock = Any()
         private val modes = mutableMapOf<String, Boolean>()
         private val generations = mutableMapOf<String, Long>()
-        private val blocks = listOf("collection", "inApp", "pushTracking")
+        private val blocks = listOf("collection", "inApp", "pushTracking", "sessionUtm")
         private val isoTimestamp = Regex("\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z")
     }
 
