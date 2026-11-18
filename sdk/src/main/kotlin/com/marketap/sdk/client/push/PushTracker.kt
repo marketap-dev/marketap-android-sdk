@@ -2,12 +2,14 @@ package com.marketap.sdk.client.push
 
 import android.content.Context
 import com.marketap.sdk.client.AndroidDeviceManager
+import com.marketap.sdk.client.AndroidSessionManager
 import com.marketap.sdk.SdkMetadataProvider
 import com.marketap.sdk.client.SharedPreferenceInternalStorage
 import com.marketap.sdk.client.api.MarketapApiImpl
 import com.marketap.sdk.client.api.RetryMarketapBackend
 import com.marketap.sdk.domain.repository.DeviceManager
-import com.marketap.sdk.domain.repository.MarketapBackend
+import com.marketap.sdk.domain.repository.InternalStorage
+import com.marketap.sdk.domain.service.event.SessionUtmStore
 import com.marketap.sdk.model.internal.AppEventProperty
 import com.marketap.sdk.model.internal.SdkIntegrationState
 import com.marketap.sdk.model.internal.api.DeviceReq
@@ -22,7 +24,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 internal object PushTracker {
-    private var marketapBackend: MarketapBackend? = null
+    private var marketapBackend: RetryMarketapBackend? = null
+    private var storage: InternalStorage? = null
     private var deviceManager: DeviceManager? = null
 
     private fun initWithContext(context: Context) {
@@ -32,6 +35,7 @@ internal object PushTracker {
             return
         }
         val storage = SharedPreferenceInternalStorage(context)
+        this.storage = storage
         val config = MarketapRegistry.config
             ?: SdkMetadataProvider.loadIntegrationInfo(storage)?.let {
                 SdkMetadataProvider.createConfig(projectId = "", integrationInfo = it)
@@ -77,6 +81,16 @@ internal object PushTracker {
         }
     }
 
+    /** 푸시를 누른 시점에 진행 중인 세션의 UTM. 세션을 새로 열지 않는다. */
+    private fun activeSessionUtm(projectId: String): Map<String, String> {
+        val storage = storage ?: return emptyMap()
+        val sessionId = AndroidSessionManager(storage).activeSessionId() ?: return emptyMap()
+        return SessionUtmStore(
+            storage,
+            enabled = { marketapBackend?.remotePolicy?.currentlyAllowed(projectId, "sessionUtm") ?: true },
+        ).stored(sessionId)
+    }
+
     fun trackClick(context: Context, data: DeliveryData) {
         initWithContext(context)
         CoroutineScope(Dispatchers.IO).launch {
@@ -89,6 +103,7 @@ internal object PushTracker {
                         AppEventProperty.offSite(data)
                             .addLocationId("push"),
                         SdkIntegrationState.toJsonString(),
+                        activeSessionUtm(data.projectId),
                     )
                 ) ?: throw IllegalStateException("MarketapBackend is not initialized")
             } catch (t: Throwable) {

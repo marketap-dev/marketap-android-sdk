@@ -23,4 +23,7 @@ internal object MarketapRegistry {
     var application: Application? = null
     var marketapClickHandler: MarketapClickHandler? = null
     var logLevel: MarketapLogLevel = MarketapLogLevel.INFO
+
+    /** 초기화 전에 받은 setUtm 값. 초기화 때 첫 이벤트보다 먼저 넘긴다. */
+    @Volatile var utmBeforeInit: Map<String, String>? = null
 }
