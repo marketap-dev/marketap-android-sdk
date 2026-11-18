@@ -54,13 +54,14 @@ internal data class IngestEventRequest(
             device: DeviceReq,
             properties: AppEventProperty,
             sdkIntegrationState: String,
+            sessionUtm: Map<String, String> = emptyMap(),
         ): IngestEventRequest {
             return IngestEventRequest(
                 id = null,
                 name = "mkt_click_message",
                 userId = userId,
                 device = device,
-                properties = properties.toMap().withSdkIntegrationState(sdkIntegrationState),
+                properties = (properties.toMap() + sessionUtm).withSdkIntegrationState(sdkIntegrationState),
             )
         }
 

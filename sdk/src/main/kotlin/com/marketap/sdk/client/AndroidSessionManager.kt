@@ -27,6 +27,13 @@ class AndroidSessionManager(
         return sessionId
     }
 
+    /** 진행 중인 세션의 id. 세션이 없거나 만료됐으면 null이고, 새 세션을 만들지 않는다. */
+    fun activeSessionId(): String? {
+        val sessionId = storage.getItem(SESSION_KEY, stringAdapter) ?: return null
+        val activityTime = storage.getItem(LAST_ACTIVITY_KEY, longAdapter) ?: return null
+        return sessionId.takeIf { activityTime + expirationTime >= System.currentTimeMillis() }
+    }
+
     private fun generateAndSaveSessionId(): String {
         val newSessionId = "${System.currentTimeMillis()}:${UUID.randomUUID()}"
         storage.setItem(SESSION_KEY, newSessionId, stringAdapter)
