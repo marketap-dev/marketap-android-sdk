@@ -50,6 +50,14 @@ internal class MarketapCoreService(
         }
     }
 
+    fun setUtm(utm: Map<String, String>) {
+        try {
+            eventIngestionService.setPendingUtm(utm)
+        } catch (t: Throwable) {
+            logger.e(t) { "Failed to set utm" }
+        }
+    }
+
     fun trackFromWebBridge(name: String, properties: Map<String, Any>?, origin: InAppOrigin?) {
         try {
             eventIngestionService.trackEvent(name, properties ?: emptyMap(), origin)

@@ -4,6 +4,7 @@ import android.app.Activity
 import android.app.Application
 import com.marketap.sdk.client.SharedPreferenceInternalStorage
 import com.marketap.sdk.client.inapp.floating.FloatingInAppView
+import com.marketap.sdk.domain.service.event.SessionUtmStore
 import com.marketap.sdk.model.MarketapConfig
 import com.marketap.sdk.model.external.EventProperty
 import com.marketap.sdk.model.external.MarketapClickHandler
@@ -207,6 +208,46 @@ object Marketap {
             "Marketap SDK track page view with properties: ${properties?.serialize(mapAdapter<String, Any>())}"
         }
         marketapCore?.track("mkt_page_view", properties)
+    }
+
+    /**
+     * 광고·메시지 링크의 UTM을 세션 UTM(`mkt_session_utm_*`)으로 넘깁니다. 링크를 받는 곳에서 호출합니다.
+     * 이벤트를 보내지 않고, 다음 이벤트부터 같은 세션의 이벤트에 붙습니다. 30분 안에 이벤트가 없으면 버립니다.
+     * SDK 초기화 전에 호출해도 됩니다.
+     *
+     * @param url `utm_source`, `utm_medium`, `utm_campaign`, `utm_term`, `utm_content` 쿼리 파라미터가 있는 링크
+     */
+    @JvmStatic
+    fun setUtmFromUrl(url: String) {
+        logger.d { "Marketap SDK set utm from url: $url" }
+        setUtmValues(SessionUtmStore.utmFromUrl(url))
+    }
+
+    /**
+     * UTM 값을 세션 UTM(`mkt_session_utm_*`)으로 넘깁니다. MMP(AppsFlyer 등) 콜백처럼 링크 없이 값만 받을 때 씁니다.
+     * 동작은 [setUtmFromUrl] 과 같습니다. 빈 값과 null 은 없는 것으로 봅니다.
+     */
+    @JvmOverloads
+    @JvmStatic
+    fun setUtm(
+        source: String?,
+        medium: String? = null,
+        campaign: String? = null,
+        term: String? = null,
+        content: String? = null,
+    ) {
+        logger.d { "Marketap SDK set utm source=$source medium=$medium campaign=$campaign term=$term content=$content" }
+        setUtmValues(
+            SessionUtmStore.UTM_KEYS.zip(listOf(source, medium, campaign, term, content))
+                .mapNotNull { (key, value) -> value?.takeIf { it.isNotEmpty() }?.let { key to it } }
+                .toMap()
+        )
+    }
+
+    private fun setUtmValues(utm: Map<String, String>) {
+        if (utm.isEmpty()) return
+        val core = if (MarketapRegistry.isInitialized) marketapCore else null
+        if (core == null) MarketapRegistry.utmBeforeInit = utm else core.setUtm(utm)
     }
 
     /**
