@@ -17,6 +17,13 @@ class PopupStateTest {
         var canAttach = true
         lateinit var lifecycle: PopupLifecycle<Screen>
         var tearDownSync = false
+        var mountAllowed = true
+        var mountChecks = 0
+
+        override fun canMount(): Boolean {
+            mountChecks++
+            return mountAllowed
+        }
 
         override fun attach(screen: Screen): Boolean {
             if (!canAttach) return false
@@ -267,5 +274,44 @@ class PopupStateTest {
         lifecycle.onScreenResumed(Screen("A"), "A")
 
         assertEquals(1, effects.count("impression"))
+    }
+
+    @Test
+    fun `화면을 기다리는 동안 붙일 수 없게 되면 붙이지 않고 노출 기록 없이 정리한다`() {
+        effects.tearDownSync = true
+        lifecycle.start(null)
+        effects.mountAllowed = false
+        lifecycle.onScreenResumed(a, "A")
+        lifecycle.onPageFinished()
+
+        assertEquals(PopupState.CLOSED, lifecycle.state)
+        assertEquals(listOf("tearDown", "release"), effects.calls)
+        assertEquals(0, effects.count("impression"))
+    }
+
+    @Test
+    fun `처음 붙일 때 붙일 수 있으면 그대로 붙고 노출을 기록한다`() {
+        lifecycle.start(null)
+        lifecycle.onScreenResumed(a, "A")
+        lifecycle.onPageFinished()
+
+        assertEquals(PopupState.ATTACHED, lifecycle.state)
+        assertEquals(listOf("attach:A", "impression"), effects.calls)
+        assertEquals(1, effects.mountChecks)
+    }
+
+    @Test
+    fun `다른 화면으로 옮겨 붙거나 다시 붙을 때는 붙일 수 있는지 묻지 않는다`() {
+        attachedToA()
+        effects.mountAllowed = false
+        lifecycle.onScreenResumed(b, "B")
+        assertEquals(PopupState.ATTACHED, lifecycle.state)
+        assertTrue(effects.calls.contains("attach:B"))
+
+        lifecycle.onScreenDestroyed(b, false)
+        lifecycle.onScreenResumed(a, "A")
+        assertEquals(PopupState.ATTACHED, lifecycle.state)
+        assertEquals(1, effects.mountChecks)
+        assertEquals(0, effects.count("tearDown"))
     }
 }

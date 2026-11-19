@@ -53,7 +53,8 @@ internal class MarketapInAppView(
     private fun buildHtml(
         campaignHtml: String,
         topSafeArea: Int,
-        bottomSafeArea: Int
+        bottomSafeArea: Int,
+        timerStartAtMillis: Long,
     ): String {
         val script = """
         <script>
@@ -80,6 +81,7 @@ internal class MarketapInAppView(
                 },
                 topSafeArea: $topSafeArea / window.devicePixelRatio,
                 bottomSafeArea: $bottomSafeArea / window.devicePixelRatio,
+                timerStartAt: $timerStartAtMillis,
             };
         </script>
     """.trimIndent()
@@ -110,8 +112,8 @@ internal class MarketapInAppView(
         fun onPageBroken()
     }
 
-    /** 메인 스레드에서 부른다. [topSafeArea]·[bottomSafeArea] 는 px. */
-    fun show(html: String, topSafeArea: Int, bottomSafeArea: Int, listener: PageListener) {
+    /** 메인 스레드에서 부른다. [topSafeArea]·[bottomSafeArea] 는 px, [timerStartAtMillis] 는 템플릿 타이머의 시작 시각(epoch ms). */
+    fun show(html: String, topSafeArea: Int, bottomSafeArea: Int, timerStartAtMillis: Long, listener: PageListener) {
         webViewClient = object : WebViewClient() {
             private var finished = false
 
@@ -142,7 +144,7 @@ internal class MarketapInAppView(
         visibility = VISIBLE
         loadDataWithBaseURL(
             null,
-            buildHtml(html, topSafeArea, bottomSafeArea),
+            buildHtml(html, topSafeArea, bottomSafeArea, timerStartAtMillis),
             "text/html",
             "UTF-8",
             null
