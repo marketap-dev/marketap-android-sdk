@@ -1,0 +1,1465 @@
+{
+  "note": "이벤트 플로우 판정 계약. backend EventFlowRule.kt 와 web-sdk eventFlowRule.ts 가 같은 결과를 내야 한다. 두 레포에 같은 내용으로 둔다(marketap-backend domain/etl/src/test/resources, marketap-web-sdk src/__tests__/fixtures). at·lastStepAt·blockedUntil 은 초 단위. impression 입력은 호출하는 쪽이 노출 뒤 상태를 지우는 동작을 흉내 낸다. 조건 매칭은 이벤트 이름만 본다.",
+  "cases": [
+    {
+      "name": "진입 뒤 제한 시간 안에 도달하면 발화한다",
+      "flow": {
+        "steps": [
+          {
+            "events": [
+              "signup"
+            ],
+            "withinSeconds": 1800
+          }
+        ],
+        "arrival": [
+          "view_product"
+        ],
+        "cancel": []
+      },
+      "inputs": [
+        {
+          "event": "signup",
+          "at": 0,
+          "expect": {
+            "fired": false,
+            "restarted": true,
+            "state": {
+              "nextStep": 1,
+              "lastStepAt": 0
+            }
+          }
+        },
+        {
+          "event": "view_product",
+          "at": 600,
+          "expect": {
+            "fired": true,
+            "restarted": false,
+            "state": {
+              "nextStep": 1,
+              "lastStepAt": 0
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "제한 시간 경계는 포함한다",
+      "flow": {
+        "steps": [
+          {
+            "events": [
+              "signup"
+            ],
+            "withinSeconds": 1800
+          }
+        ],
+        "arrival": [
+          "view_product"
+        ],
+        "cancel": []
+      },
+      "inputs": [
+        {
+          "event": "signup",
+          "at": 0,
+          "expect": {
+            "fired": false,
+            "restarted": true,
+            "state": {
+              "nextStep": 1,
+              "lastStepAt": 0
+            }
+          }
+        },
+        {
+          "event": "view_product",
+          "at": 1800,
+          "expect": {
+            "fired": true,
+            "restarted": false,
+            "state": {
+              "nextStep": 1,
+              "lastStepAt": 0
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "제한 시간이 지나면 발화하지 않고 진행을 버린다",
+      "flow": {
+        "steps": [
+          {
+            "events": [
+              "signup"
+            ],
+            "withinSeconds": 1800
+          }
+        ],
+        "arrival": [
+          "view_product"
+        ],
+        "cancel": []
+      },
+      "inputs": [
+        {
+          "event": "signup",
+          "at": 0,
+          "expect": {
+            "fired": false,
+            "restarted": true,
+            "state": {
+              "nextStep": 1,
+              "lastStepAt": 0
+            }
+          }
+        },
+        {
+          "event": "view_product",
+          "at": 1801,
+          "expect": {
+            "fired": false,
+            "restarted": false,
+            "state": null
+          }
+        }
+      ]
+    },
+    {
+      "name": "진입 전 도달 이벤트는 무시한다",
+      "flow": {
+        "steps": [
+          {
+            "events": [
+              "signup"
+            ],
+            "withinSeconds": 1800
+          }
+        ],
+        "arrival": [
+          "view_product"
+        ],
+        "cancel": []
+      },
+      "inputs": [
+        {
+          "event": "view_product",
+          "at": 0,
+          "expect": {
+            "fired": false,
+            "restarted": false,
+            "state": null
+          }
+        }
+      ]
+    },
+    {
+      "name": "취소 뒤 도달은 발화하지 않고, 다시 진입하면 발화한다",
+      "flow": {
+        "steps": [
+          {
+            "events": [
+              "add_to_cart"
+            ],
+            "withinSeconds": 86400
+          }
+        ],
+        "arrival": [
+          "view_main"
+        ],
+        "cancel": [
+          "purchase"
+        ]
+      },
+      "inputs": [
+        {
+          "event": "add_to_cart",
+          "at": 0,
+          "expect": {
+            "fired": false,
+            "restarted": true,
+            "state": {
+              "nextStep": 1,
+              "lastStepAt": 0
+            }
+          }
+        },
+        {
+          "event": "purchase",
+          "at": 100,
+          "expect": {
+            "fired": false,
+            "restarted": true,
+            "state": null
+          }
+        },
+        {
+          "event": "view_main",
+          "at": 200,
+          "expect": {
+            "fired": false,
+            "restarted": false,
+            "state": null
+          }
+        },
+        {
+          "event": "add_to_cart",
+          "at": 300,
+          "expect": {
+            "fired": false,
+            "restarted": true,
+            "state": {
+              "nextStep": 1,
+              "lastStepAt": 300
+            }
+          }
+        },
+        {
+          "event": "view_main",
+          "at": 400,
+          "expect": {
+            "fired": true,
+            "restarted": false,
+            "state": {
+              "nextStep": 1,
+              "lastStepAt": 300
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "진행 중 다시 진입하면 시각을 갱신한다",
+      "flow": {
+        "steps": [
+          {
+            "events": [
+              "signup"
+            ],
+            "withinSeconds": 1800
+          }
+        ],
+        "arrival": [
+          "view_product"
+        ],
+        "cancel": []
+      },
+      "inputs": [
+        {
+          "event": "signup",
+          "at": 0,
+          "expect": {
+            "fired": false,
+            "restarted": true,
+            "state": {
+              "nextStep": 1,
+              "lastStepAt": 0
+            }
+          }
+        },
+        {
+          "event": "signup",
+          "at": 1000,
+          "expect": {
+            "fired": false,
+            "restarted": true,
+            "state": {
+              "nextStep": 1,
+              "lastStepAt": 1000
+            }
+          }
+        },
+        {
+          "event": "view_product",
+          "at": 2500,
+          "expect": {
+            "fired": true,
+            "restarted": false,
+            "state": {
+              "nextStep": 1,
+              "lastStepAt": 1000
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "진입과 도달이 같은 이벤트면 한 이벤트로 끝까지 가지 않는다",
+      "flow": {
+        "steps": [
+          {
+            "events": [
+              "page_view"
+            ],
+            "withinSeconds": 600
+          }
+        ],
+        "arrival": [
+          "page_view"
+        ],
+        "cancel": []
+      },
+      "inputs": [
+        {
+          "event": "page_view",
+          "at": 0,
+          "expect": {
+            "fired": false,
+            "restarted": true,
+            "state": {
+              "nextStep": 1,
+              "lastStepAt": 0
+            }
+          }
+        },
+        {
+          "event": "page_view",
+          "at": 10,
+          "expect": {
+            "fired": true,
+            "restarted": false,
+            "state": {
+              "nextStep": 1,
+              "lastStepAt": 0
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "만료된 뒤 진입 이벤트가 오면 새로 진입한다",
+      "flow": {
+        "steps": [
+          {
+            "events": [
+              "page_view"
+            ],
+            "withinSeconds": 600
+          }
+        ],
+        "arrival": [
+          "page_view"
+        ],
+        "cancel": []
+      },
+      "inputs": [
+        {
+          "event": "page_view",
+          "at": 0,
+          "expect": {
+            "fired": false,
+            "restarted": true,
+            "state": {
+              "nextStep": 1,
+              "lastStepAt": 0
+            }
+          }
+        },
+        {
+          "event": "page_view",
+          "at": 700,
+          "expect": {
+            "fired": false,
+            "restarted": true,
+            "state": {
+              "nextStep": 1,
+              "lastStepAt": 700
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "도달 조건 중 하나만 맞아도 발화한다",
+      "flow": {
+        "steps": [
+          {
+            "events": [
+              "signup"
+            ],
+            "withinSeconds": 86400
+          }
+        ],
+        "arrival": [
+          "view_exhibition",
+          "view_product",
+          "view_category"
+        ],
+        "cancel": []
+      },
+      "inputs": [
+        {
+          "event": "signup",
+          "at": 0,
+          "expect": {
+            "fired": false,
+            "restarted": true,
+            "state": {
+              "nextStep": 1,
+              "lastStepAt": 0
+            }
+          }
+        },
+        {
+          "event": "view_category",
+          "at": 50,
+          "expect": {
+            "fired": true,
+            "restarted": false,
+            "state": {
+              "nextStep": 1,
+              "lastStepAt": 0
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "진입 조건 중 하나만 맞아도 진입한다",
+      "flow": {
+        "steps": [
+          {
+            "events": [
+              "signup",
+              "login"
+            ],
+            "withinSeconds": 600
+          }
+        ],
+        "arrival": [
+          "view_product"
+        ],
+        "cancel": []
+      },
+      "inputs": [
+        {
+          "event": "login",
+          "at": 0,
+          "expect": {
+            "fired": false,
+            "restarted": true,
+            "state": {
+              "nextStep": 1,
+              "lastStepAt": 0
+            }
+          }
+        },
+        {
+          "event": "view_product",
+          "at": 60,
+          "expect": {
+            "fired": true,
+            "restarted": false,
+            "state": {
+              "nextStep": 1,
+              "lastStepAt": 0
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "노출된 뒤에는 다시 진입해야 발화한다",
+      "flow": {
+        "steps": [
+          {
+            "events": [
+              "signup"
+            ],
+            "withinSeconds": 1800
+          }
+        ],
+        "arrival": [
+          "view_product"
+        ],
+        "cancel": []
+      },
+      "inputs": [
+        {
+          "event": "signup",
+          "at": 0,
+          "expect": {
+            "fired": false,
+            "restarted": true,
+            "state": {
+              "nextStep": 1,
+              "lastStepAt": 0
+            }
+          }
+        },
+        {
+          "event": "view_product",
+          "at": 100,
+          "expect": {
+            "fired": true,
+            "restarted": false,
+            "state": {
+              "nextStep": 1,
+              "lastStepAt": 0
+            }
+          }
+        },
+        {
+          "impression": true
+        },
+        {
+          "event": "view_product",
+          "at": 200,
+          "expect": {
+            "fired": false,
+            "restarted": false,
+            "state": null
+          }
+        }
+      ]
+    },
+    {
+      "name": "노출되지 않았으면 제한 시간 안의 다음 도달에서 다시 발화한다",
+      "flow": {
+        "steps": [
+          {
+            "events": [
+              "signup"
+            ],
+            "withinSeconds": 1800
+          }
+        ],
+        "arrival": [
+          "view_product"
+        ],
+        "cancel": []
+      },
+      "inputs": [
+        {
+          "event": "signup",
+          "at": 0,
+          "expect": {
+            "fired": false,
+            "restarted": true,
+            "state": {
+              "nextStep": 1,
+              "lastStepAt": 0
+            }
+          }
+        },
+        {
+          "event": "view_product",
+          "at": 100,
+          "expect": {
+            "fired": true,
+            "restarted": false,
+            "state": {
+              "nextStep": 1,
+              "lastStepAt": 0
+            }
+          }
+        },
+        {
+          "event": "view_product",
+          "at": 200,
+          "expect": {
+            "fired": true,
+            "restarted": false,
+            "state": {
+              "nextStep": 1,
+              "lastStepAt": 0
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "취소와 진입이 같은 이벤트면 진행을 버리고 새로 진입한다",
+      "flow": {
+        "steps": [
+          {
+            "events": [
+              "add_to_cart"
+            ],
+            "withinSeconds": 600
+          }
+        ],
+        "arrival": [
+          "view_main"
+        ],
+        "cancel": [
+          "add_to_cart",
+          "purchase"
+        ]
+      },
+      "inputs": [
+        {
+          "event": "add_to_cart",
+          "at": 0,
+          "expect": {
+            "fired": false,
+            "restarted": true,
+            "state": {
+              "nextStep": 1,
+              "lastStepAt": 0
+            }
+          }
+        },
+        {
+          "event": "add_to_cart",
+          "at": 500,
+          "expect": {
+            "fired": false,
+            "restarted": true,
+            "state": {
+              "nextStep": 1,
+              "lastStepAt": 500
+            }
+          }
+        },
+        {
+          "event": "view_main",
+          "at": 1000,
+          "expect": {
+            "fired": true,
+            "restarted": false,
+            "state": {
+              "nextStep": 1,
+              "lastStepAt": 500
+            }
+          }
+        },
+        {
+          "event": "purchase",
+          "at": 1050,
+          "expect": {
+            "fired": false,
+            "restarted": true,
+            "state": null
+          }
+        }
+      ]
+    },
+    {
+      "name": "관계없는 이벤트는 상태를 바꾸지 않는다",
+      "flow": {
+        "steps": [
+          {
+            "events": [
+              "signup"
+            ],
+            "withinSeconds": 1800
+          }
+        ],
+        "arrival": [
+          "view_product"
+        ],
+        "cancel": [
+          "purchase"
+        ]
+      },
+      "inputs": [
+        {
+          "event": "signup",
+          "at": 0,
+          "expect": {
+            "fired": false,
+            "restarted": true,
+            "state": {
+              "nextStep": 1,
+              "lastStepAt": 0
+            }
+          }
+        },
+        {
+          "event": "scroll",
+          "at": 10,
+          "expect": {
+            "fired": false,
+            "restarted": false,
+            "state": {
+              "nextStep": 1,
+              "lastStepAt": 0
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "세 단계는 순서대로 진행하고 단계마다 제한 시간을 따로 잰다",
+      "flow": {
+        "steps": [
+          {
+            "events": [
+              "signup"
+            ],
+            "withinSeconds": 600
+          },
+          {
+            "events": [
+              "add_to_cart"
+            ],
+            "withinSeconds": 300
+          }
+        ],
+        "arrival": [
+          "view_main"
+        ],
+        "cancel": []
+      },
+      "inputs": [
+        {
+          "event": "signup",
+          "at": 0,
+          "expect": {
+            "fired": false,
+            "restarted": true,
+            "state": {
+              "nextStep": 1,
+              "lastStepAt": 0
+            }
+          }
+        },
+        {
+          "event": "view_main",
+          "at": 10,
+          "expect": {
+            "fired": false,
+            "restarted": false,
+            "state": {
+              "nextStep": 1,
+              "lastStepAt": 0
+            }
+          }
+        },
+        {
+          "event": "add_to_cart",
+          "at": 500,
+          "expect": {
+            "fired": false,
+            "restarted": false,
+            "state": {
+              "nextStep": 2,
+              "lastStepAt": 500
+            }
+          }
+        },
+        {
+          "event": "view_main",
+          "at": 800,
+          "expect": {
+            "fired": true,
+            "restarted": false,
+            "state": {
+              "nextStep": 2,
+              "lastStepAt": 500
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "세 단계에서 중간 단계의 제한 시간이 지나면 진행을 버린다",
+      "flow": {
+        "steps": [
+          {
+            "events": [
+              "signup"
+            ],
+            "withinSeconds": 600
+          },
+          {
+            "events": [
+              "add_to_cart"
+            ],
+            "withinSeconds": 300
+          }
+        ],
+        "arrival": [
+          "view_main"
+        ],
+        "cancel": []
+      },
+      "inputs": [
+        {
+          "event": "signup",
+          "at": 0,
+          "expect": {
+            "fired": false,
+            "restarted": true,
+            "state": {
+              "nextStep": 1,
+              "lastStepAt": 0
+            }
+          }
+        },
+        {
+          "event": "add_to_cart",
+          "at": 500,
+          "expect": {
+            "fired": false,
+            "restarted": false,
+            "state": {
+              "nextStep": 2,
+              "lastStepAt": 500
+            }
+          }
+        },
+        {
+          "event": "view_main",
+          "at": 801,
+          "expect": {
+            "fired": false,
+            "restarted": false,
+            "state": null
+          }
+        }
+      ]
+    },
+    {
+      "name": "진입보다 더 진행한 상태에서는 진입 이벤트를 무시한다",
+      "flow": {
+        "steps": [
+          {
+            "events": [
+              "signup"
+            ],
+            "withinSeconds": 600
+          },
+          {
+            "events": [
+              "add_to_cart"
+            ],
+            "withinSeconds": 300
+          }
+        ],
+        "arrival": [
+          "view_main"
+        ],
+        "cancel": []
+      },
+      "inputs": [
+        {
+          "event": "signup",
+          "at": 0,
+          "expect": {
+            "fired": false,
+            "restarted": true,
+            "state": {
+              "nextStep": 1,
+              "lastStepAt": 0
+            }
+          }
+        },
+        {
+          "event": "add_to_cart",
+          "at": 100,
+          "expect": {
+            "fired": false,
+            "restarted": false,
+            "state": {
+              "nextStep": 2,
+              "lastStepAt": 100
+            }
+          }
+        },
+        {
+          "event": "signup",
+          "at": 200,
+          "expect": {
+            "fired": false,
+            "restarted": false,
+            "state": {
+              "nextStep": 2,
+              "lastStepAt": 100
+            }
+          }
+        },
+        {
+          "event": "view_main",
+          "at": 300,
+          "expect": {
+            "fired": true,
+            "restarted": false,
+            "state": {
+              "nextStep": 2,
+              "lastStepAt": 100
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "더 진행한 상태가 만료됐으면 진입 이벤트로 새로 진입한다",
+      "flow": {
+        "steps": [
+          {
+            "events": [
+              "signup"
+            ],
+            "withinSeconds": 600
+          },
+          {
+            "events": [
+              "add_to_cart"
+            ],
+            "withinSeconds": 300
+          }
+        ],
+        "arrival": [
+          "view_main"
+        ],
+        "cancel": []
+      },
+      "inputs": [
+        {
+          "event": "signup",
+          "at": 0,
+          "expect": {
+            "fired": false,
+            "restarted": true,
+            "state": {
+              "nextStep": 1,
+              "lastStepAt": 0
+            }
+          }
+        },
+        {
+          "event": "add_to_cart",
+          "at": 100,
+          "expect": {
+            "fired": false,
+            "restarted": false,
+            "state": {
+              "nextStep": 2,
+              "lastStepAt": 100
+            }
+          }
+        },
+        {
+          "event": "signup",
+          "at": 401,
+          "expect": {
+            "fired": false,
+            "restarted": true,
+            "state": {
+              "nextStep": 1,
+              "lastStepAt": 401
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "더 진행한 상태에서도 취소와 진입이 같은 이벤트면 새로 진입한다",
+      "flow": {
+        "steps": [
+          {
+            "events": [
+              "signup"
+            ],
+            "withinSeconds": 600
+          },
+          {
+            "events": [
+              "add_to_cart"
+            ],
+            "withinSeconds": 300
+          }
+        ],
+        "arrival": [
+          "view_main"
+        ],
+        "cancel": [
+          "signup"
+        ]
+      },
+      "inputs": [
+        {
+          "event": "signup",
+          "at": 0,
+          "expect": {
+            "fired": false,
+            "restarted": true,
+            "state": {
+              "nextStep": 1,
+              "lastStepAt": 0
+            }
+          }
+        },
+        {
+          "event": "add_to_cart",
+          "at": 100,
+          "expect": {
+            "fired": false,
+            "restarted": false,
+            "state": {
+              "nextStep": 2,
+              "lastStepAt": 100
+            }
+          }
+        },
+        {
+          "event": "signup",
+          "at": 200,
+          "expect": {
+            "fired": false,
+            "restarted": true,
+            "state": {
+              "nextStep": 1,
+              "lastStepAt": 200
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "재진입 제한이 있으면 취소 뒤 진입과 도달을 제한 시간 동안 무시한다",
+      "flow": {
+        "steps": [
+          {
+            "events": [
+              "signup"
+            ],
+            "withinSeconds": 1800
+          }
+        ],
+        "arrival": [
+          "view_product"
+        ],
+        "cancel": [
+          "purchase"
+        ],
+        "reentryBlockSeconds": 3600
+      },
+      "inputs": [
+        {
+          "event": "signup",
+          "at": 0,
+          "expect": {
+            "fired": false,
+            "restarted": true,
+            "state": {
+              "nextStep": 1,
+              "lastStepAt": 0
+            }
+          }
+        },
+        {
+          "event": "purchase",
+          "at": 100,
+          "expect": {
+            "fired": false,
+            "restarted": true,
+            "state": {
+              "nextStep": 0,
+              "lastStepAt": 100,
+              "blockedUntil": 3700
+            }
+          }
+        },
+        {
+          "event": "signup",
+          "at": 200,
+          "expect": {
+            "fired": false,
+            "restarted": false,
+            "state": {
+              "nextStep": 0,
+              "lastStepAt": 100,
+              "blockedUntil": 3700
+            }
+          }
+        },
+        {
+          "event": "view_product",
+          "at": 300,
+          "expect": {
+            "fired": false,
+            "restarted": false,
+            "state": {
+              "nextStep": 0,
+              "lastStepAt": 100,
+              "blockedUntil": 3700
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "재진입 제한 시각 직전까지는 진입하지 않는다",
+      "flow": {
+        "steps": [
+          {
+            "events": [
+              "signup"
+            ],
+            "withinSeconds": 1800
+          }
+        ],
+        "arrival": [
+          "view_product"
+        ],
+        "cancel": [
+          "purchase"
+        ],
+        "reentryBlockSeconds": 3600
+      },
+      "inputs": [
+        {
+          "event": "signup",
+          "at": 0,
+          "expect": {
+            "fired": false,
+            "restarted": true,
+            "state": {
+              "nextStep": 1,
+              "lastStepAt": 0
+            }
+          }
+        },
+        {
+          "event": "purchase",
+          "at": 100,
+          "expect": {
+            "fired": false,
+            "restarted": true,
+            "state": {
+              "nextStep": 0,
+              "lastStepAt": 100,
+              "blockedUntil": 3700
+            }
+          }
+        },
+        {
+          "event": "signup",
+          "at": 3699,
+          "expect": {
+            "fired": false,
+            "restarted": false,
+            "state": {
+              "nextStep": 0,
+              "lastStepAt": 100,
+              "blockedUntil": 3700
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "재진입 제한이 끝나면 다시 진입해 발화한다",
+      "flow": {
+        "steps": [
+          {
+            "events": [
+              "signup"
+            ],
+            "withinSeconds": 1800
+          }
+        ],
+        "arrival": [
+          "view_product"
+        ],
+        "cancel": [
+          "purchase"
+        ],
+        "reentryBlockSeconds": 3600
+      },
+      "inputs": [
+        {
+          "event": "signup",
+          "at": 0,
+          "expect": {
+            "fired": false,
+            "restarted": true,
+            "state": {
+              "nextStep": 1,
+              "lastStepAt": 0
+            }
+          }
+        },
+        {
+          "event": "purchase",
+          "at": 100,
+          "expect": {
+            "fired": false,
+            "restarted": true,
+            "state": {
+              "nextStep": 0,
+              "lastStepAt": 100,
+              "blockedUntil": 3700
+            }
+          }
+        },
+        {
+          "event": "signup",
+          "at": 3700,
+          "expect": {
+            "fired": false,
+            "restarted": true,
+            "state": {
+              "nextStep": 1,
+              "lastStepAt": 3700
+            }
+          }
+        },
+        {
+          "event": "view_product",
+          "at": 3800,
+          "expect": {
+            "fired": true,
+            "restarted": false,
+            "state": {
+              "nextStep": 1,
+              "lastStepAt": 3700
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "진행이 없을 때 일어난 취소 이벤트는 재진입을 막지 않는다",
+      "flow": {
+        "steps": [
+          {
+            "events": [
+              "signup"
+            ],
+            "withinSeconds": 1800
+          }
+        ],
+        "arrival": [
+          "view_product"
+        ],
+        "cancel": [
+          "purchase"
+        ],
+        "reentryBlockSeconds": 3600
+      },
+      "inputs": [
+        {
+          "event": "purchase",
+          "at": 0,
+          "expect": {
+            "fired": false,
+            "restarted": true,
+            "state": null
+          }
+        },
+        {
+          "event": "signup",
+          "at": 10,
+          "expect": {
+            "fired": false,
+            "restarted": true,
+            "state": {
+              "nextStep": 1,
+              "lastStepAt": 10
+            }
+          }
+        },
+        {
+          "event": "view_product",
+          "at": 20,
+          "expect": {
+            "fired": true,
+            "restarted": false,
+            "state": {
+              "nextStep": 1,
+              "lastStepAt": 10
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "재진입 제한 중 취소 이벤트는 제한을 늘리지 않는다",
+      "flow": {
+        "steps": [
+          {
+            "events": [
+              "signup"
+            ],
+            "withinSeconds": 1800
+          }
+        ],
+        "arrival": [
+          "view_product"
+        ],
+        "cancel": [
+          "purchase"
+        ],
+        "reentryBlockSeconds": 3600
+      },
+      "inputs": [
+        {
+          "event": "signup",
+          "at": 0,
+          "expect": {
+            "fired": false,
+            "restarted": true,
+            "state": {
+              "nextStep": 1,
+              "lastStepAt": 0
+            }
+          }
+        },
+        {
+          "event": "purchase",
+          "at": 100,
+          "expect": {
+            "fired": false,
+            "restarted": true,
+            "state": {
+              "nextStep": 0,
+              "lastStepAt": 100,
+              "blockedUntil": 3700
+            }
+          }
+        },
+        {
+          "event": "purchase",
+          "at": 2000,
+          "expect": {
+            "fired": false,
+            "restarted": false,
+            "state": {
+              "nextStep": 0,
+              "lastStepAt": 100,
+              "blockedUntil": 3700
+            }
+          }
+        },
+        {
+          "event": "signup",
+          "at": 3700,
+          "expect": {
+            "fired": false,
+            "restarted": true,
+            "state": {
+              "nextStep": 1,
+              "lastStepAt": 3700
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "재진입 제한이 있으면 진행 중 취소와 진입이 같은 이벤트여도 다시 진입하지 않는다",
+      "flow": {
+        "steps": [
+          {
+            "events": [
+              "signup"
+            ],
+            "withinSeconds": 1800
+          }
+        ],
+        "arrival": [
+          "view_product"
+        ],
+        "cancel": [
+          "signup"
+        ],
+        "reentryBlockSeconds": 3600
+      },
+      "inputs": [
+        {
+          "event": "signup",
+          "at": 0,
+          "expect": {
+            "fired": false,
+            "restarted": true,
+            "state": {
+              "nextStep": 1,
+              "lastStepAt": 0
+            }
+          }
+        },
+        {
+          "event": "signup",
+          "at": 100,
+          "expect": {
+            "fired": false,
+            "restarted": true,
+            "state": {
+              "nextStep": 0,
+              "lastStepAt": 100,
+              "blockedUntil": 3700
+            }
+          }
+        },
+        {
+          "event": "view_product",
+          "at": 200,
+          "expect": {
+            "fired": false,
+            "restarted": false,
+            "state": {
+              "nextStep": 0,
+              "lastStepAt": 100,
+              "blockedUntil": 3700
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "제한 시간이 지났어도 노출되지 않은 진행 기록이 있으면 취소 뒤 재진입을 막는다",
+      "flow": {
+        "steps": [
+          {
+            "events": [
+              "signup"
+            ],
+            "withinSeconds": 1800
+          }
+        ],
+        "arrival": [
+          "view_product"
+        ],
+        "cancel": [
+          "purchase"
+        ],
+        "reentryBlockSeconds": 3600
+      },
+      "inputs": [
+        {
+          "event": "signup",
+          "at": 0,
+          "expect": {
+            "fired": false,
+            "restarted": true,
+            "state": {
+              "nextStep": 1,
+              "lastStepAt": 0
+            }
+          }
+        },
+        {
+          "event": "purchase",
+          "at": 2000,
+          "expect": {
+            "fired": false,
+            "restarted": true,
+            "state": {
+              "nextStep": 0,
+              "lastStepAt": 2000,
+              "blockedUntil": 5600
+            }
+          }
+        },
+        {
+          "event": "signup",
+          "at": 2100,
+          "expect": {
+            "fired": false,
+            "restarted": false,
+            "state": {
+              "nextStep": 0,
+              "lastStepAt": 2000,
+              "blockedUntil": 5600
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

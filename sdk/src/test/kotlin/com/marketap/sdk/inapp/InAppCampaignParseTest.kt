@@ -71,6 +71,43 @@ class InAppCampaignParseTest {
         assertNull(res.campaigns!!.single().triggerConditionVersion)
         assertNull(res.globalFrequencyCaps)
         assertNull(res.campaigns!!.single().timer)
+        assertNull(trigger.flow)
+    }
+
+    @Test
+    fun `이벤트 플로우를 읽고 모르는 키는 무시한다`() {
+        val json = legacyJson.replace(
+            "\"frequencyCap\": {\"limit\": 1, \"durationMinutes\": 60}",
+            """
+            "frequencyCap": {"limit": 1, "durationMinutes": 60},
+            "flow": {
+              "precedingSteps": [
+                {"conditions": [{"eventFilter": {"eventName": "signup"}}], "withinSeconds": 1800, "unknownKey": 1},
+                {"conditions": [{"eventFilter": {"eventName": "add_cart"}}, {"eventFilter": {"eventName": "wish"}}], "withinSeconds": 600}
+              ],
+              "reentryBlockSeconds": 86400,
+              "futureField": "x"
+            }
+            """.trimIndent(),
+        )
+        val flow = json.deserialize(adapter<InAppCampaignRes>()).campaigns!!.single().triggerEventCondition.flow!!
+
+        assertEquals(listOf(1800L, 600L), flow.precedingSteps.map { it.withinSeconds })
+        assertEquals("signup", flow.precedingSteps[0].conditions.single().eventFilter.eventName)
+        assertEquals(listOf("add_cart", "wish"), flow.precedingSteps[1].conditions.map { it.eventFilter.eventName })
+        assertEquals(86400L, flow.reentryBlockSeconds)
+    }
+
+    @Test
+    fun `재진입 제한이 없는 이벤트 플로우를 읽는다`() {
+        val json = legacyJson.replace(
+            "\"frequencyCap\": {\"limit\": 1, \"durationMinutes\": 60}",
+            """"frequencyCap": {"limit": 1, "durationMinutes": 60}, "flow": {"precedingSteps": [{"conditions": [{"eventFilter": {"eventName": "signup"}}], "withinSeconds": 60}]}""",
+        )
+        val flow = json.deserialize(adapter<InAppCampaignRes>()).campaigns!!.single().triggerEventCondition.flow!!
+
+        assertNull(flow.reentryBlockSeconds)
+        assertEquals(60L, flow.precedingSteps.single().withinSeconds)
     }
 
     @Test
