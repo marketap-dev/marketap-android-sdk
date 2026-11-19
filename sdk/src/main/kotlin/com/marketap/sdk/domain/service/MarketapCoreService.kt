@@ -25,7 +25,8 @@ internal class MarketapCoreService(
 
     fun identify(userId: String, properties: Map<String, Any>?) {
         try {
-            userIngestionService.identify(userId, properties ?: emptyMap())
+            val identify = { userIngestionService.identify(userId, properties ?: emptyMap()) }
+            inAppService.switchIdentity(userId, clientStateManager::getUserId, identify)
         } catch (t: Throwable) {
             // Ignore
             logger.e(t) { "Failed to identify user: $userId" }
@@ -34,7 +35,7 @@ internal class MarketapCoreService(
 
     fun resetIdentity() {
         try {
-            userIngestionService.resetIdentity()
+            inAppService.switchIdentity(null, clientStateManager::getUserId, userIngestionService::resetIdentity)
         } catch (t: Throwable) {
             // Ignore
             logger.e(t) { "Failed to reset identity" }
