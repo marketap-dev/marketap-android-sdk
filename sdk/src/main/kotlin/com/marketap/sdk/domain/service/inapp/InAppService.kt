@@ -2,6 +2,8 @@ package com.marketap.sdk.domain.service.inapp
 
 import com.marketap.sdk.domain.repository.InAppView
 import com.marketap.sdk.domain.service.inapp.condition.ConditionChecker
+import com.marketap.sdk.domain.service.inapp.condition.EventFlowEvaluating
+import com.marketap.sdk.domain.service.inapp.condition.EventFlowEvaluation
 import com.marketap.sdk.domain.service.inapp.condition.InAppWindowChecker
 import com.marketap.sdk.domain.service.inapp.condition.OccurrenceEvaluating
 import com.marketap.sdk.domain.service.inapp.condition.matchesAbort
@@ -56,12 +58,25 @@ private object AlwaysSatisfiedOccurrence : OccurrenceEvaluating {
     override fun resetAll() {}
 }
 
+private object NoEventFlow : EventFlowEvaluating {
+    override fun now() = System.currentTimeMillis()
+    override fun evaluate(campaign: InAppCampaign, event: IngestEventRequest, arrivalMatched: Boolean, occurredAt: Long) =
+        EventFlowEvaluation(arrivalMatched, restarted = false)
+    override fun canShow(campaign: InAppCampaign) = true
+    override fun clear(campaignId: String) {}
+    override fun clearAll() {}
+}
+
+private val InAppCampaign.hasEventFlow: Boolean
+    get() = triggerEventCondition.flow?.precedingSteps?.isNotEmpty() == true
+
 /**
  * 판정 상태(지연 예약·누적 횟수)를 건드리는 작업은 모두 [scheduler]에서 하나씩 실행한다.
  * [delayedCoordinator]가 없으면 지연 설정을 무시하고 바로 띄운다.
  * [canDisplay]는 지금 resume된 화면이 있어 인앱을 띄울 수 있는지다.
  *
  * 사용자 세대(generation)는 userId가 바뀔 때마다 올라간다. 이전 세대에 받은 이벤트와 실행 중인 예약은 띄우지 않는다.
+ * 단, 비회원(userId 없음) 이벤트는 이전 세대여도 이벤트 플로우 진행에는 쓴다. 비회원에서 로그인하면 진행을 이어 준다.
  */
 internal class InAppService(
     private val campaignExposureService: CampaignExposing,
@@ -75,10 +90,14 @@ internal class InAppService(
     private val windowChecker: InAppWindowChecker = InAppWindowChecker(),
     private val canDisplay: () -> Boolean = { true },
     private val timerStore: InAppTimerStore? = null,
+    private val eventFlowEvaluator: EventFlowEvaluating = NoEventFlow,
     private val clock: () -> Long = ::monotonicNowMs,
 ) {
     private val identityLock = Any()
     private val identityGeneration = AtomicLong()
+
+    /** 이벤트 플로우 진행을 지운 횟수. 비회원 이벤트는 그 사이 진행이 지워졌으면 플로우에 쓰지 않는다. */
+    private val eventFlowClears = AtomicLong()
 
     init {
         delayedCoordinator?.bindExecutor(::executeReservation)
@@ -149,8 +168,8 @@ internal class InAppService(
     }
 
     /**
-     * userId를 바꾸는 [change]를 세대 전환과 함께 실행하고, 지연 예약·누적 횟수를 바로 지운다.
-     * [fromAnonymous]면(익명 → 로그인) 같은 사람으로 보고 예약·횟수를 그대로 둔다(Braze changeUser 와 같다).
+     * userId를 바꾸는 [change]를 세대 전환과 함께 실행하고, 지연 예약·누적 횟수·이벤트 플로우 진행을 바로 지운다.
+     * [fromAnonymous]면(익명 → 로그인) 같은 사람으로 보고 모두 그대로 둔다(Braze changeUser 와 같다).
      */
     fun changeIdentity(fromAnonymous: Boolean = false, change: () -> Unit) {
         if (fromAnonymous) {
@@ -162,11 +181,14 @@ internal class InAppService(
             try {
                 change()
             } finally {
+                eventFlowClears.incrementAndGet()
                 delayedCoordinator?.clearPersisted()
                 occurrenceEvaluator.resetAll()
+                eventFlowEvaluator.clearAll()
                 scheduler.execute {
                     delayedCoordinator?.clearAll()
                     occurrenceEvaluator.resetAll()
+                    eventFlowEvaluator.clearAll()
                 }
             }
         }
@@ -180,26 +202,36 @@ internal class InAppService(
         callbacks: () -> InAppCallbacks,
         generation: Long,
     ) {
+        val occurredAt = eventFlowEvaluator.now()
         synchronized(identityLock) {
-            if (!isCurrent(generation)) return
-            scheduler.execute { processEvent(event, origin, callbacks, generation) }
+            val flowClears = eventFlowClears.get()
+            if (!canAdvanceFlows(event, generation, flowClears)) return
+            scheduler.execute { processEvent(event, origin, callbacks, generation, occurredAt, flowClears) }
         }
     }
+
+    private fun canAdvanceFlows(event: IngestEventRequest, generation: Long, flowClears: Long) =
+        isCurrent(generation) || (event.userId == null && flowClears == eventFlowClears.get())
 
     private fun processEvent(
         event: IngestEventRequest,
         origin: InAppOrigin?,
         callbacks: () -> InAppCallbacks,
         generation: Long,
+        occurredAt: Long,
+        flowClears: Long,
     ) {
-        if (!isCurrent(generation)) return
-        delayedCoordinator?.cancelMatching(event)
+        if (!canAdvanceFlows(event, generation, flowClears)) return
+        if (isCurrent(generation)) delayedCoordinator?.cancelMatching(event)
 
         campaignFetchService.useCampaigns(
             onUnavailable = {
-                if (isCurrent(generation)) resetAborted(campaignFetchService.lastCachedCampaigns().orEmpty(), event)
+                val stored = campaignFetchService.lastCachedCampaigns().orEmpty()
+                advanceFlows(stored, event, generation, occurredAt, flowClears)
+                if (isCurrent(generation)) resetAborted(stored, event)
             }
         ) { campaigns ->
+            val flowFired = advanceFlows(campaigns, event, generation, occurredAt, flowClears)
             if (!isCurrent(generation)) return@useCampaigns
             resetAborted(campaigns, event)
 
@@ -207,11 +239,31 @@ internal class InAppService(
             val sessionId = event.properties?.get(SESSION_ID_KEY) as? String
             // 우선순위 순 후보 전체를 본다. 1순위의 상세 fetch 가 빈 응답이어도 뒤 후보가 뜰 수 있다.
             val candidates = campaigns
-                .filter { isEligible(it, event, globalFrequencyCaps) }
+                .filter { isEligible(it, event, globalFrequencyCaps, flowFired) }
                 .filter { occurrenceEvaluator.recordAndEvaluate(it, sessionId) }
 
             showCandidates(candidates, event, origin, callbacks, generation)
         }
+    }
+
+    /** 플로우 캠페인의 진행을 이 이벤트로 갱신하고, 이번 이벤트로 도달한 캠페인 id를 돌려준다. */
+    private fun advanceFlows(
+        campaigns: List<InAppCampaign>,
+        event: IngestEventRequest,
+        generation: Long,
+        occurredAt: Long,
+        flowClears: Long,
+    ): Set<String> {
+        if (!canAdvanceFlows(event, generation, flowClears)) return emptySet()
+        val fired = mutableSetOf<String>()
+        campaigns.filter { it.hasEventFlow }.forEach { campaign ->
+            val arrivalMatched =
+                eventConditionChecker.matchesTrigger(campaign.triggerEventCondition, event.name, event.properties)
+            val evaluation = eventFlowEvaluator.evaluate(campaign, event, arrivalMatched, occurredAt)
+            if (evaluation.restarted) occurrenceEvaluator.reset(campaign.id)
+            if (evaluation.fired) fired.add(campaign.id)
+        }
+        return fired
     }
 
     private fun resetAborted(campaigns: List<InAppCampaign>, event: IngestEventRequest) {
@@ -224,9 +276,15 @@ internal class InAppService(
         campaign: InAppCampaign,
         event: IngestEventRequest,
         globalFrequencyCaps: List<GlobalFrequencyCapRule>,
+        flowFired: Set<String>,
     ): Boolean {
         val trigger = campaign.triggerEventCondition
-        if (!eventConditionChecker.matchesTrigger(trigger, event.name, event.properties)) {
+        val triggered = if (campaign.hasEventFlow) {
+            campaign.id in flowFired
+        } else {
+            eventConditionChecker.matchesTrigger(trigger, event.name, event.properties)
+        }
+        if (!triggered) {
             logger.v { "Campaign ${campaign.id} does not match event condition for event ${event.name}" }
             return false
         }
@@ -327,7 +385,7 @@ internal class InAppService(
                 ?: continue
 
             if (!isCurrent(generation)) return
-            if (handleCampaign(resolvedCampaign, slot, origin, callbacks())) {
+            if (handleCampaign(resolvedCampaign, campaign, slot, origin, callbacks())) {
                 handledSlots.add(slot)
             }
         }
@@ -363,12 +421,14 @@ internal class InAppService(
         if (!canDisplay()) return DelayedDelivery.RETRY
         if (inAppView.isShowing(slot) || !isCurrent(generation)) return DelayedDelivery.DONE
 
-        handleCampaign(resolvedCampaign, slot, origin, callbackFactory())
+        handleCampaign(resolvedCampaign, campaign, slot, origin, callbackFactory())
         return DelayedDelivery.DONE
     }
 
+    /** [listed]는 목록의 캠페인이다. 상세 응답에는 플로우 설정이 없을 수 있어 진행 확인은 목록 기준으로 한다. */
     private fun handleCampaign(
         targetCampaign: InAppCampaign,
+        listed: InAppCampaign,
         slot: InAppDisplaySlot,
         origin: InAppOrigin?,
         callbacks: InAppCallbacks,
@@ -379,14 +439,21 @@ internal class InAppService(
             logger.d { "Campaign ${targetCampaign.id} timer has expired" }
             return false
         }
+        if (!eventFlowEvaluator.canShow(listed)) {
+            logger.d { "Campaign ${targetCampaign.id} event flow is no longer in progress" }
+            return false
+        }
         val closeOnPageLeave = InAppPageScope.closesOnPageLeave(slot, targetCampaign.floatingScope)
-        val shown = showCampaign(targetCampaign, campaignHtml, slot, origin, closeOnPageLeave, callbacks)
-        if (shown) occurrenceEvaluator.reset(targetCampaign.id)
+        val shown = showCampaign(targetCampaign, listed, campaignHtml, slot, origin, closeOnPageLeave, callbacks)
+        if (shown) {
+            occurrenceEvaluator.reset(targetCampaign.id)
+        }
         return shown
     }
 
     private fun showCampaign(
         targetCampaign: InAppCampaign,
+        listed: InAppCampaign,
         campaignHtml: String,
         slot: InAppDisplaySlot,
         origin: InAppOrigin?,
@@ -405,6 +472,7 @@ internal class InAppService(
             {
                 campaignExposureService.recordImpression(targetCampaign.id)
                 campaignExposureService.recordGlobalImpression(targetCampaign.tagIds.orEmpty())
+                scheduler.execute { eventFlowEvaluator.clear(targetCampaign.id) }
                 callbacks.onImpression(targetCampaign)
                 logger.d { "Recorded impression for campaign: ${targetCampaign.id}" }
             },
@@ -422,7 +490,7 @@ internal class InAppService(
             },
             callbacks::onSetUserProperties,
             { timerStore?.startFor(targetCampaign) ?: System.currentTimeMillis() },
-            { !isTimerExpired(targetCampaign) },
+            { !isTimerExpired(targetCampaign) && eventFlowEvaluator.canShow(listed) },
         )
     }
 

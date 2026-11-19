@@ -21,6 +21,9 @@ data class EventTriggerCondition(
     val abortConditions: List<Condition>? = null,
 
     val sendableTimeWindow: SendableTimeWindow? = null,
+
+    /** 있으면 단계를 차례로 거친 뒤의 트리거 이벤트만 도달로 본다. */
+    val flow: EventFlow? = null,
 )
 
 internal val EventTriggerCondition.effectiveConditions: List<Condition>

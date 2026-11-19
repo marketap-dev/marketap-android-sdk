@@ -20,6 +20,7 @@ import com.marketap.sdk.model.internal.api.IngestEventRequest
 import com.marketap.sdk.model.internal.api.UpdateProfileRequest
 import com.marketap.sdk.model.internal.inapp.Condition
 import com.marketap.sdk.model.internal.inapp.EventFilter
+import com.marketap.sdk.model.internal.inapp.EventFlow
 import com.marketap.sdk.model.internal.inapp.EventTriggerCondition
 import com.marketap.sdk.model.internal.inapp.FrequencyCap
 import com.marketap.sdk.model.internal.inapp.GlobalFrequencyCapRule
@@ -52,6 +53,8 @@ internal object TestCampaigns {
         anyOf: List<String>? = null,
         timer: InAppCampaignTimer? = null,
         isTest: Boolean? = null,
+        flow: EventFlow? = null,
+        version: String = "v1",
     ) = InAppCampaign(
         id = id,
         layout = Layout("MODAL", layoutSubType, emptyList()),
@@ -63,12 +66,13 @@ internal object TestCampaigns {
             occurrenceCondition = occurrence,
             abortConditions = abortEvents?.map { Condition(EventFilter(it)) },
             sendableTimeWindow = window,
+            flow = flow,
         ),
         priority = "NORMAL",
         html = html,
         updatedAt = "2026-11-09T00:00:00Z",
         displaySlot = if (slot == InAppDisplaySlot.FLOATING) "FLOATING" else null,
-        triggerConditionVersion = "v1",
+        triggerConditionVersion = version,
         tagIds = tagIds,
         disableGlobalFrequencyCap = disableGlobalFrequencyCap,
         timer = timer,
@@ -93,6 +97,7 @@ internal class FakeFetching(
     var beforeDeliver: (() -> Unit)? = null
     var cached: List<InAppCampaign>? = null
     var globalCaps: List<GlobalFrequencyCapRule> = emptyList()
+    var beforeResolve: (() -> Unit)? = null
     val resolveCalls: MutableList<String> = Collections.synchronizedList(mutableListOf())
     val resolveThreads: MutableList<String> = Collections.synchronizedList(mutableListOf())
 
@@ -112,6 +117,10 @@ internal class FakeFetching(
 
     override fun resolveCampaignHtml(campaign: InAppCampaign, event: IngestEventRequest): InAppCampaign? {
         if (campaign.html != null) return campaign
+        beforeResolve?.let {
+            beforeResolve = null
+            it()
+        }
         resolveCalls.add(campaign.id)
         resolveThreads.add(Thread.currentThread().name)
         return resolved[campaign.id]
