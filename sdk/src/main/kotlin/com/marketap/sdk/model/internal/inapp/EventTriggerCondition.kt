@@ -12,7 +12,15 @@ data class EventTriggerCondition(
 
     val frequencyCap: FrequencyCap? = null,
 
-    val delayMinutes: Int? = null
+    val delayMinutes: Int? = null,
+
+    val delaySeconds: Int? = null,
+
+    val occurrenceCondition: OccurrenceCondition? = null,
+
+    val abortConditions: List<Condition>? = null,
+
+    val sendableTimeWindow: SendableTimeWindow? = null,
 )
 
 internal val EventTriggerCondition.effectiveConditions: List<Condition>
