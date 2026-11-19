@@ -23,6 +23,7 @@ import com.marketap.sdk.domain.service.inapp.InAppService
 import com.marketap.sdk.domain.service.inapp.InAppTimerStore
 import com.marketap.sdk.domain.service.inapp.SerialInAppScheduler
 import com.marketap.sdk.domain.service.inapp.condition.ConditionCheckerImpl
+import com.marketap.sdk.domain.service.inapp.condition.EventFlowEvaluator
 import com.marketap.sdk.domain.service.inapp.condition.OccurrenceConditionEvaluator
 import com.marketap.sdk.domain.service.inapp.condition.PropertyConditionCheckerImpl
 import com.marketap.sdk.domain.service.inapp.condition.comparator.ValueComparatorImpl
@@ -117,6 +118,7 @@ object Dependency {
             inAppScheduler,
             canDisplay = canDisplay,
             timerStore = InAppTimerStore(storage),
+            eventFlowEvaluator = EventFlowEvaluator(storage, conditionChecker),
         )
 
         eventIngestionService = EventIngestionService(

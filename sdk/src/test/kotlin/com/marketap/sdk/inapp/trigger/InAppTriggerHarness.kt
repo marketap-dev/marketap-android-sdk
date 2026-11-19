@@ -5,6 +5,7 @@ import com.marketap.sdk.domain.service.inapp.InAppCallbackFactory
 import com.marketap.sdk.domain.service.inapp.InAppScheduler
 import com.marketap.sdk.domain.service.inapp.InAppService
 import com.marketap.sdk.domain.service.inapp.InAppTimerStore
+import com.marketap.sdk.domain.service.inapp.condition.EventFlowEvaluator
 import com.marketap.sdk.domain.service.inapp.condition.InAppWindowChecker
 import com.marketap.sdk.domain.service.inapp.condition.OccurrenceConditionEvaluator
 import com.marketap.sdk.model.internal.InAppCampaign
@@ -29,6 +30,7 @@ internal class InAppTriggerHarness(
     val timeZone: TimeZone = TimeZone.getTimeZone("Asia/Seoul")
 
     val evaluator = OccurrenceConditionEvaluator(storage) { scheduler.now }
+    val flowEvaluator = EventFlowEvaluator(storage, MatchByEventName()) { scheduler.now }
     lateinit var coordinator: DelayedInAppCoordinator
         private set
     lateinit var service: InAppService
@@ -69,6 +71,7 @@ internal class InAppTriggerHarness(
             InAppWindowChecker({ scheduler.now }, { timeZone }),
             canDisplay = { foreground && displayable },
             timerStore = InAppTimerStore(storage) { scheduler.now },
+            eventFlowEvaluator = flowEvaluator,
         )
     }
 
