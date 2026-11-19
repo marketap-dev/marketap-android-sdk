@@ -47,6 +47,8 @@ private const val CONTAINER_Z = 2000f
 internal class PopupInAppView(
     private val html: String,
     val session: InAppSession,
+    private val timerStartAt: () -> Long,
+    private val canMount: () -> Boolean,
     private val onClosed: () -> Unit,
 ) : CurrentActivityHolder.ScreenListener, PopupLifecycle.Effects<Activity>, MarketapInAppView.PageListener {
 
@@ -117,7 +119,7 @@ internal class PopupInAppView(
             view.applySafeArea(top, bottom)
         } else {
             loaded = true
-            view.show(html, top, bottom, this)
+            view.show(html, top, bottom, timerStartAt(), this)
         }
         return true
     }
@@ -150,6 +152,8 @@ internal class PopupInAppView(
     }
 
     override fun recordImpression() = session.shown()
+
+    override fun canMount(): Boolean = canMount.invoke()
 
     override fun release() {
         onClosed()

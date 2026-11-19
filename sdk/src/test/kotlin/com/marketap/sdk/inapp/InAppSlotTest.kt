@@ -52,6 +52,8 @@ class InAppSlotTest {
             onHide: (HideType) -> Unit,
             onTrack: (eventName: String, properties: Map<String, Any>?) -> Unit,
             onSetUserProperties: (properties: Map<String, Any>) -> Unit,
+            timerStartAt: () -> Long,
+            canMount: () -> Boolean,
         ): Boolean {
             val entry = Shown(html, slot, onShow, onHide)
             if (!slots.claim(slot, entry)) return false

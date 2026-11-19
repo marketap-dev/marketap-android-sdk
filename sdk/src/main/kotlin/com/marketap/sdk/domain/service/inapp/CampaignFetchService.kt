@@ -10,7 +10,9 @@ import com.marketap.sdk.model.internal.api.FetchCampaignReq
 import com.marketap.sdk.model.internal.api.FetchCampaignsReq
 import com.marketap.sdk.model.internal.api.InAppCampaignRes
 import com.marketap.sdk.model.internal.api.IngestEventRequest
+import com.marketap.sdk.model.internal.inapp.GlobalFrequencyCapRule
 import com.marketap.sdk.utils.adapter
+import com.marketap.sdk.utils.listAdapter
 import com.marketap.sdk.utils.logger
 import com.marketap.sdk.utils.longAdapter
 import com.marketap.sdk.utils.stringAdapter
@@ -28,10 +30,16 @@ internal class CampaignFetchService(
         private const val CAMPAIGN_CACHE_KEY = "last_campaigns_v3"
         private const val CAMPAIGN_CACHED_AT = "campaign_cached_at_v3"
         private const val CAMPAIGN_CHECKSUM = "campaign_checksum_v3"
+        private const val GLOBAL_FREQUENCY_CAPS_KEY = "global_frequency_caps"
         private const val EXPIRATION_TIME: Long = 5 * 60 * 1000 // 5 minutes
     }
 
-    override fun useCampaigns(block: (campaigns: List<InAppCampaign>) -> Unit) {
+    private val globalFrequencyCapsAdapter = listAdapter<GlobalFrequencyCapRule>()
+
+    override fun useCampaigns(block: (campaigns: List<InAppCampaign>) -> Unit) =
+        useCampaigns(onUnavailable = {}, block)
+
+    override fun useCampaigns(onUnavailable: () -> Unit, block: (campaigns: List<InAppCampaign>) -> Unit) {
         if (!policyAllows()) {
             block(emptyList())
             return
@@ -46,7 +54,9 @@ internal class CampaignFetchService(
         val device = deviceManager.getDevice()
         val cachedChecksum = internalStorage.getItem<String>("$CAMPAIGN_CHECKSUM:$userId", stringAdapter)
 
+        var delivered = false
         inAppCampaignApi.fetchCampaigns(FetchCampaignsReq(projectId, userId, device.toReq(), cachedChecksum), {
+            delivered = true
             logger.d { "Fetching campaigns from API for user $userId" }
             if (!policyAllows()) {
                 block(emptyList())
@@ -64,12 +74,29 @@ internal class CampaignFetchService(
                 internalStorage.setItem("$CAMPAIGN_CACHE_KEY:$userId", res, adapter())
             }
             internalStorage.setItem("$CAMPAIGN_CHECKSUM:$userId", res.checksum, stringAdapter)
+            res.globalFrequencyCaps?.let {
+                internalStorage.setItem(GLOBAL_FREQUENCY_CAPS_KEY, it, globalFrequencyCapsAdapter)
+            }
             internalStorage.setItem(
                 "$CAMPAIGN_CACHED_AT:$userId",
                 System.currentTimeMillis(),
                 longAdapter
             )
         }
+        if (!delivered) onUnavailable()
+    }
+
+    override fun lastCachedCampaigns(): List<InAppCampaign>? = if (!policyAllows()) emptyList() else try {
+        val userId = clientStateManager.getUserId()
+        internalStorage.getItem<InAppCampaignRes>("$CAMPAIGN_CACHE_KEY:$userId", adapter())?.campaigns
+    } catch (e: Exception) {
+        null
+    }
+
+    override fun getGlobalFrequencyCaps(): List<GlobalFrequencyCapRule> = try {
+        internalStorage.getItem(GLOBAL_FREQUENCY_CAPS_KEY, globalFrequencyCapsAdapter).orEmpty()
+    } catch (e: Exception) {
+        emptyList()
     }
 
     override fun resolveCampaignHtml(

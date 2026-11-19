@@ -70,6 +70,8 @@ class InAppFallthroughTest {
             onHide: (HideType) -> Unit,
             onTrack: (eventName: String, properties: Map<String, Any>?) -> Unit,
             onSetUserProperties: (properties: Map<String, Any>) -> Unit,
+            timerStartAt: () -> Long,
+            canMount: () -> Boolean,
         ): Boolean {
             shownHtml.add(html)
             return true

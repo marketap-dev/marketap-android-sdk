@@ -2,14 +2,19 @@ package com.marketap.sdk.domain.service.inapp
 
 import com.marketap.sdk.domain.repository.InAppView
 import com.marketap.sdk.domain.service.inapp.condition.ConditionChecker
+import com.marketap.sdk.domain.service.inapp.condition.InAppWindowChecker
+import com.marketap.sdk.domain.service.inapp.condition.OccurrenceEvaluating
+import com.marketap.sdk.domain.service.inapp.condition.matchesAbort
 import com.marketap.sdk.domain.service.inapp.condition.matchesTrigger
 import com.marketap.sdk.model.internal.InAppCampaign
 import com.marketap.sdk.model.internal.api.IngestEventRequest
+import com.marketap.sdk.model.internal.inapp.GlobalFrequencyCapRule
 import com.marketap.sdk.model.internal.inapp.HideType
 import com.marketap.sdk.model.internal.inapp.InAppDisplaySlot
 import com.marketap.sdk.model.internal.inapp.InAppOrigin
 import com.marketap.sdk.model.internal.slot
 import com.marketap.sdk.utils.logger
+import java.util.concurrent.atomic.AtomicLong
 
 /**
  * 상세 fetch 를 실제로 보내는 후보의 최대 개수. 서버가 노출을 확정하지 못해 빈 응답을
@@ -21,12 +26,13 @@ private const val MAX_FALLTHROUGH_FETCHES = 5
 /**
  * 폴스루 전체의 시간 예산(ms).
  *
- * resolveCampaignHtml 은 runBlocking + withTimeoutOrNull(1000) 이라 **호출 스레드를**
- * fetch 당 최대 1초 붙잡는다. onEvent 는 track() 을 부른 스레드(메인일 수 있음)에서 그대로
- * 도므로, 상한 없이 후보를 이어가면 최대 5초를 블록해 ANR 을 낸다. 예산을 넘기면 멈춘다.
+ * resolveCampaignHtml 은 runBlocking + withTimeoutOrNull(1000) 이라 **실행 스레드를**
+ * fetch 당 최대 1초 붙잡는다. 상한 없이 후보를 이어가면 최대 5초를 블록하므로 예산을 넘기면 멈춘다.
  * (web SDK 는 이 값이 2000ms 다. Android 는 fetch 당 1초 블록이라 2회면 예산이 찬다.)
  */
 private const val FALLTHROUGH_BUDGET_MS = 2000L
+
+private const val SESSION_ID_KEY = "mkt_session_id"
 
 /**
  * 경과 시간 측정용 단조 시계(ms).
@@ -44,13 +50,40 @@ internal fun monotonicNowMs(): Long = System.nanoTime() / 1_000_000
 /** 화면 전환 보호 시간(ms). [InAppService.screenChanged] 호출 전 이 시간 안에 화면에 나타난 메시지는 그 호출로 닫지 않는다. */
 internal const val SCREEN_CHANGE_GRACE_MS = 100L
 
+private object AlwaysSatisfiedOccurrence : OccurrenceEvaluating {
+    override fun recordAndEvaluate(campaign: InAppCampaign, sessionId: String?) = true
+    override fun reset(campaignId: String) {}
+    override fun resetAll() {}
+}
+
+/**
+ * 판정 상태(지연 예약·누적 횟수)를 건드리는 작업은 모두 [scheduler]에서 하나씩 실행한다.
+ * [delayedCoordinator]가 없으면 지연 설정을 무시하고 바로 띄운다.
+ * [canDisplay]는 지금 resume된 화면이 있어 인앱을 띄울 수 있는지다.
+ *
+ * 사용자 세대(generation)는 userId가 바뀔 때마다 올라간다. 이전 세대에 받은 이벤트와 실행 중인 예약은 띄우지 않는다.
+ */
 internal class InAppService(
     private val campaignExposureService: CampaignExposing,
     private val eventConditionChecker: ConditionChecker,
     private val campaignFetchService: CampaignFetching,
     private val inAppView: InAppView,
+    private val callbackFactory: () -> InAppCallbacks = { NoopInAppCallbacks },
+    private val occurrenceEvaluator: OccurrenceEvaluating = AlwaysSatisfiedOccurrence,
+    private val delayedCoordinator: DelayedInAppCoordinator? = null,
+    private val scheduler: InAppScheduler = InlineInAppScheduler,
+    private val windowChecker: InAppWindowChecker = InAppWindowChecker(),
+    private val canDisplay: () -> Boolean = { true },
+    private val timerStore: InAppTimerStore? = null,
     private val clock: () -> Long = ::monotonicNowMs,
 ) {
+    private val identityLock = Any()
+    private val identityGeneration = AtomicLong()
+
+    init {
+        delayedCoordinator?.bindExecutor(::executeReservation)
+    }
+
     fun screenChanged() {
         inAppView.closeForAppScreenChange(clock() - SCREEN_CHANGE_GRACE_MS)
     }
@@ -65,6 +98,7 @@ internal class InAppService(
         onEvent(event, origin = null, onImpression, onClick, onTrack, onSetUserProperties)
     }
 
+    /** 이 이벤트로 즉시 뜨는 메시지에 [onImpression] 등 주어진 콜백을 쓴다. 지연 예약으로 뜨는 메시지는 [callbackFactory]로 만든다. */
     fun onEvent(
         event: IngestEventRequest,
         origin: InAppOrigin?,
@@ -73,94 +107,282 @@ internal class InAppService(
         onTrack: (campaign: InAppCampaign, eventName: String, properties: Map<String, Any>?) -> Unit,
         onSetUserProperties: (properties: Map<String, Any>) -> Unit,
     ) {
-        campaignFetchService.useCampaigns { campaigns ->
-            // 우선순위 순 후보 전체를 본다. 예전에는 find() 로 1순위 하나만 잡아서, 그 캠페인의
-            // 상세 fetch 가 빈 응답이면(쿠폰 발급 실패·타겟팅 탈락 등 서버가 노출을 확정 못 한 경우)
-            // 뒤에 뜰 수 있는 캠페인이 있어도 화면에 아무것도 안 떴다. (web SDK 와 동일한 수정)
-            val candidates = campaigns.filter { campaign ->
-                if (!eventConditionChecker.matchesTrigger(
-                        campaign.triggerEventCondition,
-                        event.name,
-                        event.properties
-                    )
-                ) {
-                    logger.v {
-                        "Campaign ${campaign.id} does not match event condition for event ${event.name}"
-                    }
-                    return@filter false
-                }
-                if (campaignExposureService.isCampaignHidden(campaign.id)) {
-                    logger.v { "Campaign ${campaign.id} is hidden" }
-                    return@filter false
-                }
+        val callbacks = object : InAppCallbacks {
+            override fun onImpression(campaign: InAppCampaign) = onImpression(campaign)
+            override fun onClick(campaign: InAppCampaign, locationId: String) = onClick(campaign, locationId)
+            override fun onTrack(campaign: InAppCampaign, eventName: String, properties: Map<String, Any>?) =
+                onTrack(campaign, eventName, properties)
+            override fun onSetUserProperties(properties: Map<String, Any>) = onSetUserProperties(properties)
+        }
+        handleEvent(event, origin, { callbacks }, currentGeneration())
+    }
 
-                campaign.triggerEventCondition.frequencyCap?.let { frequencyCap ->
-                    if (campaignExposureService.hasReachedImpressionLimit(
-                            campaign.id,
-                            frequencyCap.durationMinutes,
-                            frequencyCap.limit
-                        )
-                    ) {
-                        logger.v {
-                            "Campaign ${campaign.id} has reached frequency cap limit"
-                        }
-                        return@filter false
-                    }
-                }
-                logger.v { "Campaign ${campaign.id} matches event condition for event ${event.name}" }
-                true
-            }
+    fun currentGeneration(): Long = identityGeneration.get()
 
-            val deadline = monotonicNowMs() + FALLTHROUGH_BUDGET_MS
-            var fetches = 0
-            val handledSlots = mutableSetOf<InAppDisplaySlot>()
-            for (campaign in candidates) {
-                val slot = campaign.slot
-                if (slot in handledSlots) continue
-                if (inAppView.isShowing(slot)) {
-                    handledSlots.add(slot)
-                    continue
-                }
+    /**
+     * [origin]은 이벤트가 들어온 웹뷰다. 앱 화면 이벤트면 null.
+     * [generation]은 이벤트의 userId를 읽기 전에 [currentGeneration]으로 얻은 값이다.
+     */
+    fun onEvent(
+        event: IngestEventRequest,
+        origin: InAppOrigin?,
+        generation: Long = currentGeneration(),
+    ) {
+        handleEvent(event, origin, callbackFactory, generation)
+    }
 
-                // html 이 비어 있는 후보만 상세 fetch 를 탄다(resolveCampaignHtml 의 분기와 같은 조건).
-                // 정적 렌더 캠페인은 서버를 안 타므로 요청 예산에서 뺀다.
-                val needsFetch = campaign.html == null
-                if (needsFetch) {
-                    if (fetches >= MAX_FALLTHROUGH_FETCHES) {
-                        logger.v { "Reached fetch budget ($MAX_FALLTHROUGH_FETCHES), stopping fallthrough" }
-                        break
-                    }
-                    // fetch 는 스레드를 최대 1초 블록한다. 남은 예산이 없으면 시작조차 안 한다.
-                    if (monotonicNowMs() >= deadline) {
-                        logger.v { "Reached time budget (${FALLTHROUGH_BUDGET_MS}ms), stopping fallthrough" }
-                        break
-                    }
-                    fetches++
-                }
+    /** SDK 초기화·포그라운드 복귀 때 저장된 예약의 타이머를 다시 걸고, 시각이 지난 예약을 실행한다. */
+    fun restoreDelayed() {
+        val coordinator = delayedCoordinator ?: return
+        scheduler.execute { coordinator.sync() }
+    }
 
-                val resolvedCampaign = campaignFetchService.resolveCampaignHtml(campaign, event)
-                    ?: continue
+    /**
+     * userId 를 [next]로 바꾸는 [change]를 실행한다. 지금 userId([current])를 읽는 것부터 바꾸는 것까지 한 잠금 안에서 해서,
+     * 동시에 들어온 identify·로그아웃이 이전 사용자를 잘못 읽고 폐기를 건너뛰지 않게 한다.
+     */
+    fun switchIdentity(next: String?, current: () -> String?, change: () -> Unit) {
+        synchronized(identityLock) {
+            val previous = current()
+            if (previous == next) change() else changeIdentity(fromAnonymous = previous == null, change = change)
+        }
+    }
 
-                if (handleCampaign(resolvedCampaign, slot, origin, onImpression, onClick, onTrack, onSetUserProperties)) {
-                    handledSlots.add(slot)
+    /**
+     * userId를 바꾸는 [change]를 세대 전환과 함께 실행하고, 지연 예약·누적 횟수를 바로 지운다.
+     * [fromAnonymous]면(익명 → 로그인) 같은 사람으로 보고 예약·횟수를 그대로 둔다(Braze changeUser 와 같다).
+     */
+    fun changeIdentity(fromAnonymous: Boolean = false, change: () -> Unit) {
+        if (fromAnonymous) {
+            synchronized(identityLock) { change() }
+            return
+        }
+        synchronized(identityLock) {
+            identityGeneration.incrementAndGet()
+            try {
+                change()
+            } finally {
+                delayedCoordinator?.clearPersisted()
+                occurrenceEvaluator.resetAll()
+                scheduler.execute {
+                    delayedCoordinator?.clearAll()
+                    occurrenceEvaluator.resetAll()
                 }
             }
         }
+    }
+
+    private fun isCurrent(generation: Long) = generation == identityGeneration.get()
+
+    private fun handleEvent(
+        event: IngestEventRequest,
+        origin: InAppOrigin?,
+        callbacks: () -> InAppCallbacks,
+        generation: Long,
+    ) {
+        synchronized(identityLock) {
+            if (!isCurrent(generation)) return
+            scheduler.execute { processEvent(event, origin, callbacks, generation) }
+        }
+    }
+
+    private fun processEvent(
+        event: IngestEventRequest,
+        origin: InAppOrigin?,
+        callbacks: () -> InAppCallbacks,
+        generation: Long,
+    ) {
+        if (!isCurrent(generation)) return
+        delayedCoordinator?.cancelMatching(event)
+
+        campaignFetchService.useCampaigns(
+            onUnavailable = {
+                if (isCurrent(generation)) resetAborted(campaignFetchService.lastCachedCampaigns().orEmpty(), event)
+            }
+        ) { campaigns ->
+            if (!isCurrent(generation)) return@useCampaigns
+            resetAborted(campaigns, event)
+
+            val globalFrequencyCaps = campaignFetchService.getGlobalFrequencyCaps()
+            val sessionId = event.properties?.get(SESSION_ID_KEY) as? String
+            // 우선순위 순 후보 전체를 본다. 1순위의 상세 fetch 가 빈 응답이어도 뒤 후보가 뜰 수 있다.
+            val candidates = campaigns
+                .filter { isEligible(it, event, globalFrequencyCaps) }
+                .filter { occurrenceEvaluator.recordAndEvaluate(it, sessionId) }
+
+            showCandidates(candidates, event, origin, callbacks, generation)
+        }
+    }
+
+    private fun resetAborted(campaigns: List<InAppCampaign>, event: IngestEventRequest) {
+        campaigns
+            .filter { eventConditionChecker.matchesAbort(it.triggerEventCondition.abortConditions, event) }
+            .forEach { occurrenceEvaluator.reset(it.id) }
+    }
+
+    private fun isEligible(
+        campaign: InAppCampaign,
+        event: IngestEventRequest,
+        globalFrequencyCaps: List<GlobalFrequencyCapRule>,
+    ): Boolean {
+        val trigger = campaign.triggerEventCondition
+        if (!eventConditionChecker.matchesTrigger(trigger, event.name, event.properties)) {
+            logger.v { "Campaign ${campaign.id} does not match event condition for event ${event.name}" }
+            return false
+        }
+        if (!windowChecker.check(trigger.sendableTimeWindow)) {
+            logger.v { "Campaign ${campaign.id} is outside its sendable time window" }
+            return false
+        }
+        if (campaignExposureService.isCampaignHidden(campaign.id)) {
+            logger.v { "Campaign ${campaign.id} is hidden" }
+            return false
+        }
+        if (isTimerExpired(campaign)) {
+            logger.v { "Campaign ${campaign.id} timer has expired" }
+            return false
+        }
+        if (delayedCoordinator?.isScheduled(campaign.id) == true) {
+            logger.v { "Campaign ${campaign.id} is already scheduled" }
+            return false
+        }
+        if (hasReachedFrequencyCap(campaign)) {
+            logger.v { "Campaign ${campaign.id} has reached frequency cap limit" }
+            return false
+        }
+        if (hasReachedGlobalFrequencyCap(campaign, globalFrequencyCaps)) {
+            logger.v { "Campaign ${campaign.id} has reached a global frequency cap" }
+            return false
+        }
+        logger.v { "Campaign ${campaign.id} matches event condition for event ${event.name}" }
+        return true
+    }
+
+    private fun hasReachedFrequencyCap(campaign: InAppCampaign): Boolean {
+        val frequencyCap = campaign.triggerEventCondition.frequencyCap ?: return false
+        return campaignExposureService.hasReachedImpressionLimit(
+            campaign.id,
+            frequencyCap.durationMinutes,
+            frequencyCap.limit
+        )
+    }
+
+    private fun hasReachedGlobalFrequencyCap(
+        campaign: InAppCampaign,
+        rules: List<GlobalFrequencyCapRule>,
+    ): Boolean {
+        if (campaign.disableGlobalFrequencyCap == true) return false
+        val tagIds = campaign.tagIds.orEmpty()
+        return rules.any { rule ->
+            ruleTagsIntersect(rule.tagIds, tagIds) && campaignExposureService.hasReachedGlobalFrequencyCap(rule)
+        }
+    }
+
+    private fun showCandidates(
+        candidates: List<InAppCampaign>,
+        event: IngestEventRequest,
+        origin: InAppOrigin?,
+        callbacks: () -> InAppCallbacks,
+        generation: Long,
+    ) {
+        val deadline = monotonicNowMs() + FALLTHROUGH_BUDGET_MS
+        var fetches = 0
+        val handledSlots = mutableSetOf<InAppDisplaySlot>()
+        for (campaign in candidates) {
+            if (!isCurrent(generation)) return
+            val slot = campaign.slot
+            if (slot in handledSlots) continue
+            if (inAppView.isShowing(slot)) {
+                handledSlots.add(slot)
+                continue
+            }
+
+            // 지연 예약은 그 자리만 처리된 것으로 보고 다른 자리 후보는 계속 본다.
+            if (delayedCoordinator != null && campaign.delayMillis() != null) {
+                if (delayedCoordinator.schedule(campaign, event, origin)) {
+                    occurrenceEvaluator.reset(campaign.id)
+                }
+                handledSlots.add(slot)
+                continue
+            }
+
+            // html 이 비어 있는 후보만 상세 fetch 를 탄다(resolveCampaignHtml 의 분기와 같은 조건).
+            // 정적 렌더 캠페인은 서버를 안 타므로 요청 예산에서 뺀다.
+            val needsFetch = campaign.html == null
+            if (needsFetch) {
+                if (fetches >= MAX_FALLTHROUGH_FETCHES) {
+                    logger.v { "Reached fetch budget ($MAX_FALLTHROUGH_FETCHES), stopping fallthrough" }
+                    break
+                }
+                // fetch 는 스레드를 최대 1초 블록한다. 남은 예산이 없으면 시작조차 안 한다.
+                if (monotonicNowMs() >= deadline) {
+                    logger.v { "Reached time budget (${FALLTHROUGH_BUDGET_MS}ms), stopping fallthrough" }
+                    break
+                }
+                fetches++
+            }
+
+            val resolvedCampaign = campaignFetchService.resolveCampaignHtml(campaign, event)
+                ?.withTimerOf(campaign)
+                ?: continue
+
+            if (!isCurrent(generation)) return
+            if (handleCampaign(resolvedCampaign, slot, origin, callbacks())) {
+                handledSlots.add(slot)
+            }
+        }
+    }
+
+    /**
+     * 실행 직전에 최신 목록으로 다시 확인한다. 목록을 받을 수 없으면 마지막 캐시로 보고,
+     * 캐시도 없으면 [DelayedDelivery.RETRY]. [origin]은 예약을 만든 이벤트의 출처 웹뷰이고,
+     * 이미 사라졌으면 출처 없이 띄운다.
+     */
+    private fun executeReservation(reservation: DelayedReservation, origin: InAppOrigin?): DelayedDelivery {
+        val generation = currentGeneration()
+        var campaigns: List<InAppCampaign>? = null
+        campaignFetchService.useCampaigns(
+            onUnavailable = { campaigns = campaignFetchService.lastCachedCampaigns() }
+        ) { campaigns = it }
+        val campaign = (campaigns ?: return DelayedDelivery.RETRY)
+            .firstOrNull { it.id == reservation.campaignId }
+            ?: return DelayedDelivery.DONE
+
+        if (campaignExposureService.isCampaignHidden(campaign.id) ||
+            hasReachedFrequencyCap(campaign) ||
+            hasReachedGlobalFrequencyCap(campaign, campaignFetchService.getGlobalFrequencyCaps())
+        ) {
+            return DelayedDelivery.DONE
+        }
+
+        val slot = reservation.slot
+        if (inAppView.isShowing(slot)) return DelayedDelivery.DONE
+        val resolvedCampaign = campaignFetchService.resolveCampaignHtml(campaign, reservation.triggerEvent)
+            ?.withTimerOf(campaign)
+            ?: return DelayedDelivery.DONE
+        if (!canDisplay()) return DelayedDelivery.RETRY
+        if (inAppView.isShowing(slot) || !isCurrent(generation)) return DelayedDelivery.DONE
+
+        handleCampaign(resolvedCampaign, slot, origin, callbackFactory())
+        return DelayedDelivery.DONE
     }
 
     private fun handleCampaign(
         targetCampaign: InAppCampaign,
         slot: InAppDisplaySlot,
         origin: InAppOrigin?,
-        onImpression: (campaign: InAppCampaign) -> Unit,
-        onClick: (campaign: InAppCampaign, locationId: String) -> Unit,
-        onTrack: (campaign: InAppCampaign, eventName: String, properties: Map<String, Any>?) -> Unit,
-        onSetUserProperties: (properties: Map<String, Any>) -> Unit,
+        callbacks: InAppCallbacks,
     ): Boolean {
         logger.d { "Showing in-app campaign: ${targetCampaign.id} with layout type: ${targetCampaign.layout.layoutType}" }
         val campaignHtml = targetCampaign.html ?: return false
+        if (isTimerExpired(targetCampaign)) {
+            logger.d { "Campaign ${targetCampaign.id} timer has expired" }
+            return false
+        }
         val closeOnPageLeave = InAppPageScope.closesOnPageLeave(slot, targetCampaign.floatingScope)
-        return showCampaign(targetCampaign, campaignHtml, slot, origin, closeOnPageLeave, onImpression, onClick, onTrack, onSetUserProperties)
+        val shown = showCampaign(targetCampaign, campaignHtml, slot, origin, closeOnPageLeave, callbacks)
+        if (shown) occurrenceEvaluator.reset(targetCampaign.id)
+        return shown
     }
 
     private fun showCampaign(
@@ -169,10 +391,7 @@ internal class InAppService(
         slot: InAppDisplaySlot,
         origin: InAppOrigin?,
         closeOnPageLeave: Boolean,
-        onImpression: (campaign: InAppCampaign) -> Unit,
-        onClick: (campaign: InAppCampaign, locationId: String) -> Unit,
-        onTrack: (campaign: InAppCampaign, eventName: String, properties: Map<String, Any>?) -> Unit,
-        onSetUserProperties: (properties: Map<String, Any>) -> Unit,
+        callbacks: InAppCallbacks,
     ): Boolean {
         val liveOrigin = origin?.takeUnless { it.isGone }
         if (origin != null && liveOrigin == null) {
@@ -185,11 +404,12 @@ internal class InAppService(
             closeOnPageLeave,
             {
                 campaignExposureService.recordImpression(targetCampaign.id)
-                onImpression(targetCampaign)
+                campaignExposureService.recordGlobalImpression(targetCampaign.tagIds.orEmpty())
+                callbacks.onImpression(targetCampaign)
                 logger.d { "Recorded impression for campaign: ${targetCampaign.id}" }
             },
             { locationId ->
-                onClick(targetCampaign, locationId)
+                callbacks.onClick(targetCampaign, locationId)
                 logger.d { "Recorded click for campaign: ${targetCampaign.id} at location: $locationId" }
                 targetCampaign.id
             },
@@ -198,11 +418,18 @@ internal class InAppService(
                 hideCampaignByType(targetCampaign.id, hideType)
             },
             { eventName, properties ->
-                onTrack(targetCampaign, eventName, properties)
+                callbacks.onTrack(targetCampaign, eventName, properties)
             },
-            onSetUserProperties,
+            callbacks::onSetUserProperties,
+            { timerStore?.startFor(targetCampaign) ?: System.currentTimeMillis() },
+            { !isTimerExpired(targetCampaign) },
         )
     }
+
+    private fun isTimerExpired(campaign: InAppCampaign): Boolean = timerStore?.isExpired(campaign) == true
+
+    private fun InAppCampaign.withTimerOf(listed: InAppCampaign): InAppCampaign =
+        if (this === listed) this else copy(timer = timer ?: listed.timer, isTest = isTest ?: listed.isTest)
 
     /**
      * 캠페인 숨김 처리 (웹브릿지에서 호출)

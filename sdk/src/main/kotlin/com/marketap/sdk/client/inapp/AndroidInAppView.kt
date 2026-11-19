@@ -40,16 +40,19 @@ class AndroidInAppView : InAppView {
         onHide: (HideType) -> Unit,
         onTrack: (eventName: String, properties: Map<String, Any>?) -> Unit,
         onSetUserProperties: (properties: Map<String, Any>) -> Unit,
+        timerStartAt: () -> Long,
+        canMount: () -> Boolean,
     ): Boolean {
         val session = InAppSession(onShow, onClick, onHide, onTrack, onSetUserProperties, origin, closeOnPageLeave)
         if (!slots.claim(slot, session)) return false
         when (slot) {
-            InAppDisplaySlot.POPUP -> showPopup(html, session)
+            InAppDisplaySlot.POPUP -> showPopup(html, session, timerStartAt, canMount)
             InAppDisplaySlot.FLOATING -> FloatingInAppView.show(
                 html = html,
                 origin = origin,
                 stayOnHost = closeOnPageLeave && origin != null,
-                timerStartAtMillis = System.currentTimeMillis(),
+                timerStartAt = timerStartAt,
+                canMount = canMount,
                 callback = session,
                 onShown = { session.shown() },
                 onClosed = { slots.release(InAppDisplaySlot.FLOATING, session) },
@@ -61,9 +64,9 @@ class AndroidInAppView : InAppView {
     /** 자리는 팝업 View 가 정리를 마칠 때 반납된다. */
     private val popupHolder = PopupHolder<PopupInAppView>()
 
-    private fun showPopup(html: String, session: InAppSession) {
+    private fun showPopup(html: String, session: InAppSession, timerStartAt: () -> Long, canMount: () -> Boolean) {
         lateinit var view: PopupInAppView
-        view = PopupInAppView(html, session) {
+        view = PopupInAppView(html, session, timerStartAt, canMount) {
             synchronized(slots) {
                 slots.release(InAppDisplaySlot.POPUP, session)
                 popupHolder.clear(view)

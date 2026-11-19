@@ -62,7 +62,8 @@ internal object FloatingInAppView : CurrentActivityHolder.ScreenListener {
 
     /**
      * @param stayOnHost 다른 화면이 앞에 와도 옮기지 않고, 붙은 화면이 사라지면 닫는다.
-     * @param timerStartAtMillis 노출 시작 시각(epoch ms).
+     * @param timerStartAt 화면에 붙일 때 한 번 불러 템플릿 타이머의 시작 시각(epoch ms)으로 넘긴다.
+     * @param canMount 화면에 붙이기 직전에 부른다. false 면 붙이지 않고 [onClosed] 로 끝낸다.
      * @param onShown 웹뷰가 문서를 다 불러왔을 때 한 번.
      * @param onClosed 어떤 이유로든(사용자 닫기, [dismiss], 붙을 화면 없음, 이미 표시 중) 이 요청이 끝날 때 한 번.
      */
@@ -70,7 +71,8 @@ internal object FloatingInAppView : CurrentActivityHolder.ScreenListener {
         html: String,
         origin: InAppOrigin?,
         stayOnHost: Boolean,
-        timerStartAtMillis: Long,
+        timerStartAt: () -> Long,
+        canMount: () -> Boolean,
         callback: InAppCallback,
         onShown: () -> Unit,
         onClosed: () -> Unit,
@@ -85,6 +87,11 @@ internal object FloatingInAppView : CurrentActivityHolder.ScreenListener {
             val decor = activity?.window?.decorView as? ViewGroup
             if (activity == null || decor == null) {
                 logger.w { "Floating: no screen to attach" }
+                onClosed()
+                return@postToMainThread
+            }
+            if (!canMount()) {
+                logger.d { "Floating: not mounted (timer expired)" }
                 onClosed()
                 return@postToMainThread
             }
@@ -111,7 +118,7 @@ internal object FloatingInAppView : CurrentActivityHolder.ScreenListener {
             val (top, bottom) = ViewCompat.getRootWindowInsets(decor)?.let(::decorSafeArea) ?: (0 to 0)
             view.loadDataWithBaseURL(
                 null,
-                FloatingScripts.buildDocument(html, top, bottom, timerStartAtMillis),
+                FloatingScripts.buildDocument(html, top, bottom, timerStartAt()),
                 "text/html",
                 "UTF-8",
                 null

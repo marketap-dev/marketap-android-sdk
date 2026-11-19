@@ -37,6 +37,9 @@ internal class PopupLifecycle<S : Any>(private val effects: Effects<S>) {
         fun tearDown()
         fun recordImpression()
         fun release()
+
+        /** 처음 붙이기 직전에 한 번 묻는다. false 면 붙이지 않고 정리한다. */
+        fun canMount(): Boolean = true
     }
 
     @Volatile
@@ -48,6 +51,7 @@ internal class PopupLifecycle<S : Any>(private val effects: Effects<S>) {
     private var tearingDown = false
     private var pageFinished = false
     private var impressionRecorded = false
+    private var mounted = false
 
     val acceptsClicks: Boolean get() = state == PopupState.ATTACHED
 
@@ -130,7 +134,12 @@ internal class PopupLifecycle<S : Any>(private val effects: Effects<S>) {
     }
 
     private fun attachTo(screen: S): Boolean {
+        if (!mounted && !effects.canMount()) {
+            finish()
+            return false
+        }
         if (!effects.attach(screen)) return false
+        mounted = true
         host = WeakReference(screen)
         waitGeneration += 1
         state = PopupState.ATTACHED
