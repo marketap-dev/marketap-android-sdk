@@ -9,5 +9,5 @@ const val INGESTION_ENDPOINT = "$INGESTION_DOMAIN/v1/client/events"
 
 //const val IN_APP_MESSAGING_DOMAIN = "https://dev-crm.marketap.io"
 const val IN_APP_MESSAGING_DOMAIN = "https://crm.marketap.io"
-const val IN_APP_MESSAGING_ENDPOINT = "$IN_APP_MESSAGING_DOMAIN/api/v2/campaigns"
+const val IN_APP_MESSAGING_ENDPOINT = "$IN_APP_MESSAGING_DOMAIN/api/v3/campaigns"
 const val META_SERVER_INFO_ENDPOINT = "$IN_APP_MESSAGING_DOMAIN/api/v2/meta/server-info"
