@@ -37,10 +37,10 @@ class EventFlowRuleContractTest {
                 precedingSteps = (spec["steps"] as List<Map<String, Any?>>).map { step ->
                     EventFlowStep(
                         conditions = (step["events"] as List<String>).map(::condition),
-                        withinSeconds = (step["withinSeconds"] as Double).toLong(),
+                        withinSeconds = (step["withinSeconds"] as Number).toLong(),
                     )
                 },
-                reentryBlockSeconds = (spec["reentryBlockSeconds"] as Double?)?.toLong(),
+                reentryBlockSeconds = (spec["reentryBlockSeconds"] as Number?)?.toLong(),
             )
             val arrival = spec["arrival"] as List<String>
             val cancel = (spec["cancel"] as List<String>).map(::condition)
@@ -57,7 +57,7 @@ class EventFlowRuleContractTest {
                     flow,
                     eventName in arrival,
                     cancel,
-                    (input["at"] as Double).toLong() * 1000,
+                    (input["at"] as Number).toLong() * 1000,
                 ) { it.eventFilter.eventName == eventName }
 
                 assertEquals(
@@ -74,9 +74,9 @@ class EventFlowRuleContractTest {
     private fun expected(expect: Map<String, Any?>): Expected {
         val state = (expect["state"] as Map<String, Any?>?)?.let {
             EventFlowState(
-                nextStep = (it["nextStep"] as Double).toInt(),
-                lastStepAt = (it["lastStepAt"] as Double).toLong() * 1000,
-                blockedUntil = (it["blockedUntil"] as Double?)?.let { at -> at.toLong() * 1000 },
+                nextStep = (it["nextStep"] as Number).toInt(),
+                lastStepAt = (it["lastStepAt"] as Number).toLong() * 1000,
+                blockedUntil = (it["blockedUntil"] as Number?)?.let { at -> at.toLong() * 1000 },
             )
         }
         return Expected(expect["fired"] as Boolean, expect["restarted"] as Boolean, state)

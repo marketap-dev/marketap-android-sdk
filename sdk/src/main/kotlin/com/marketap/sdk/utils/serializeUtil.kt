@@ -2,11 +2,71 @@ package com.marketap.sdk.utils
 
 import com.squareup.moshi.JsonAdapter
 import com.squareup.moshi.JsonClass
+import com.squareup.moshi.JsonReader
+import com.squareup.moshi.JsonWriter
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.Types
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
+import java.lang.reflect.Type
+
+/**
+ * 타입 정보 없이 읽는 값(`Any`)의 JSON 숫자를 정수면 Long, 아니면 Double 로 읽는다.
+ * Long 범위를 넘는 정수는 Double 로 읽는다.
+ */
+internal object LongOrDoubleAnyAdapterFactory : JsonAdapter.Factory {
+    override fun create(
+        type: Type,
+        annotations: Set<Annotation>,
+        moshi: Moshi
+    ): JsonAdapter<*>? {
+        if (type != Any::class.java || annotations.isNotEmpty()) return null
+        val delegate = moshi.nextAdapter<Any>(this, Any::class.java, annotations)
+        return LongOrDoubleAnyAdapter(delegate)
+    }
+}
+
+private class LongOrDoubleAnyAdapter(
+    private val delegate: JsonAdapter<Any>
+) : JsonAdapter<Any>() {
+    override fun fromJson(reader: JsonReader): Any? {
+        return when (reader.peek()) {
+            JsonReader.Token.BEGIN_ARRAY -> {
+                val list = ArrayList<Any?>()
+                reader.beginArray()
+                while (reader.hasNext()) {
+                    list.add(fromJson(reader))
+                }
+                reader.endArray()
+                list
+            }
+
+            JsonReader.Token.BEGIN_OBJECT -> {
+                val map = LinkedHashMap<String, Any?>()
+                reader.beginObject()
+                while (reader.hasNext()) {
+                    map[reader.nextName()] = fromJson(reader)
+                }
+                reader.endObject()
+                map
+            }
+
+            JsonReader.Token.NUMBER -> {
+                val raw = reader.nextString()
+                val isInteger = raw.none { it == '.' || it == 'e' || it == 'E' }
+                if (isInteger) raw.toLongOrNull() ?: raw.toDouble() else raw.toDouble()
+            }
+
+            else -> delegate.fromJson(reader)
+        }
+    }
+
+    override fun toJson(writer: JsonWriter, value: Any?) {
+        delegate.toJson(writer, value)
+    }
+}
 
 internal val moshi: Moshi = Moshi.Builder()
+    .add(LongOrDoubleAnyAdapterFactory)
     .add(KotlinJsonAdapterFactory())  // code-gen adapter 우선 적용
     .build()
 
