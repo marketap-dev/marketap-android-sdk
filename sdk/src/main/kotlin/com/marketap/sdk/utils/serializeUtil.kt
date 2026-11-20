@@ -2,6 +2,8 @@ package com.marketap.sdk.utils
 
 import com.squareup.moshi.JsonAdapter
 import com.squareup.moshi.JsonClass
+import com.squareup.moshi.JsonDataException
+import com.squareup.moshi.JsonQualifier
 import com.squareup.moshi.JsonReader
 import com.squareup.moshi.JsonWriter
 import com.squareup.moshi.Moshi
@@ -65,7 +67,92 @@ private class LongOrDoubleAnyAdapter(
     }
 }
 
+/** 목록에서 읽을 수 없는 항목은 그 항목만 제외한다. */
+@Retention(AnnotationRetention.RUNTIME)
+@JsonQualifier
+internal annotation class SkipUndecodable
+
+internal object SkipUndecodableListAdapterFactory : JsonAdapter.Factory {
+    override fun create(
+        type: Type,
+        annotations: Set<Annotation>,
+        moshi: Moshi
+    ): JsonAdapter<*>? {
+        val remaining = Types.nextAnnotations(annotations, SkipUndecodable::class.java) ?: return null
+        if (Types.getRawType(type) != List::class.java) return null
+        val elementType = Types.collectionElementType(type, List::class.java)
+        return SkipUndecodableListAdapter(moshi.adapter<Any>(elementType, remaining)).nullSafe()
+    }
+}
+
+private class SkipUndecodableListAdapter(
+    private val elementAdapter: JsonAdapter<Any>
+) : JsonAdapter<List<Any>>() {
+    override fun fromJson(reader: JsonReader): List<Any> {
+        val result = ArrayList<Any>()
+        reader.beginArray()
+        while (reader.hasNext()) {
+            val item = try {
+                elementAdapter.fromJson(reader.peekJson())
+            } catch (e: JsonDataException) {
+                logger.w { "Skipped an item that cannot be decoded: ${e.message}" }
+                null
+            }
+            reader.skipValue()
+            if (item != null) result.add(item)
+        }
+        reader.endArray()
+        return result
+    }
+
+    override fun toJson(writer: JsonWriter, value: List<Any>?) {
+        writer.beginArray()
+        value?.forEach { elementAdapter.toJson(writer, it) }
+        writer.endArray()
+    }
+}
+
+/** 목록에 읽을 수 없는 항목이 하나라도 있으면 목록 전체를 null 로 읽는다. */
+@Retention(AnnotationRetention.RUNTIME)
+@JsonQualifier
+internal annotation class NullIfAnyUndecodable
+
+internal object NullIfAnyUndecodableListAdapterFactory : JsonAdapter.Factory {
+    override fun create(
+        type: Type,
+        annotations: Set<Annotation>,
+        moshi: Moshi
+    ): JsonAdapter<*>? {
+        val remaining = Types.nextAnnotations(annotations, NullIfAnyUndecodable::class.java) ?: return null
+        if (Types.getRawType(type) != List::class.java) return null
+        val elementType = Types.collectionElementType(type, List::class.java)
+        val listType = Types.newParameterizedType(List::class.java, elementType)
+        return NullIfAnyUndecodableListAdapter(moshi.adapter<List<Any>>(listType, remaining))
+    }
+}
+
+private class NullIfAnyUndecodableListAdapter(
+    private val delegate: JsonAdapter<List<Any>>
+) : JsonAdapter<List<Any>>() {
+    override fun fromJson(reader: JsonReader): List<Any>? {
+        val result = try {
+            delegate.fromJson(reader.peekJson())
+        } catch (e: JsonDataException) {
+            logger.w { "Ignored a list that cannot be decoded: ${e.message}" }
+            null
+        }
+        reader.skipValue()
+        return result
+    }
+
+    override fun toJson(writer: JsonWriter, value: List<Any>?) {
+        delegate.toJson(writer, value)
+    }
+}
+
 internal val moshi: Moshi = Moshi.Builder()
+    .add(SkipUndecodableListAdapterFactory)
+    .add(NullIfAnyUndecodableListAdapterFactory)
     .add(LongOrDoubleAnyAdapterFactory)
     .add(KotlinJsonAdapterFactory())  // code-gen adapter 우선 적용
     .build()
