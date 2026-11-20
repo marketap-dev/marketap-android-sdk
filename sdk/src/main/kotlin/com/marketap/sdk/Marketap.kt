@@ -15,8 +15,6 @@ import com.marketap.sdk.presentation.Dependency.initializeCore
 import com.marketap.sdk.presentation.MarketapRegistry
 import com.marketap.sdk.presentation.MarketapRegistry.marketapCore
 import com.marketap.sdk.utils.logger
-import com.marketap.sdk.utils.mapAdapter
-import com.marketap.sdk.utils.serialize
 
 
 object Marketap {
@@ -77,8 +75,8 @@ object Marketap {
         logger.d {
             "Marketap SDK login with " +
                     "userId: $userId, " +
-                    "userProperties: ${userProperties?.serialize(mapAdapter<String, Any>())}, " +
-                    "eventProperties: ${eventProperties?.serialize(mapAdapter<String, Any>())}"
+                    "userProperties: ${userProperties}, " +
+                    "eventProperties: ${eventProperties}"
         }
         marketapCore?.identify(userId, userProperties)
         marketapCore?.track("mkt_login", eventProperties)
@@ -105,8 +103,8 @@ object Marketap {
         logger.d {
             "Marketap SDK signup with " +
                     "userId: $userId, " +
-                    "userProperties: ${userProperties?.serialize(mapAdapter<String, Any>())}, " +
-                    "eventProperties: ${eventProperties?.serialize(mapAdapter<String, Any>())}"
+                    "userProperties: ${userProperties}, " +
+                    "eventProperties: ${eventProperties}"
         }
         marketapCore?.identify(userId, userProperties)
         marketapCore?.track("mkt_signup", eventProperties)
@@ -129,7 +127,7 @@ object Marketap {
     @JvmStatic
     fun logout(properties: Map<String, Any>? = null) {
         logger.d {
-            "Marketap SDK logout with properties: ${properties?.serialize(mapAdapter<String, Any>())}"
+            "Marketap SDK logout with properties: ${properties}"
         }
         marketapCore?.track("mkt_logout", properties)
         marketapCore?.resetIdentity()
@@ -150,7 +148,7 @@ object Marketap {
     ) {
         logger.d {
             "Marketap SDK track event with name: $name, " +
-                    "properties: ${properties?.serialize(mapAdapter<String, Any>())}"
+                    "properties: ${properties}"
         }
         marketapCore?.track(name, properties)
     }
@@ -167,7 +165,7 @@ object Marketap {
     fun trackPurchase(revenue: Double, properties: Map<String, Any>? = null) {
         logger.d {
             "Marketap SDK track purchase" +
-                    "revenue: $revenue, properties: ${properties?.serialize(mapAdapter<String, Any>())}"
+                    "revenue: $revenue, properties: ${properties}"
         }
         marketapCore?.track(
             "mkt_purchase",
@@ -187,7 +185,7 @@ object Marketap {
     fun trackRevenue(name: String, revenue: Double, properties: Map<String, Any>? = null) {
         logger.d {
             "Marketap SDK track revenue event with name: $name, " +
-                    "revenue: $revenue, properties: ${properties?.serialize(mapAdapter<String, Any>())}"
+                    "revenue: $revenue, properties: ${properties}"
         }
         marketapCore?.track(
             name,
@@ -205,7 +203,7 @@ object Marketap {
     @JvmStatic
     fun trackPageView(properties: Map<String, Any>? = null) {
         logger.d {
-            "Marketap SDK track page view with properties: ${properties?.serialize(mapAdapter<String, Any>())}"
+            "Marketap SDK track page view with properties: ${properties}"
         }
         marketapCore?.track("mkt_page_view", properties)
     }
@@ -273,7 +271,7 @@ object Marketap {
     fun identify(userId: String, properties: Map<String, Any>? = null) {
         logger.d {
             "Marketap SDK identify user with userId: $userId, " +
-                    "properties: ${properties?.serialize(mapAdapter<String, Any>())}"
+                    "properties: ${properties}"
         }
         marketapCore?.identify(userId, properties)
     }

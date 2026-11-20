@@ -12,6 +12,8 @@ import com.marketap.sdk.domain.service.state.ClientStateManager
 import com.marketap.sdk.model.internal.inapp.HideType
 import com.marketap.sdk.model.internal.inapp.InAppOrigin
 import com.marketap.sdk.utils.logger
+import com.marketap.sdk.utils.filterSupportedProperties
+import com.marketap.sdk.utils.findUnsupportedPropertyName
 
 internal class MarketapCoreService(
     private val eventIngestionService: EventIngestionService,
@@ -23,9 +25,29 @@ internal class MarketapCoreService(
     private val sessionManager: SessionManager,
 ) {
 
+    /** 보낼 수 없는 값이 하나라도 있으면 이벤트를 보내지 않는다. */
+    private fun hasSupportedEventProperties(name: String, properties: Map<String, Any>?): Boolean {
+        val unsupported = properties.findUnsupportedPropertyName() ?: return true
+        logger.e {
+            "Event \"$name\" is not sent: property \"$unsupported\" has an unsupported value " +
+                    "(${properties?.get(unsupported)?.javaClass?.name})"
+        }
+        return false
+    }
+
+    /** 유저 속성은 보낼 수 없는 값을 가진 속성만 빼고 나머지를 보낸다. */
+    private fun supportedUserProperties(properties: Map<String, Any>?): Map<String, Any> {
+        return properties.filterSupportedProperties { name ->
+            logger.e {
+                "User property \"$name\" is not sent: unsupported value (${properties?.get(name)?.javaClass?.name})"
+            }
+        }
+    }
+
     fun identify(userId: String, properties: Map<String, Any>?) {
         try {
-            val identify = { userIngestionService.identify(userId, properties ?: emptyMap()) }
+            val supported = supportedUserProperties(properties)
+            val identify = { userIngestionService.identify(userId, supported) }
             inAppService.switchIdentity(userId, clientStateManager::getUserId, identify)
         } catch (t: Throwable) {
             // Ignore
@@ -44,6 +66,7 @@ internal class MarketapCoreService(
 
     fun track(name: String, properties: Map<String, Any>?) {
         try {
+            if (!hasSupportedEventProperties(name, properties)) return
             eventIngestionService.trackEvent(name, properties ?: emptyMap())
         } catch (t: Throwable) {
             // Ignore
@@ -61,6 +84,7 @@ internal class MarketapCoreService(
 
     fun trackFromWebBridge(name: String, properties: Map<String, Any>?, origin: InAppOrigin?) {
         try {
+            if (!hasSupportedEventProperties(name, properties)) return
             eventIngestionService.trackEvent(name, properties ?: emptyMap(), origin)
         } catch (t: Throwable) {
             logger.e(t) { "Failed to track event from web bridge: $name" }
@@ -85,7 +109,7 @@ internal class MarketapCoreService(
 
     fun setUserProperties(userProperties: Map<String, Any>) {
         try {
-            userIngestionService.setUserProperties(userProperties)
+            userIngestionService.setUserProperties(supportedUserProperties(userProperties))
         } catch (t: Throwable) {
             logger.e(t) { "Failed to set user properties" }
         }
