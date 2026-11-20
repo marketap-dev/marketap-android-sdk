@@ -19,8 +19,13 @@ import com.marketap.sdk.utils.logger
 import com.marketap.sdk.model.internal.MarketapServerConfig
 import com.marketap.sdk.utils.pairAdapter
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
@@ -52,11 +57,17 @@ internal class RetryMarketapBackend(
         remotePolicy.clearIfChanged(entry.first, block, generation)
         return true
     }
+    private val ioScope = CoroutineScope(
+        SupervisorJob() + Dispatchers.IO + CoroutineExceptionHandler { _, t ->
+            logger.e(t) { "Error in marketap background task" }
+        }
+    )
 
     companion object {
         private const val KEY_PENDING_USER_PROFILE = "pending_user_profile"
         private const val KEY_PENDING_DEVICE_PROFILE = "pending_device_profile"
         private const val KEY_PUSH_EVENTS = "push_events"
+        private const val EVENT_BATCH_SIZE = 10
     }
 
     private fun getSafeDevice(removeUserId: Boolean?): DeviceReq? {
@@ -104,27 +115,44 @@ internal class RetryMarketapBackend(
     }
 
     private suspend fun drainEventQueue(queue: String, block: String) {
-        val items = synchronized(RemotePolicyStore.lock) {
-            storage.popItems(queue, pairAdapter<String, IngestEventRequest>(), 10).map {
-                it to remotePolicy.generation(it.first, block)
-            }
-        }
         val api = if (queue == KEY_PUSH_EVENTS) pushApi else marketapApi
-        items.forEach { (item, generation) ->
-            val (projectId, request) = item
-            apiWorkGroup.dispatch {
-                try {
-                    if (!remotePolicy.allowed(projectId, block) || generation != remotePolicy.generation(projectId, block)) return@dispatch
-                    val device = getSafeDevice(request.device.removeUserId)
-                    if (device != null) {
-                        api.track(projectId, request.copy(device = device))
-                    } else {
-                        throw IllegalStateException("Device is not ready")
-                    }
-                } catch (e: Exception) {
-                    enqueueEvent(queue, block, PairEntry(projectId, request), generation)
+        while (true) {
+            val items = synchronized(RemotePolicyStore.lock) {
+                storage.popItems(queue, pairAdapter<String, IngestEventRequest>(), EVENT_BATCH_SIZE).map {
+                    it to remotePolicy.generation(it.first, block)
                 }
             }
+            if (items.isEmpty()) return
+
+            val allSent = coroutineScope {
+                items.map { (item, generation) -> async { sendEvent(api, queue, block, item, generation) } }
+                    .awaitAll()
+                    .all { it }
+            }
+            if (!allSent) return
+        }
+    }
+
+    /** 전송했거나 정책상 보내지 않기로 한 경우 true, 실패해 큐에 되돌린 경우 false. */
+    private suspend fun sendEvent(
+        api: MarketapApi,
+        queue: String,
+        block: String,
+        item: PairEntry<String, IngestEventRequest>,
+        generation: Long,
+    ): Boolean {
+        val (projectId, request) = item
+        return try {
+            if (!remotePolicy.allowed(projectId, block) || generation != remotePolicy.generation(projectId, block)) {
+                return true
+            }
+            val device = getSafeDevice(request.device.removeUserId)
+                ?: throw IllegalStateException("Device is not ready")
+            api.track(projectId, request.copy(device = device))
+            true
+        } catch (e: Exception) {
+            enqueueEvent(queue, block, PairEntry(projectId, request), generation)
+            false
         }
     }
 
@@ -157,7 +185,7 @@ internal class RetryMarketapBackend(
                     "deviceId: ${request.deviceId}, properties: ${request.properties}"
         }
         storage.setItem(KEY_PENDING_DEVICE_PROFILE, PairEntry(projectId, request), pairAdapter())
-        CoroutineScope(Dispatchers.IO).launch {
+        ioScope.launch {
             profileWorker.dispatch(::checkDeviceQueue)
         }
     }
@@ -176,7 +204,7 @@ internal class RetryMarketapBackend(
             logger.d { "fetching campaigns, request: $request" }
             val deferredResponse = CompletableDeferred<InAppCampaignRes>()
 
-            apiWorkGroup.dispatch {
+            ioScope.launch {
                 try {
                     val res = marketapApi.fetchCampaigns(request)
                     synchronized(RemotePolicyStore.lock) {
@@ -220,7 +248,7 @@ internal class RetryMarketapBackend(
             logger.d { "fetching campaign, campaignId: $campaignId, request: $request" }
             val deferredResponse = CompletableDeferred<InAppCampaignSingleRes>()
 
-            apiWorkGroup.dispatch {
+            ioScope.launch {
                 try {
                     val res = marketapApi.fetchCampaign(campaignId, request)
                     synchronized(RemotePolicyStore.lock) {
@@ -255,7 +283,7 @@ internal class RetryMarketapBackend(
                     "eventName: ${request.name}, properties: ${request.properties}"
         }
 
-        CoroutineScope(Dispatchers.IO).launch {
+        ioScope.launch {
             request.timestamp = getNowAsString(projectId)
             if (!remotePolicy.allowed(projectId, collectionBlock)) return@launch
             val generation = remotePolicy.generation(projectId, collectionBlock)
@@ -272,7 +300,7 @@ internal class RetryMarketapBackend(
                     "userId: ${request.userId}, properties: ${request.properties}"
         }
         if (!remotePolicy.allowed(projectId, "collection")) return
-        CoroutineScope(Dispatchers.IO).launch {
+        ioScope.launch {
             request.timestamp = getNowAsString(projectId)
             if (!remotePolicy.allowed(projectId, "collection")) return@launch
             storage.setItem(KEY_PENDING_USER_PROFILE, PairEntry(projectId, request), pairAdapter())
@@ -281,7 +309,7 @@ internal class RetryMarketapBackend(
     }
 
     fun prefetchServerInfo(projectId: String) {
-        CoroutineScope(Dispatchers.IO).launch {
+        ioScope.launch {
             fetchServerInfoIfNeeded(projectId)
         }
     }
