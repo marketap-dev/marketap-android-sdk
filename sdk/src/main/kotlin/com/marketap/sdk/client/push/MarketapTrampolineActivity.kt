@@ -45,33 +45,38 @@ class MarketapTrampolineActivity : Activity() {
                 }
             }
 
-            // 딥링크 or 앱 런치
-            val launchIntent = if (!deepLink.isNullOrEmpty()) {
-                Intent(Intent.ACTION_VIEW, Uri.parse(deepLink)).apply {
-                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-                }
-            } else if (!url.isNullOrEmpty()) {
-                Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
-                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-                }
-            } else {
-                packageManager.getLaunchIntentForPackage(packageName)?.apply {
+            val link = deepLink?.takeIf { it.isNotEmpty() } ?: url?.takeIf { it.isNotEmpty() }
+            val linkIntent = link?.let {
+                Intent(Intent.ACTION_VIEW, Uri.parse(it)).apply {
                     flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
                 }
             }
 
             logger.d { "Launching Marketap notification with deepLink: $deepLink, url: $url" }
-            launchIntent?.let {
-                startActivity(it)
-            }
+            startActivitySafely(linkIntent ?: launcherIntent())
         } else {
             logger.w { "MarketapTrampolineActivity launched without valid Marketap notification data" }
-            startActivity(packageManager.getLaunchIntentForPackage(packageName)?.apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-            })
+            startActivitySafely(launcherIntent())
         }
 
         quit()
+    }
+
+    private fun launcherIntent(): Intent? {
+        return packageManager.getLaunchIntentForPackage(packageName)?.apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+    }
+
+    private fun startActivitySafely(target: Intent?): Boolean {
+        if (target == null) return false
+        return try {
+            startActivity(target)
+            true
+        } catch (e: Exception) {
+            logger.w { "Failed to start activity for ${target.data}: ${e.message}" }
+            false
+        }
     }
 
     private fun quit() {
