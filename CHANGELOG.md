@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.6.1 (2026-11-23)
+
+## What's Changed
+* release: 1.6.0 by @marketap-sdk-release[bot] in https://github.com/marketap-dev/marketap-android-sdk/pull/19
+* [NT-1111] 인앱 팝업을 현재 화면의 View 로 붙이는 Braze 방식으로 전환 by @yumin-marketap in https://github.com/marketap-dev/marketap-android-sdk/pull/20
+* [NT-1151] 세션 UTM 자동 처리 by @yumin-marketap in https://github.com/marketap-dev/marketap-android-sdk/pull/21
+* [NT-1152] 인앱 트리거 "또는" 조건 지원 및 캠페인 API v3 전환 by @yumin-marketap in https://github.com/marketap-dev/marketap-android-sdk/pull/22
+* [NT-1111] 앱 인앱 지연 노출·이벤트 횟수 조건·N분 타이머 by @yumin-marketap in https://github.com/marketap-dev/marketap-android-sdk/pull/23
+* [NT-1139] 앱 인앱 이벤트 플로우 by @yumin-marketap in https://github.com/marketap-dev/marketap-android-sdk/pull/24
+* [NT-1144] Android SDK 안정성 점검 후속 수정 by @yumin-marketap in https://github.com/marketap-dev/marketap-android-sdk/pull/25
+
+
+**Full Changelog**: https://github.com/marketap-dev/marketap-android-sdk/compare/1.6.0...1.6.1
+
+
 ## 1.6.0 (2026-11-12)
 
 ## What's Changed
