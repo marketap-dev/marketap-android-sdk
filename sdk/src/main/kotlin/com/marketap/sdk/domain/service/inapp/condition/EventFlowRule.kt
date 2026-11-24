@@ -29,7 +29,7 @@ internal data class EventFlowTransition(
  * 이벤트 플로우 판정 규칙. 웹 SDK·서버와 같은 규칙이며 같은 사례 파일(`event-flow-cases.json`)로 검증한다.
  *
  * 인앱이 실제로 노출되면 호출하는 쪽이 상태를 지운다. 도달했지만 노출되지 않았으면 상태를 유지한다.
- * 진입 직후 단계에서 진입 이벤트가 다시 오면 시각만 갱신하고, 그보다 더 진행했으면 진입 이벤트를 무시한다.
+ * 진입 직후 단계에서 진입 이벤트가 다시 오면 시각만 갱신하고, 그보다 더 진행했거나 도달을 1회 이상 셌으면 진입 이벤트를 무시한다.
  * 취소와 진입에 모두 맞는 이벤트는 진행을 버린 뒤 새로 진입한다.
  * 재진입 제한 시간이 있으면 진행 기록(만료됐지만 노출되지 않은 것 포함)이 있을 때 일어난 취소 이벤트만 그 시간 동안 진입을 막는다.
  */
@@ -37,12 +37,14 @@ internal object EventFlowRule {
 
     /**
      * @param arrivalMatched 이 이벤트가 캠페인의 트리거 조건(도달)에 맞는지.
+     * @param arrivalCounted 트리거 횟수 조건이 있고 지금 진행에서 도달을 1회 이상 셌는지. 횟수는 호출하는 쪽이 센다.
      * @param cancelConditions 트리거의 취소 이벤트(abortConditions).
      */
     fun next(
         state: EventFlowState?,
         flow: EventFlow,
         arrivalMatched: Boolean,
+        arrivalCounted: Boolean,
         cancelConditions: List<Condition>,
         eventAt: Long,
         matches: (Condition) -> Boolean,
@@ -79,7 +81,7 @@ internal object EventFlowRule {
             }
         }
 
-        val progressedBeyondEntry = alive != null && alive.nextStep > 1
+        val progressedBeyondEntry = alive != null && (alive.nextStep > 1 || arrivalCounted)
         if (!progressedBeyondEntry && steps.first().conditions.any(matches)) {
             return EventFlowTransition(EventFlowState(1, eventAt), fired = false, restarted = true)
         }

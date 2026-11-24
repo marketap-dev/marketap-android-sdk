@@ -24,7 +24,7 @@ class EventFlowRuleContractTest {
 
     @Test
     fun `사례 수가 웹·서버와 같다`() {
-        assertEquals(26, cases.size)
+        assertEquals(30, cases.size)
     }
 
     @Suppress("UNCHECKED_CAST")
@@ -56,6 +56,7 @@ class EventFlowRuleContractTest {
                     state,
                     flow,
                     eventName in arrival,
+                    input["arrivalCounted"] == true,
                     cancel,
                     (input["at"] as Number).toLong() * 1000,
                 ) { it.eventFilter.eventName == eventName }
