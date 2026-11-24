@@ -54,6 +54,7 @@ internal const val SCREEN_CHANGE_GRACE_MS = 100L
 
 private object AlwaysSatisfiedOccurrence : OccurrenceEvaluating {
     override fun recordAndEvaluate(campaign: InAppCampaign, sessionId: String?) = true
+    override fun hasCounted(campaign: InAppCampaign, sessionId: String?) = false
     override fun reset(campaignId: String) {}
     override fun resetAll() {}
 }
