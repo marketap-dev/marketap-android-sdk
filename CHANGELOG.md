@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.6.2 (2026-11-24)
+
+이벤트 플로우와 이벤트 횟수 조건을 같이 쓸 때, 도달을 센 뒤 진입 이벤트가 다시 와도 쌓인 횟수가 초기화되지 않도록 수정
+
+## What's Changed
+* release: 1.6.1 by @marketap-sdk-release[bot] in https://github.com/marketap-dev/marketap-android-sdk/pull/26
+* [NT-1139] 플로우에서 도달 횟수를 센 뒤의 진입 이벤트를 무시 by @yumin-marketap in https://github.com/marketap-dev/marketap-android-sdk/pull/27
+
+
+**Full Changelog**: https://github.com/marketap-dev/marketap-android-sdk/compare/1.6.1...1.6.2
+
+
 ## 1.6.1 (2026-11-23)
 
 ## What's Changed
