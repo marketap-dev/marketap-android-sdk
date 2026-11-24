@@ -20,6 +20,7 @@ internal interface EventFlowEvaluating {
         campaign: InAppCampaign,
         event: IngestEventRequest,
         arrivalMatched: Boolean,
+        arrivalCounted: Boolean,
         occurredAt: Long,
     ): EventFlowEvaluation
 
@@ -57,6 +58,7 @@ internal class EventFlowEvaluator(
         campaign: InAppCampaign,
         event: IngestEventRequest,
         arrivalMatched: Boolean,
+        arrivalCounted: Boolean,
         occurredAt: Long,
     ): EventFlowEvaluation {
         val trigger = campaign.triggerEventCondition
@@ -73,6 +75,7 @@ internal class EventFlowEvaluator(
             current,
             flow,
             arrivalMatched,
+            arrivalCounted,
             trigger.abortConditions.orEmpty(),
             occurredAt,
         ) { conditionChecker.checkCondition(it, event.name, event.properties) }

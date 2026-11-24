@@ -10,6 +10,9 @@ import com.squareup.moshi.JsonClass
 internal interface OccurrenceEvaluating {
     /** 이번 이벤트를 기록하고 횟수 조건을 채웠는지 돌려준다. 조건이 없으면 항상 true. */
     fun recordAndEvaluate(campaign: InAppCampaign, sessionId: String?): Boolean
+
+    /** 횟수 조건이 있고, 이번 이벤트를 세기 전에 이미 센 횟수가 1회 이상이면 true. 기록하지 않는다. */
+    fun hasCounted(campaign: InAppCampaign, sessionId: String?): Boolean
     fun reset(campaignId: String)
     fun resetAll()
 }
@@ -50,6 +53,27 @@ internal class OccurrenceConditionEvaluator(
             recordWindowed(campaign.id, condition, validityKey, sessionId)
         } else {
             recordNonWindowed(campaign.id, condition, validityKey, sessionId)
+        }
+    }
+
+    override fun hasCounted(campaign: InAppCampaign, sessionId: String?): Boolean {
+        val condition = campaign.triggerEventCondition.occurrenceCondition ?: return false
+        val validityKey = campaign.triggerConditionVersion.orEmpty()
+        val durationMinutes = condition.durationMinutes
+        if (durationMinutes != null) {
+            val state = storage.getItem(windowedKey(campaign.id), windowedAdapter)
+                ?.takeIf { it.validityKey == validityKey } ?: return false
+            val cutoff = now() - durationMinutes * 60_000L
+            return state.occurrences.any {
+                it.timestamp >= cutoff && (!condition.sessionScoped || it.sessionId == sessionId)
+            }
+        }
+        val state = storage.getItem(nonWindowedKey(campaign.id), nonWindowedAdapter)
+            ?.takeIf { it.validityKey == validityKey } ?: return false
+        return if (condition.sessionScoped) {
+            state.lastSessionId == sessionId && state.sessionCount > 0
+        } else {
+            state.totalCount > 0
         }
     }
 

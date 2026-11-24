@@ -119,10 +119,24 @@ class InAppEventFlowTest {
     }
 
     @Test
-    fun `다시 진입하면 트리거 횟수를 처음부터 센다`() {
+    fun `도달을 센 뒤에는 진입 이벤트를 무시하고 횟수를 이어 센다`() {
+        val h = harness(flowCampaign(occurrence = OccurrenceCondition(3)))
+        h.fire(ENTRY)
+        h.fire(ARRIVAL)
+        h.fire(ARRIVAL)
+        h.fire(ENTRY)
+        assertEquals(emptyList<String>(), h.shownIds())
+
+        h.fire(ARRIVAL)
+        assertEquals(listOf("f"), h.shownIds())
+    }
+
+    @Test
+    fun `도달을 센 뒤 취소되면 다시 진입해 처음부터 센다`() {
         val h = harness(flowCampaign(occurrence = OccurrenceCondition(2)))
         h.fire(ENTRY)
         h.fire(ARRIVAL)
+        h.fire(CANCEL)
         h.fire(ENTRY)
         h.fire(ARRIVAL)
         assertEquals(emptyList<String>(), h.shownIds())

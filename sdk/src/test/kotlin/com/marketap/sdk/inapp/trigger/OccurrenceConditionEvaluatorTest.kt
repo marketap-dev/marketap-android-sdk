@@ -100,4 +100,58 @@ class OccurrenceConditionEvaluatorTest {
         assertFalse(evaluator.recordAndEvaluate(a, "s"))
         assertFalse(evaluator.recordAndEvaluate(b, "s"))
     }
+
+    @Test
+    fun `hasCounted 는 횟수 조건이 없으면 false`() {
+        val c = campaign(occurrence = null)
+        evaluator.recordAndEvaluate(c, "s")
+        assertFalse(evaluator.hasCounted(c, "s"))
+    }
+
+    @Test
+    fun `hasCounted 는 기간 없는 조건에서 한 번이라도 셌으면 true 이고 기록하지 않는다`() {
+        val c = campaign(occurrence = OccurrenceCondition(2))
+        assertFalse(evaluator.hasCounted(c, "s1"))
+        evaluator.recordAndEvaluate(c, "s1")
+        assertTrue(evaluator.hasCounted(c, "s2"))
+        assertTrue(evaluator.hasCounted(c, "s2"))
+        assertTrue(evaluator.recordAndEvaluate(c, "s2"))
+    }
+
+    @Test
+    fun `hasCounted 는 세션 단위 조건에서 같은 세션 기록만 본다`() {
+        val c = campaign(occurrence = OccurrenceCondition(2, sessionScoped = true))
+        evaluator.recordAndEvaluate(c, "s1")
+        assertTrue(evaluator.hasCounted(c, "s1"))
+        assertFalse(evaluator.hasCounted(c, "s2"))
+    }
+
+    @Test
+    fun `hasCounted 는 기간 조건에서 기간 안의 기록만 본다`() {
+        val c = campaign(occurrence = OccurrenceCondition(2, durationMinutes = 10))
+        evaluator.recordAndEvaluate(c, "s")
+        now += 10 * 60_000L
+        assertTrue(evaluator.hasCounted(c, "s"))
+        now += 1
+        assertFalse(evaluator.hasCounted(c, "s"))
+    }
+
+    @Test
+    fun `hasCounted 는 기간·세션 조건에서 기간 안 같은 세션 기록만 본다`() {
+        val c = campaign(occurrence = OccurrenceCondition(2, durationMinutes = 10, sessionScoped = true))
+        evaluator.recordAndEvaluate(c, "s1")
+        assertTrue(evaluator.hasCounted(c, "s1"))
+        assertFalse(evaluator.hasCounted(c, "s2"))
+    }
+
+    @Test
+    fun `hasCounted 는 설정 버전이 바뀌거나 reset 하면 false`() {
+        val v1 = campaign(occurrence = OccurrenceCondition(2), version = "v1")
+        val v2 = campaign(occurrence = OccurrenceCondition(2), version = "v2")
+        evaluator.recordAndEvaluate(v1, "s")
+        assertFalse(evaluator.hasCounted(v2, "s"))
+        assertTrue(evaluator.hasCounted(v1, "s"))
+        evaluator.reset("a")
+        assertFalse(evaluator.hasCounted(v1, "s"))
+    }
 }

@@ -1,5 +1,5 @@
 {
-  "note": "이벤트 플로우 판정 계약. backend EventFlowRule.kt 와 web-sdk eventFlowRule.ts 가 같은 결과를 내야 한다. 두 레포에 같은 내용으로 둔다(marketap-backend domain/etl/src/test/resources, marketap-web-sdk src/__tests__/fixtures). at·lastStepAt·blockedUntil 은 초 단위. impression 입력은 호출하는 쪽이 노출 뒤 상태를 지우는 동작을 흉내 낸다. 조건 매칭은 이벤트 이름만 본다.",
+  "note": "이벤트 플로우 판정 계약. backend EventFlowRule.kt, web-sdk eventFlowRule.ts, iOS EventFlowRule.swift, Android EventFlowRule.kt 가 같은 결과를 내야 한다. 네 레포에 같은 내용으로 둔다(marketap-backend domain/etl/src/test/resources, marketap-web-sdk src/__tests__/fixtures, marketap-ios-sdk Sources/MarketapSDKTests/Fixtures, marketap-android-sdk sdk/src/test/resources). at·lastStepAt·blockedUntil 은 초 단위. impression 입력은 호출하는 쪽이 노출 뒤 상태를 지우는 동작을 흉내 낸다. arrivalCounted 는 트리거 횟수 조건에서 지금 진행의 도달을 1회 이상 셌는지이며 없으면 false 다. 조건 매칭은 이벤트 이름만 본다.",
   "cases": [
     {
       "name": "진입 뒤 제한 시간 안에 도달하면 발화한다",
@@ -1456,6 +1456,289 @@
               "nextStep": 0,
               "lastStepAt": 2000,
               "blockedUntil": 5600
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "도달을 1회 이상 센 뒤에는 진입 이벤트를 무시한다",
+      "flow": {
+        "steps": [
+          {
+            "events": [
+              "signup"
+            ],
+            "withinSeconds": 1800
+          }
+        ],
+        "arrival": [
+          "view_product"
+        ],
+        "cancel": []
+      },
+      "inputs": [
+        {
+          "event": "signup",
+          "at": 0,
+          "expect": {
+            "fired": false,
+            "restarted": true,
+            "state": {
+              "nextStep": 1,
+              "lastStepAt": 0
+            }
+          }
+        },
+        {
+          "event": "view_product",
+          "at": 60,
+          "expect": {
+            "fired": true,
+            "restarted": false,
+            "state": {
+              "nextStep": 1,
+              "lastStepAt": 0
+            }
+          }
+        },
+        {
+          "event": "signup",
+          "at": 120,
+          "arrivalCounted": true,
+          "expect": {
+            "fired": false,
+            "restarted": false,
+            "state": {
+              "nextStep": 1,
+              "lastStepAt": 0
+            }
+          }
+        },
+        {
+          "event": "view_product",
+          "at": 180,
+          "arrivalCounted": true,
+          "expect": {
+            "fired": true,
+            "restarted": false,
+            "state": {
+              "nextStep": 1,
+              "lastStepAt": 0
+            }
+          }
+        },
+        {
+          "event": "signup",
+          "at": 2000,
+          "arrivalCounted": true,
+          "expect": {
+            "fired": false,
+            "restarted": true,
+            "state": {
+              "nextStep": 1,
+              "lastStepAt": 2000
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "도달을 세지 않았으면 다시 진입할 때 시각을 갱신한다",
+      "flow": {
+        "steps": [
+          {
+            "events": [
+              "signup"
+            ],
+            "withinSeconds": 1800
+          }
+        ],
+        "arrival": [
+          "view_product"
+        ],
+        "cancel": []
+      },
+      "inputs": [
+        {
+          "event": "signup",
+          "at": 0,
+          "expect": {
+            "fired": false,
+            "restarted": true,
+            "state": {
+              "nextStep": 1,
+              "lastStepAt": 0
+            }
+          }
+        },
+        {
+          "event": "view_product",
+          "at": 60,
+          "expect": {
+            "fired": true,
+            "restarted": false,
+            "state": {
+              "nextStep": 1,
+              "lastStepAt": 0
+            }
+          }
+        },
+        {
+          "event": "signup",
+          "at": 120,
+          "expect": {
+            "fired": false,
+            "restarted": true,
+            "state": {
+              "nextStep": 1,
+              "lastStepAt": 120
+            }
+          }
+        },
+        {
+          "event": "view_product",
+          "at": 1900,
+          "expect": {
+            "fired": true,
+            "restarted": false,
+            "state": {
+              "nextStep": 1,
+              "lastStepAt": 120
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "도달을 센 뒤에도 취소 이벤트는 진행을 버린다",
+      "flow": {
+        "steps": [
+          {
+            "events": [
+              "signup"
+            ],
+            "withinSeconds": 1800
+          }
+        ],
+        "arrival": [
+          "view_product"
+        ],
+        "cancel": [
+          "logout"
+        ]
+      },
+      "inputs": [
+        {
+          "event": "signup",
+          "at": 0,
+          "expect": {
+            "fired": false,
+            "restarted": true,
+            "state": {
+              "nextStep": 1,
+              "lastStepAt": 0
+            }
+          }
+        },
+        {
+          "event": "view_product",
+          "at": 60,
+          "expect": {
+            "fired": true,
+            "restarted": false,
+            "state": {
+              "nextStep": 1,
+              "lastStepAt": 0
+            }
+          }
+        },
+        {
+          "event": "logout",
+          "at": 120,
+          "arrivalCounted": true,
+          "expect": {
+            "fired": false,
+            "restarted": true,
+            "state": null
+          }
+        },
+        {
+          "event": "view_product",
+          "at": 180,
+          "expect": {
+            "fired": false,
+            "restarted": false,
+            "state": null
+          }
+        },
+        {
+          "event": "signup",
+          "at": 240,
+          "expect": {
+            "fired": false,
+            "restarted": true,
+            "state": {
+              "nextStep": 1,
+              "lastStepAt": 240
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "도달을 센 뒤에도 취소와 진입이 같은 이벤트면 새로 진입한다",
+      "flow": {
+        "steps": [
+          {
+            "events": [
+              "signup"
+            ],
+            "withinSeconds": 1800
+          }
+        ],
+        "arrival": [
+          "view_product"
+        ],
+        "cancel": [
+          "signup"
+        ]
+      },
+      "inputs": [
+        {
+          "event": "signup",
+          "at": 0,
+          "expect": {
+            "fired": false,
+            "restarted": true,
+            "state": {
+              "nextStep": 1,
+              "lastStepAt": 0
+            }
+          }
+        },
+        {
+          "event": "view_product",
+          "at": 60,
+          "expect": {
+            "fired": true,
+            "restarted": false,
+            "state": {
+              "nextStep": 1,
+              "lastStepAt": 0
+            }
+          }
+        },
+        {
+          "event": "signup",
+          "at": 120,
+          "arrivalCounted": true,
+          "expect": {
+            "fired": false,
+            "restarted": true,
+            "state": {
+              "nextStep": 1,
+              "lastStepAt": 120
             }
           }
         }

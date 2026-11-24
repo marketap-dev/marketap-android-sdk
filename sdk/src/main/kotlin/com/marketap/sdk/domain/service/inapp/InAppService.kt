@@ -54,13 +54,20 @@ internal const val SCREEN_CHANGE_GRACE_MS = 100L
 
 private object AlwaysSatisfiedOccurrence : OccurrenceEvaluating {
     override fun recordAndEvaluate(campaign: InAppCampaign, sessionId: String?) = true
+    override fun hasCounted(campaign: InAppCampaign, sessionId: String?) = false
     override fun reset(campaignId: String) {}
     override fun resetAll() {}
 }
 
 private object NoEventFlow : EventFlowEvaluating {
     override fun now() = System.currentTimeMillis()
-    override fun evaluate(campaign: InAppCampaign, event: IngestEventRequest, arrivalMatched: Boolean, occurredAt: Long) =
+    override fun evaluate(
+        campaign: InAppCampaign,
+        event: IngestEventRequest,
+        arrivalMatched: Boolean,
+        arrivalCounted: Boolean,
+        occurredAt: Long,
+    ) =
         EventFlowEvaluation(arrivalMatched, restarted = false)
     override fun canShow(campaign: InAppCampaign) = true
     override fun clear(campaignId: String) {}
@@ -256,10 +263,12 @@ internal class InAppService(
     ): Set<String> {
         if (!canAdvanceFlows(event, generation, flowClears)) return emptySet()
         val fired = mutableSetOf<String>()
+        val sessionId = event.properties?.get(SESSION_ID_KEY) as? String
         campaigns.filter { it.hasEventFlow }.forEach { campaign ->
             val arrivalMatched =
                 eventConditionChecker.matchesTrigger(campaign.triggerEventCondition, event.name, event.properties)
-            val evaluation = eventFlowEvaluator.evaluate(campaign, event, arrivalMatched, occurredAt)
+            val arrivalCounted = occurrenceEvaluator.hasCounted(campaign, sessionId)
+            val evaluation = eventFlowEvaluator.evaluate(campaign, event, arrivalMatched, arrivalCounted, occurredAt)
             if (evaluation.restarted) occurrenceEvaluator.reset(campaign.id)
             if (evaluation.fired) fired.add(campaign.id)
         }
