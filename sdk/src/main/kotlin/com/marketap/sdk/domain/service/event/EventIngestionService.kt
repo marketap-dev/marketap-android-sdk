@@ -22,6 +22,7 @@ internal class EventIngestionService(
     private val deviceManager: DeviceManager,
     private val userIngestionService: UserIngestionService,
     private val sessionUtmStore: SessionUtmStore? = null,
+    private val clickIdStore: ClickIdStore? = null,
 ) {
     fun trackEvent(eventName: String, eventProperties: Map<String, Any>) {
         trackEvent(eventName, eventProperties, origin = null)
@@ -35,17 +36,22 @@ internal class EventIngestionService(
         val sdkIntegrationState = SdkIntegrationState.toJsonString()
 
         val sessionId = currentSessionId(projectId, userId, device, sdkIntegrationState, eventProperties)
+        val (properties, clickId) = clickIdStore?.attach(eventName, eventProperties) ?: (eventProperties to null)
 
         val eventRequest = IngestEventRequest(
             generateRandomUUID(),
             eventName,
             userId,
             device,
-            withSessionUtm(eventProperties + ("mkt_session_id" to sessionId), sessionId)
+            withSessionUtm(properties + ("mkt_session_id" to sessionId), sessionId)
                 .withSdkIntegrationState(sdkIntegrationState),
         )
 
-        marketapBackend.track(projectId, eventRequest)
+        if (clickId == null) {
+            marketapBackend.track(projectId, eventRequest)
+        } else {
+            marketapBackend.track(projectId, eventRequest) { clickIdStore?.consume(clickId) }
+        }
 
         inAppService.onEvent(eventRequest, origin, generation)
 
@@ -88,6 +94,10 @@ internal class EventIngestionService(
 
     fun setPendingUtm(utm: Map<String, String>) {
         sessionUtmStore?.setPending(utm)
+    }
+
+    fun setPendingClickId(clickId: String, receivedAt: Long) {
+        clickIdStore?.setPending(clickId, receivedAt)
     }
 
     fun withSessionUtm(properties: Map<String, Any>, sessionId: String): Map<String, Any> =

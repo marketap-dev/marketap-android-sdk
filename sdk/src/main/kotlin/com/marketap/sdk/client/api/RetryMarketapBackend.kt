@@ -278,6 +278,10 @@ internal class RetryMarketapBackend(
     }
 
     override fun track(projectId: String, request: IngestEventRequest) {
+        track(projectId, request) {}
+    }
+
+    override fun track(projectId: String, request: IngestEventRequest, onQueued: () -> Unit) {
         logger.d {
             "tracking event for project $projectId, " +
                     "eventName: ${request.name}, properties: ${request.properties}"
@@ -288,6 +292,7 @@ internal class RetryMarketapBackend(
             if (!remotePolicy.allowed(projectId, collectionBlock)) return@launch
             val generation = remotePolicy.generation(projectId, collectionBlock)
             if (!enqueueEvent(eventQueue, collectionBlock, PairEntry(projectId, request), generation)) return@launch
+            onQueued()
             apiWorkGroup.dispatch(::checkEventQueue)
             profileWorker.dispatch(::checkUserQueue)
             profileWorker.dispatch(::checkDeviceQueue)

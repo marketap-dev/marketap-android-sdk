@@ -108,18 +108,22 @@ internal class SessionUtmStore(
 
         /** 링크의 `utm_*` 쿼리 파라미터를 `mkt_utm_*` 키로 꺼낸다. 해석할 수 없는 링크면 빈 값이다. */
         fun utmFromUrl(url: String): Map<String, String> {
-            val query = runCatching { URI(url.trim()).rawQuery }.getOrNull() ?: return emptyMap()
-            val params = query.split('&').mapNotNull { pair ->
+            val params = queryParams(url)
+            return UTM_KEYS.mapNotNull { key ->
+                val name = key.removePrefix("mkt_")
+                params.firstOrNull { it.first == name }?.second?.takeIf { it.isNotEmpty() }?.let { key to it }
+            }.toMap()
+        }
+
+        fun queryParams(url: String): List<Pair<String, String>> {
+            val query = runCatching { URI(url.trim()).rawQuery }.getOrNull() ?: return emptyList()
+            return query.split('&').mapNotNull { pair ->
                 val index = pair.indexOf('=')
                 if (index <= 0) return@mapNotNull null
                 val name = runCatching { URLDecoder.decode(pair.substring(0, index), "UTF-8") }.getOrNull()
                 val value = runCatching { URLDecoder.decode(pair.substring(index + 1), "UTF-8") }.getOrNull()
                 if (name == null || value == null) null else name to value
             }
-            return UTM_KEYS.mapNotNull { key ->
-                val name = key.removePrefix("mkt_")
-                params.firstOrNull { it.first == name }?.second?.takeIf { it.isNotEmpty() }?.let { key to it }
-            }.toMap()
         }
     }
 }

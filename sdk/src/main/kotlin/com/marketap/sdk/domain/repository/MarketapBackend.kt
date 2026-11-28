@@ -32,6 +32,11 @@ internal interface MarketapBackend {
         request: IngestEventRequest
     )
 
+    fun track(projectId: String, request: IngestEventRequest, onQueued: () -> Unit) {
+        track(projectId, request)
+        onQueued()
+    }
+
     fun updateProfile(
         projectId: String,
         request: UpdateProfileRequest

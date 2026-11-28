@@ -12,6 +12,7 @@ import com.marketap.sdk.client.inapp.AndroidInAppView
 import com.marketap.sdk.client.push.MarketapNotificationOpenHandler
 import com.marketap.sdk.domain.service.MarketapCoreService
 import com.marketap.sdk.domain.service.event.EventIngestionService
+import com.marketap.sdk.domain.service.event.ClickIdStore
 import com.marketap.sdk.domain.service.event.SessionUtmStore
 import com.marketap.sdk.domain.service.event.UserIngestionService
 import com.marketap.sdk.domain.service.inapp.AppForegroundTracker
@@ -129,6 +130,7 @@ object Dependency {
             deviceManager,
             userIngestionService,
             SessionUtmStore(storage, enabled = { marketapBackend.remotePolicy.currentlyAllowed(config.projectId, "sessionUtm") }),
+            ClickIdStore(storage, enabled = { marketapBackend.remotePolicy.currentlyAllowed(config.projectId, "collection") }),
         )
         foregroundTracker.addForegroundListener(inAppService::restoreDelayed)
         inAppService.restoreDelayed()
@@ -146,6 +148,12 @@ object Dependency {
         MarketapRegistry.utmBeforeInit?.let {
             eventIngestionService.setPendingUtm(it)
             MarketapRegistry.utmBeforeInit = null
+        }
+        synchronized(MarketapRegistry) {
+            MarketapRegistry.clickIdBeforeInit?.let { (clickId, receivedAt) ->
+                eventIngestionService.setPendingClickId(clickId, receivedAt)
+                MarketapRegistry.clickIdBeforeInit = null
+            }
         }
 
         val deviceListener = DeviceListener(deviceManager, userIngestionService, application, core)
