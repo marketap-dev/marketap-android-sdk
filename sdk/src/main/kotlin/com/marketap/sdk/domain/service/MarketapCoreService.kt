@@ -82,6 +82,14 @@ internal class MarketapCoreService(
         }
     }
 
+    fun setClickId(clickId: String, receivedAt: Long) {
+        try {
+            eventIngestionService.setPendingClickId(clickId, receivedAt)
+        } catch (t: Throwable) {
+            logger.e(t) { "Failed to set click id" }
+        }
+    }
+
     fun trackFromWebBridge(name: String, properties: Map<String, Any>?, origin: InAppOrigin?) {
         try {
             if (!hasSupportedEventProperties(name, properties)) return

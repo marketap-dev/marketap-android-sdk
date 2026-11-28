@@ -4,6 +4,7 @@ import android.app.Activity
 import android.app.Application
 import com.marketap.sdk.client.SharedPreferenceInternalStorage
 import com.marketap.sdk.client.inapp.floating.FloatingInAppView
+import com.marketap.sdk.domain.service.event.ClickIdStore
 import com.marketap.sdk.domain.service.event.SessionUtmStore
 import com.marketap.sdk.model.MarketapConfig
 import com.marketap.sdk.model.external.EventProperty
@@ -49,6 +50,15 @@ object Marketap {
             } catch (t: Throwable) {
                 logger.e(t) { "Marketap SDK initialization failed with projectId  ${config.projectId}" }
                 null
+            }
+            synchronized(MarketapRegistry) {
+                val core = if (MarketapRegistry.isInitialized) MarketapRegistry.marketapCore else null
+                MarketapRegistry.clickIdBeforeInit?.let { (clickId, receivedAt) ->
+                    if (core != null) {
+                        core.setClickId(clickId, receivedAt)
+                        MarketapRegistry.clickIdBeforeInit = null
+                    }
+                }
             }
         } else {
             MarketapRegistry.clientKey = clientKey
@@ -219,6 +229,25 @@ object Marketap {
     fun setUtmFromUrl(url: String) {
         logger.d { "Marketap SDK set utm from url: $url" }
         setUtmValues(SessionUtmStore.utmFromUrl(url))
+    }
+
+    /**
+     * 링크로 앱이 열렸을 때 받은 링크를 넘깁니다. 링크를 받는 곳에서 화면 이동보다 먼저 호출합니다.
+     * 링크의 UTM 은 [setUtmFromUrl] 과 같이 처리하고, 메시지 클릭 ID(`mkt_clid`)는 30분 안의 다음 이벤트에 붙입니다.
+     * 이벤트를 보내거나 화면을 이동하지 않습니다. SDK 초기화 전에 호출해도 됩니다.
+     *
+     * @param url 앱이 받은 링크. https 주소와 앱 스킴 주소 모두 됩니다.
+     */
+    @JvmStatic
+    fun processDeepLink(url: String) {
+        logger.d { "Marketap SDK process deep link: $url" }
+        setUtmValues(SessionUtmStore.utmFromUrl(url))
+        val clickId = ClickIdStore.clickIdFromUrl(url) ?: return
+        val receivedAt = System.currentTimeMillis()
+        synchronized(MarketapRegistry) {
+            val core = if (MarketapRegistry.isInitialized) MarketapRegistry.marketapCore else null
+            if (core == null) MarketapRegistry.clickIdBeforeInit = clickId to receivedAt else core.setClickId(clickId, receivedAt)
+        }
     }
 
     /**
